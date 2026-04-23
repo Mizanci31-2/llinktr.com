@@ -1,0 +1,1511 @@
+﻿import { useEffect, useState } from "react";
+import type { ElementType } from "react";
+import { useParams, useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
+import { trpc } from "@/lib/trpc";
+import Navbar from "@/components/Navbar";
+import { toast } from "sonner";
+import {
+  BIO_THEMES,
+  BLOCK_TYPES,
+  COMMERCE_LINK_PRESETS,
+  MAX_PROFILE_IMAGE_BYTES,
+  SOCIAL_PLATFORMS,
+  getBioBackgroundStyle,
+  getBioButtonStyle,
+  getBioCardStyle,
+  getBioTheme,
+  getBioThemePreviewStyle,
+  safeAccentColor,
+  themeHasImageBackground,
+} from "@/lib/constants";
+import { SocialIcon } from "@/components/SocialIcon";
+import {
+  AlignLeft,
+  AlignCenter,
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  BarChart3,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Eye,
+  Globe,
+  GripVertical,
+  Heading1,
+  Image,
+  Link,
+  Loader2,
+  Minus,
+  Monitor,
+  MousePointerClick,
+  Plus,
+  Save,
+  Share2,
+  Store,
+  Smartphone,
+  Trash2,
+  Type,
+  Upload,
+  UserRound,
+  X,
+} from "lucide-react";
+
+type BlockType = "heading" | "description" | "text" | "link" | "social" | "divider" | "profile_image";
+
+interface LocalBlock {
+  id?: number;
+  tempId: string;
+  type: BlockType;
+  sortOrder: number;
+  isEnabled: boolean;
+  clicks?: number;
+  data: Record<string, string | boolean | number>;
+}
+
+const BLOCK_ICONS: Record<BlockType, ElementType> = {
+  heading: Heading1,
+  description: AlignLeft,
+  text: Type,
+  link: Link,
+  social: Share2,
+  divider: Minus,
+  profile_image: Image,
+};
+
+const BLOCK_LABELS: Record<BlockType, string> = {
+  heading: "Başlık",
+  description: "Açıklama",
+  text: "Metin",
+  link: "Link",
+  social: "Sosyal Hesap",
+  divider: "Ayırıcı",
+  profile_image: "Profil Resmi",
+};
+
+function generateTempId() {
+  return `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function normalizeBlocks(blocks: LocalBlock[]) {
+  return blocks.map((block, index) => ({ ...block, sortOrder: index }));
+}
+
+function readImageFile(file: File, onLoaded: (dataUrl: string) => void, label = "Görsel") {
+  if (!file.type.startsWith("image/")) {
+    toast.error("Lütfen geçerli bir görsel dosyası seçin");
+    return;
+  }
+
+  if (file.size > MAX_PROFILE_IMAGE_BYTES) {
+    toast.error(`${label} en fazla 5 MB olabilir`);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === "string") {
+      onLoaded(reader.result);
+    }
+  };
+  reader.onerror = () => toast.error("Görsel okunamadı");
+  reader.readAsDataURL(file);
+}
+
+function getBlockSummary(block: LocalBlock) {
+  if (block.type === "heading") {
+    return String(block.data.text || "Büyük bir başlık ekleyin");
+  }
+
+  if (block.type === "description" || block.type === "text") {
+    return String(block.data.text || "Açıklama veya serbest metin alanı");
+  }
+
+  if (block.type === "link") {
+    const title = String(block.data.title || (isCommerceLinkData(block.data) ? "E-ticaret sitesi" : "Link"));
+    const url = String(block.data.url || "https://...");
+    return `${title} - ${url}`;
+  }
+
+  if (block.type === "social") {
+    const platform = SOCIAL_PLATFORMS.find(item => item.id === block.data.platform);
+    return platform ? `${platform.label} hesabı` : "Platform seçin";
+  }
+
+  if (block.type === "profile_image") {
+    return "Profil resmi blok görünümü";
+  }
+
+  return "Bölümler arasına ayırıcı çizgi ekler";
+}
+
+function getLinkAlignment(data: Record<string, string | boolean | number>) {
+  return data.align === "left" ? "left" : "center";
+}
+
+function getCommercePreset(presetId?: string) {
+  return COMMERCE_LINK_PRESETS.find(item => item.id === presetId);
+}
+
+function isCommerceLinkData(data: Record<string, string | boolean | number>) {
+  return Boolean(getCommercePreset(String(data.logoPreset || "")));
+}
+
+function getBlockLabel(block: LocalBlock) {
+  if (block.type === "link" && isCommerceLinkData(block.data)) {
+    return "E-ticaret sitesi";
+  }
+
+  return BLOCK_LABELS[block.type];
+}
+
+function getBlockTone(block: LocalBlock) {
+  if (block.type === "link" && isCommerceLinkData(block.data)) {
+    return {
+      frame: "border-emerald-500/30 bg-emerald-500/[0.05]",
+      header: "border-b border-emerald-500/20 bg-emerald-500/[0.08]",
+      icon: "text-emerald-400",
+      panel: "border-emerald-500/25 bg-emerald-500/[0.04]",
+      badge: "bg-emerald-500/10 text-emerald-300",
+    };
+  }
+
+  switch (block.type) {
+    case "heading":
+      return {
+        frame: "border-sky-500/25 bg-sky-500/[0.04]",
+        header: "border-b border-sky-500/15 bg-sky-500/[0.07]",
+        icon: "text-sky-400",
+        panel: "border-sky-500/20 bg-sky-500/[0.04]",
+        badge: "bg-sky-500/10 text-sky-300",
+      };
+    case "description":
+    case "text":
+      return {
+        frame: "border-violet-500/25 bg-violet-500/[0.04]",
+        header: "border-b border-violet-500/15 bg-violet-500/[0.07]",
+        icon: "text-violet-400",
+        panel: "border-violet-500/20 bg-violet-500/[0.04]",
+        badge: "bg-violet-500/10 text-violet-300",
+      };
+    case "social":
+      return {
+        frame: "border-pink-500/25 bg-pink-500/[0.04]",
+        header: "border-b border-pink-500/15 bg-pink-500/[0.07]",
+        icon: "text-pink-400",
+        panel: "border-pink-500/20 bg-pink-500/[0.04]",
+        badge: "bg-pink-500/10 text-pink-300",
+      };
+    case "profile_image":
+      return {
+        frame: "border-amber-500/25 bg-amber-500/[0.04]",
+        header: "border-b border-amber-500/15 bg-amber-500/[0.07]",
+        icon: "text-amber-400",
+        panel: "border-amber-500/20 bg-amber-500/[0.04]",
+        badge: "bg-amber-500/10 text-amber-300",
+      };
+    default:
+      return {
+        frame: "border-border/70 bg-card",
+        header: "border-b border-border/40 bg-background/50",
+        icon: "text-primary",
+        panel: "border-border/70 bg-background/55",
+        badge: "bg-primary/10 text-primary",
+      };
+  }
+}
+
+function LinkLogo({
+  data,
+  size,
+  fallbackColor,
+}: {
+  data: Record<string, string | boolean | number>;
+  size: number;
+  fallbackColor: string;
+}) {
+  if (data.logoPreset) {
+    const preset = getCommercePreset(String(data.logoPreset));
+    if (preset?.logoUrl) {
+      return <img src={preset.logoUrl} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
+    }
+
+    return <SocialIcon platform={String(data.logoPreset)} size={size} color={fallbackColor} />;
+  }
+
+  if (data.logoUrl) {
+    return <img src={String(data.logoUrl)} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
+  }
+
+  return null;
+}
+
+function BlockEditor({
+  block,
+  onChange,
+  onDelete,
+  onToggle,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+}: {
+  block: LocalBlock;
+  onChange: (data: Record<string, string | boolean | number>) => void;
+  onDelete: () => void;
+  onToggle: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const Icon = BLOCK_ICONS[block.type];
+  const linkAlign = block.type === "link" ? getLinkAlignment(block.data) : "center";
+  const selectedCommercePreset = block.type === "link" ? getCommercePreset(String(block.data.logoPreset || "")) : undefined;
+  const selectedSocialPlatform = block.type === "social" ? SOCIAL_PLATFORMS.find(item => item.id === block.data.platform) : undefined;
+  const isCommerceLink = block.type === "link" && Boolean(selectedCommercePreset);
+  const tone = getBlockTone(block);
+  const blockLabel = getBlockLabel(block);
+
+  const handleImageUpload = (file?: File) => {
+    if (!file) return;
+    readImageFile(file, (dataUrl) => onChange({ ...block.data, url: dataUrl }), "Profil resmi");
+  };
+
+  const handleCommercePresetChange = (presetId: string) => {
+    const nextPreset = getCommercePreset(presetId);
+    if (!nextPreset) return;
+
+    const nextData: Record<string, string | boolean | number> = {
+      ...block.data,
+      logoPreset: nextPreset.id,
+      title: nextPreset.label,
+    };
+    delete nextData.logoUrl;
+    onChange(nextData);
+  };
+
+  return (
+    <div className={`overflow-hidden rounded-[1.15rem] border shadow-sm transition-all ${block.isEnabled ? tone.frame : "border-border/40 bg-card/55 opacity-60"}`}>
+      <div className={`flex items-center gap-3 px-3.5 py-3.5 ${block.isEnabled ? tone.header : "border-b border-border/30 bg-background/45"}`}>
+        <GripVertical className="h-4 w-4 cursor-grab flex-shrink-0 text-muted-foreground" />
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 ${block.isEnabled ? tone.badge : "bg-muted/40 text-muted-foreground"}`}>
+            <Icon className={`h-4 w-4 ${block.isEnabled ? tone.icon : "text-muted-foreground"}`} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-medium">{blockLabel}</span>
+              {(block.type === "link" || block.type === "social") && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                  {block.clicks ?? 0} tıklama
+                </span>
+              )}
+            </div>
+            <p className="truncate text-[11px] text-muted-foreground">{getBlockSummary(block)}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+            className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30"
+            aria-label="Bloğu yukarı taşı"
+          >
+            <ArrowUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30"
+            aria-label="Bloğu aşağı taşı"
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+          </button>
+          <Switch checked={block.isEnabled} onCheckedChange={onToggle} className="scale-75" />
+          <button type="button" onClick={() => setExpanded(!expanded)} className="p-1 rounded text-muted-foreground hover:text-foreground">
+            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+          <button type="button" onClick={onDelete} className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {expanded && block.type !== "divider" && (
+        <div className="space-y-3 border-t border-border/40 px-3.5 pb-3.5 pt-3.5">
+          {block.type === "heading" && (
+            <Input
+              value={String(block.data.text || "")}
+              onChange={(event) => onChange({ ...block.data, text: event.target.value })}
+              placeholder="Başlık metni..."
+              className="bg-input border-border/50 text-sm"
+            />
+          )}
+
+          {block.type === "description" && (
+            <Textarea
+              value={String(block.data.text || "")}
+              onChange={(event) => onChange({ ...block.data, text: event.target.value })}
+              placeholder="Açıklama metni..."
+              className="bg-input border-border/50 text-sm resize-none"
+              rows={2}
+            />
+          )}
+
+          {block.type === "text" && (
+            <Textarea
+              value={String(block.data.text || "")}
+              onChange={(event) => onChange({ ...block.data, text: event.target.value })}
+              placeholder="Metin içeriği..."
+              className="bg-input border-border/50 text-sm resize-none"
+              rows={3}
+            />
+          )}
+
+          {block.type === "link" && (
+            <div className="space-y-3">
+              <div className={`rounded-xl border p-3 shadow-sm ${tone.panel}`}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium">Yazı hizası</p>
+                  <span className="text-[10px] text-muted-foreground">Varsayılan: ortalı</span>
+                </div>
+                <ToggleGroup
+                  type="single"
+                  value={linkAlign}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    onChange({ ...block.data, align: value });
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <ToggleGroupItem value="center" className="gap-1.5 text-[10px] sm:text-[11px]">
+                    <AlignCenter className="h-3.5 w-3.5" />
+                    Ortalı
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="left" className="gap-1.5 text-[10px] sm:text-[11px]">
+                    <AlignLeft className="h-3.5 w-3.5" />
+                    Soldan
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              {isCommerceLink && (
+                <div className={`space-y-2 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium">E-ticaret sitesi</p>
+                    <span className="text-[10px] text-muted-foreground">İsterseniz sonra değiştirebilirsiniz</span>
+                  </div>
+                  <Select value={selectedCommercePreset?.id || ""} onValueChange={handleCommercePresetChange}>
+                    <SelectTrigger className="h-11 bg-input border-border/70 text-sm">
+                      {selectedCommercePreset ? (
+                        <div className="flex min-w-0 items-center gap-2">
+                          <img src={selectedCommercePreset.logoUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                          <span className="truncate">{selectedCommercePreset.label}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Mağaza seçin...</span>
+                      )}
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border/50">
+                      {COMMERCE_LINK_PRESETS.map((preset) => (
+                        <SelectItem key={preset.id} value={preset.id} className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <img src={preset.logoUrl} alt="" className="h-[18px] w-[18px] rounded-full object-cover" />
+                            <span>{preset.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className={`space-y-2 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium">{isCommerceLink ? "Mağaza bilgileri" : "Link içeriği"}</p>
+                  <span className="text-[10px] text-muted-foreground">Tek satır görünür</span>
+                </div>
+                <Input
+                  value={String(block.data.title || "")}
+                  onChange={(event) => onChange({ ...block.data, title: event.target.value })}
+                  placeholder={isCommerceLink ? "Mağaza adı" : "Başlık"}
+                  className={`bg-input border-border/60 text-sm ${linkAlign === "center" ? "text-center" : "text-left"}`}
+                />
+                <Input
+                  value={String(block.data.url || "")}
+                  onChange={(event) => onChange({ ...block.data, url: event.target.value })}
+                  placeholder={selectedCommercePreset?.placeholder || "https://..."}
+                  className="bg-input border-border/60 text-sm"
+                />
+              </div>
+
+              <div className={`space-y-2 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
+                <div className="flex items-center gap-3">
+                  {block.data.logoUrl || block.data.logoPreset ? (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border/50 bg-background/80">
+                      <LinkLogo data={block.data} size={28} fallbackColor={selectedCommercePreset?.color || "#FFFFFF"} />
+                    </div>
+                  ) : (
+                    <div className="h-10 w-10 rounded-full border border-dashed border-border/60 flex items-center justify-center">
+                      <Image className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium">{isCommerceLink ? "Mağaza logosu" : "Link logosu"}</p>
+                    {isCommerceLink ? (
+                      <p className="text-[11px] text-muted-foreground">
+                        Hazır e-ticaret seçiminde logo otomatik gelir. Bu blokta ayrıca logo değiştirmeniz gerekmez.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">İsteğe bağlıdır. Her link için 1 görsel, en fazla 5 MB.</p>
+                    )}
+                  </div>
+                </div>
+                {!isCommerceLink && (
+                  <>
+                    <Input
+                      value={String(block.data.logoUrl || "")}
+                      onChange={(event) => onChange({ ...block.data, logoUrl: event.target.value })}
+                      placeholder="Logo URL'si (opsiyonel)"
+                      className="bg-input border-border/60 text-sm"
+                    />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        if (file) {
+                          readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrl: dataUrl }), "Logo");
+                        }
+                        event.currentTarget.value = "";
+                      }}
+                      className="bg-input border-border/60 text-sm"
+                    />
+                    {block.data.logoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const nextData = { ...block.data };
+                          delete nextData.logoUrl;
+                          onChange(nextData);
+                        }}
+                        className="h-8 px-2 text-xs text-muted-foreground"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Logoyu kaldır
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {block.type === "social" && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
+                <div className="mb-2">
+                  <p className="text-xs font-medium">Platform seçimi</p>
+                  <p className="text-[11px] text-muted-foreground">Butona basıp sosyal platformu seçin. Logolar listede görünür.</p>
+                </div>
+                <Select value={String(block.data.platform || "")} onValueChange={(value) => onChange({ ...block.data, platform: value })}>
+                  <SelectTrigger className="h-11 bg-input border-border/70 text-sm">
+                    {selectedSocialPlatform ? (
+                      <div className="flex min-w-0 items-center gap-2">
+                        <SocialIcon platform={selectedSocialPlatform.id} size={18} color={selectedSocialPlatform.color} />
+                        <span className="truncate">{selectedSocialPlatform.label}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Platform seçin...</span>
+                    )}
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border/50">
+                    {SOCIAL_PLATFORMS.map(platform => (
+                      <SelectItem key={platform.id} value={platform.id} className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <SocialIcon platform={platform.id} size={18} color={platform.color} />
+                          <span>{platform.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
+                <p className="text-xs font-medium">Bağlantı</p>
+                <Input
+                  value={String(block.data.url || "")}
+                  onChange={(event) => onChange({ ...block.data, url: event.target.value })}
+                  placeholder={SOCIAL_PLATFORMS.find(platform => platform.id === block.data.platform)?.placeholder || "https://..."}
+                  className="bg-input border-border/60 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">Sosyal hesaplar bio sayfasının alt kısmında yuvarlak ikon olarak gösterilir. Ayrı başlık girmeniz gerekmez.</p>
+              </div>
+            </div>
+          )}
+
+          {block.type === "profile_image" && (
+            <div className="space-y-2">
+              {block.data.url && (
+                <div className="flex justify-center">
+                  <img src={String(block.data.url)} alt="Profil resmi" className="h-20 w-20 rounded-full object-cover border border-border/50" />
+                </div>
+              )}
+              <Input
+                value={String(block.data.url || "")}
+                onChange={(event) => onChange({ ...block.data, url: event.target.value })}
+                placeholder="Profil resmi URL'si"
+                className="bg-input border-border/50 text-sm"
+              />
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  handleImageUpload(event.currentTarget.files?.[0]);
+                  event.currentTarget.value = "";
+                }}
+                className="bg-input border-border/50 text-sm"
+              />
+              <p className="text-xs text-muted-foreground">JPG, PNG veya WebP yükleyebilirsiniz. Üst sınır 5 MB.</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PreviewCardContents({
+  blocks,
+  page,
+  accentColor,
+  theme,
+  mode,
+}: {
+  blocks: LocalBlock[];
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
+  accentColor: string;
+  theme: string;
+  mode: "phone" | "desktop";
+}) {
+  const themeConfig = getBioTheme(theme);
+  const accent = safeAccentColor(accentColor, themeConfig.accent);
+  const enabledBlocks = blocks.filter(block => block.isEnabled);
+  const contentBlocks = enabledBlocks.filter(block => block.type !== "social" && block.type !== "profile_image");
+  const socialBlocks = enabledBlocks.filter(block => block.type === "social" && block.data.url);
+  const buttonStyle = getBioButtonStyle(themeConfig, accent);
+  const isDesktop = mode === "desktop";
+  const iconSize = isDesktop ? 30 : 24;
+
+  const getSocialColor = (block: LocalBlock) => {
+    const platform = SOCIAL_PLATFORMS.find(item => item.id === block.data.platform);
+    return platform?.color || accent;
+  };
+
+  const renderBlock = (block: LocalBlock) => {
+    if (block.type === "divider") {
+      return <hr key={block.tempId} className={isDesktop ? "my-3 border-t" : "my-2 border-t"} style={{ borderColor: themeConfig.cardBorder }} />;
+    }
+
+    if (block.type === "heading") {
+      return (
+        <p key={block.tempId} className={`py-1 text-center font-bold ${isDesktop ? "text-lg" : "text-sm"}`} style={{ color: themeConfig.text }}>
+          {String(block.data.text || "Başlık")}
+        </p>
+      );
+    }
+
+    if (block.type === "description" || block.type === "text") {
+      return (
+        <p key={block.tempId} className={`px-2 text-center leading-relaxed ${isDesktop ? "text-sm" : "text-xs"}`} style={{ color: themeConfig.mutedText }}>
+          {String(block.data.text || "Metin...")}
+        </p>
+      );
+    }
+
+    if (block.type === "link") {
+      const align = getLinkAlignment(block.data);
+      const logo = <LinkLogo data={block.data} size={iconSize} fallbackColor={accent} />;
+
+      return (
+        <div
+          key={block.tempId}
+          className={`overflow-hidden rounded-xl border transition-all ${isDesktop ? "px-5 py-4.5" : "px-4 py-3.5"}`}
+          style={buttonStyle}
+        >
+          <div className={`grid min-h-[2rem] items-center gap-3 ${isDesktop ? "grid-cols-[2rem_minmax(0,1fr)_1rem]" : "grid-cols-[1.75rem_minmax(0,1fr)_0.75rem]"}`}>
+            <div className={`flex items-center justify-center rounded-full ${isDesktop ? "h-8 w-8" : "h-7 w-7"}`}>
+              {logo || <span className={`${isDesktop ? "h-8 w-8" : "h-7 w-7"} rounded-full`} />}
+            </div>
+            <span className={`block min-w-0 truncate font-medium ${isDesktop ? "text-[15px]" : "text-xs"} ${align === "left" ? "text-left" : "text-center"}`}>
+              {String(block.data.title || "Link")}
+            </span>
+            <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3 w-3"} opacity-55`} />
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div className={`rounded-[1.95rem] border flex flex-col ${isDesktop ? "min-h-[620px] p-7" : "min-h-[520px] p-4.5"}`} style={getBioCardStyle(themeConfig)}>
+      <div className={`flex flex-col items-center ${isDesktop ? "mb-6 mt-1 gap-3" : "mb-4 mt-1 gap-2"}`}>
+        {page.profileImageUrl ? (
+          <img
+            src={page.profileImageUrl}
+            alt="Profil resmi"
+            className={`${isDesktop ? "h-20 w-20" : "h-16 w-16"} rounded-full object-cover border-2`}
+            style={{ borderColor: `${accent}66` }}
+          />
+        ) : (
+          <div
+            className={`${isDesktop ? "h-20 w-20" : "h-16 w-16"} rounded-full border-2 flex items-center justify-center`}
+            style={{ borderColor: `${accent}66`, background: `${accent}22` }}
+          >
+            <UserRound className={isDesktop ? "h-8 w-8" : "h-7 w-7"} style={{ color: accent }} />
+          </div>
+        )}
+        <div className="text-center">
+          <p className={`font-semibold ${isDesktop ? "text-xl" : "text-sm"}`} style={{ color: themeConfig.text }}>
+            {page.title || "@kullanici"}
+          </p>
+          {page.description && (
+            <p className={`${isDesktop ? "mt-1 text-sm" : "mt-0.5 text-xs"}`} style={{ color: themeConfig.mutedText }}>
+              {page.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className={`flex-1 ${isDesktop ? "space-y-3.5" : "space-y-2"}`}>
+        {contentBlocks.map(renderBlock)}
+      </div>
+
+      {socialBlocks.length > 0 && (
+        <div className={`flex flex-wrap justify-center ${isDesktop ? "mt-7 gap-3" : "mt-5 gap-2.5"}`}>
+          {socialBlocks.map(block => (
+            <div
+              key={block.tempId}
+              className={`${isDesktop ? "h-11 w-11" : "h-10 w-10"} rounded-full border flex items-center justify-center`}
+              style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder }}
+            >
+              <SocialIcon platform={String(block.data.platform || "")} size={isDesktop ? 20 : 18} color={getSocialColor(block)} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PhonePreview({
+  blocks,
+  page,
+  accentColor,
+  theme,
+}: {
+  blocks: LocalBlock[];
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
+  accentColor: string;
+  theme: string;
+}) {
+  const themeConfig = getBioTheme(theme);
+  const accent = safeAccentColor(accentColor, themeConfig.accent);
+
+  return (
+    <div className="sticky top-20">
+      <div className="flex flex-col items-center">
+        <div className="relative w-[308px] overflow-hidden rounded-[2.65rem] border-2 border-black/70 bg-black shadow-2xl">
+          <div className="absolute top-0 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
+          <div className="min-h-[596px] overflow-y-auto px-3.5 pt-7 pb-4.5" style={getBioBackgroundStyle(themeConfig, accent)}>
+            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="phone" />
+          </div>
+        </div>
+        <div className="mt-3 text-center">
+          <p className="text-xs text-muted-foreground">Canlı Önizleme</p>
+          <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center justify-center gap-1 text-xs text-primary hover:underline">
+            <Globe className="h-3 w-3" />
+            llinktr.com/p/{page.slug}
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DesktopPreview({
+  blocks,
+  page,
+  accentColor,
+  theme,
+}: {
+  blocks: LocalBlock[];
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
+  accentColor: string;
+  theme: string;
+}) {
+  const themeConfig = getBioTheme(theme);
+  const accent = safeAccentColor(accentColor, themeConfig.accent);
+
+  return (
+    <div className="sticky top-20">
+      <div className="overflow-hidden rounded-[1.8rem] border border-border/60 bg-card shadow-2xl">
+        <div className="flex items-center gap-3 border-b border-border/50 bg-background/75 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          </div>
+          <div className="hidden flex-1 justify-center md:flex">
+            <div className="w-full max-w-[18rem] rounded-full border border-border/50 bg-background/80 px-4 py-1.5 text-center text-[11px] text-muted-foreground">
+              https://llinktr.com/p/{page.slug}
+            </div>
+          </div>
+          <div className="rounded-full border border-border/50 px-3 py-1 text-[11px] text-muted-foreground">
+            Masaüstü görünümü
+          </div>
+        </div>
+        <div className="min-h-[760px] p-5 md:p-7" style={getBioBackgroundStyle(themeConfig, accent)}>
+          <div className="mx-auto max-w-[40rem]">
+            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="desktop" />
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 text-center">
+        <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center justify-center gap-1 text-xs text-primary hover:underline">
+          <Globe className="h-3 w-3" />
+          llinktr.com/p/{page.slug}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+export default function BioBuilder() {
+  const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
+  const { isAuthenticated, loading } = useAuth();
+  const utils = trpc.useUtils();
+  const pageId = parseInt(id || "0");
+
+  const { data: pageData, isLoading } = trpc.bioPages.getById.useQuery(
+    { id: pageId },
+    { enabled: isAuthenticated && !!pageId },
+  );
+
+  const [blocks, setBlocks] = useState<LocalBlock[]>([]);
+  const [pageTitle, setPageTitle] = useState("");
+  const [pageDesc, setPageDesc] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [theme, setTheme] = useState("dark_grid");
+  const [accentColor, setAccentColor] = useState("#22D3EE");
+  const [isPublished, setIsPublished] = useState(true);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isAddBlockDialogOpen, setIsAddBlockDialogOpen] = useState(false);
+  const [showCommercePresets, setShowCommercePresets] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"phone" | "desktop">("phone");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const themeConfig = getBioTheme(theme);
+  const activeAccentColor = safeAccentColor(accentColor, themeConfig.accent);
+  const hasProfileImageBlock = blocks.some(block => block.type === "profile_image");
+  const totalClicks = blocks.reduce((sum, block) => sum + (block.clicks ?? 0), 0);
+  const activeBlockCount = blocks.filter(block => block.isEnabled).length;
+  const hiddenBlockCount = blocks.length - activeBlockCount;
+  const actionBlockCount = blocks.filter(block => block.type === "link" || block.type === "social").length;
+
+  useEffect(() => {
+    if (!pageData) return;
+
+    const selectedTheme = getBioTheme(pageData.page.theme);
+    setPageTitle(pageData.page.title);
+    setPageDesc(pageData.page.description || "");
+    setProfileImageUrl(pageData.page.profileImageUrl || "");
+    setTheme(selectedTheme.id);
+    setAccentColor(pageData.page.accentColor || selectedTheme.accent);
+    setIsPublished(pageData.page.isPublished);
+    setBlocks(normalizeBlocks(pageData.blocks.filter(block => block.type !== "profile_image").map(block => ({
+      id: block.id,
+      tempId: generateTempId(),
+      type: block.type as BlockType,
+      sortOrder: block.sortOrder,
+      isEnabled: block.isEnabled,
+      clicks: block.clicks ?? 0,
+      data: (block.data as Record<string, string | boolean | number>) || {},
+    }))));
+    setIsDirty(false);
+  }, [pageData]);
+
+  const updatePageMutation = trpc.bioPages.update.useMutation({
+    onSuccess: () => utils.bioPages.getById.invalidate({ id: pageId }),
+    onError: (error) => toast.error(error.message),
+  });
+
+  const bulkSaveMutation = trpc.bioBlocks.bulkSave.useMutation({
+    onSuccess: (savedBlocks) => {
+      setBlocks(normalizeBlocks(savedBlocks.map(block => ({
+        id: block.id,
+        tempId: generateTempId(),
+        type: block.type as BlockType,
+        sortOrder: block.sortOrder,
+        isEnabled: block.isEnabled,
+        clicks: block.clicks ?? 0,
+        data: (block.data as Record<string, string | boolean | number>) || {},
+      }))));
+      setIsDirty(false);
+      toast.success("Kaydedildi");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const handleSave = async () => {
+    await updatePageMutation.mutateAsync({
+      id: pageId,
+      title: pageTitle,
+      description: pageDesc || null,
+      profileImageUrl: profileImageUrl || null,
+      theme,
+      accentColor: activeAccentColor,
+      isPublished,
+    });
+
+    await bulkSaveMutation.mutateAsync({
+      pageId,
+      blocks: blocks.map((block, index) => ({
+        id: block.id,
+        type: block.type,
+        sortOrder: index,
+        isEnabled: block.isEnabled,
+        data: block.data,
+      })),
+    });
+  };
+
+  const addBlock = (type: BlockType) => {
+    if (blocks.length >= 50) {
+      toast.error("Maksimum 50 öğe sınırına ulaştınız");
+      return;
+    }
+
+    if (type === "profile_image" && hasProfileImageBlock) {
+      toast.error("Profil resmi bloğu yalnızca bir kez eklenebilir");
+      return;
+    }
+
+    const newBlock: LocalBlock = {
+      tempId: generateTempId(),
+      type,
+      sortOrder: blocks.length,
+      isEnabled: true,
+      clicks: 0,
+      data:
+        type === "profile_image" && profileImageUrl
+          ? { url: profileImageUrl }
+          : type === "link"
+            ? { align: "center" }
+            : {},
+    };
+    setBlocks(prev => normalizeBlocks([...prev, newBlock]));
+    setIsDirty(true);
+    setIsAddBlockDialogOpen(false);
+    setShowCommercePresets(false);
+  };
+
+  const addCommerceBlock = (presetId: string) => {
+    if (blocks.length >= 50) {
+      toast.error("Maksimum 50 öğe sınırına ulaştınız");
+      return;
+    }
+
+    const preset = getCommercePreset(presetId);
+    if (!preset) return;
+
+    const newBlock: LocalBlock = {
+      tempId: generateTempId(),
+      type: "link",
+      sortOrder: blocks.length,
+      isEnabled: true,
+      clicks: 0,
+      data: {
+        title: preset.label,
+        url: "",
+        logoPreset: preset.id,
+        align: "center",
+      },
+    };
+
+    setBlocks(prev => normalizeBlocks([...prev, newBlock]));
+    setIsDirty(true);
+    setIsAddBlockDialogOpen(false);
+    setShowCommercePresets(false);
+  };
+
+  const updateBlock = (tempId: string, data: Record<string, string | boolean | number>) => {
+    setBlocks(prev => prev.map(block => block.tempId === tempId ? { ...block, data } : block));
+    setIsDirty(true);
+  };
+
+  const deleteBlock = (tempId: string) => {
+    setBlocks(prev => normalizeBlocks(prev.filter(block => block.tempId !== tempId)));
+    setIsDirty(true);
+  };
+
+  const toggleBlock = (tempId: string) => {
+    setBlocks(prev => prev.map(block => block.tempId === tempId ? { ...block, isEnabled: !block.isEnabled } : block));
+    setIsDirty(true);
+  };
+
+  const moveBlock = (tempId: string, direction: "up" | "down") => {
+    setBlocks(prev => {
+      const index = prev.findIndex(block => block.tempId === tempId);
+      if (index === -1) return prev;
+      const nextIndex = direction === "up" ? index - 1 : index + 1;
+      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return normalizeBlocks(next);
+    });
+    setIsDirty(true);
+  };
+
+  const moveBlockTo = (sourceId: string, targetId: string) => {
+    if (sourceId === targetId) return;
+    setBlocks(prev => {
+      const sourceIndex = prev.findIndex(block => block.tempId === sourceId);
+      const targetIndex = prev.findIndex(block => block.tempId === targetId);
+      if (sourceIndex === -1 || targetIndex === -1) return prev;
+      const next = [...prev];
+      const [source] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, source);
+      return normalizeBlocks(next);
+    });
+    setIsDirty(true);
+  };
+
+  const handleThemeChange = (themeId: string) => {
+    const selectedTheme = getBioTheme(themeId);
+    setTheme(selectedTheme.id);
+    setAccentColor(selectedTheme.accent);
+    setIsDirty(true);
+  };
+
+  const handleProfileImageUpload = (file?: File) => {
+    if (!file) return;
+    readImageFile(file, (dataUrl) => {
+      setProfileImageUrl(dataUrl);
+      setIsDirty(true);
+    }, "Profil resmi");
+  };
+
+  if (loading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    window.location.href = getLoginUrl();
+    return null;
+  }
+
+  if (!pageData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Sayfa bulunamadı</p>
+          <Button onClick={() => navigate("/dashboard")}>Panele Dön</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const isSaving = updatePageMutation.isPending || bulkSaveMutation.isPending;
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
+
+      <div className="border-b border-border/50 bg-card/50 sticky top-16 z-40 backdrop-blur-xl">
+        <div className="container py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-muted-foreground flex-shrink-0">
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Panel
+            </Button>
+            <div className="h-4 w-px bg-border" />
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold truncate">{pageData.page.title}</h1>
+              <p className="text-xs text-muted-foreground truncate">llinktr.com/p/{pageData.page.slug}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="hidden sm:flex items-center gap-2 rounded-lg border border-border/50 px-3 py-1.5">
+              <span className="text-xs text-muted-foreground">{isPublished ? "Yayında" : "Durduruldu"}</span>
+              <Switch checked={isPublished} onCheckedChange={(checked) => { setIsPublished(checked); setIsDirty(true); }} className="scale-75" />
+            </div>
+            <a href={`/p/${pageData.page.slug}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="border-border/50 text-xs">
+                <Eye className="h-3.5 w-3.5 mr-1.5" />
+                Görüntüle
+              </Button>
+            </a>
+            <Button size="sm" onClick={handleSave} disabled={isSaving || !isDirty} className="bg-primary text-primary-foreground text-xs shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]">
+              {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Save className="h-3.5 w-3.5 mr-1.5" />Kaydet</>}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 container py-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_560px]">
+          <div className="space-y-6">
+            <div className="p-5 rounded-2xl bg-card border border-border/50">
+              <h2 className="font-semibold mb-4">Profil Detayları</h2>
+              <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sayfa Başlığı</Label>
+                    <Input value={pageTitle} onChange={(event) => { setPageTitle(event.target.value); setIsDirty(true); }} placeholder="Sayfa başlığı..." className="bg-input border-border/50" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Kısa Açıklama</Label>
+                    <Input value={pageDesc} onChange={(event) => { setPageDesc(event.target.value); setIsDirty(true); }} placeholder="Dijital içerik üreticisi" className="bg-input border-border/50" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Profil Resmi URL</Label>
+                    <Input value={profileImageUrl} onChange={(event) => { setProfileImageUrl(event.target.value); setIsDirty(true); }} placeholder="https://..." className="bg-input border-border/50" />
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex flex-col items-center justify-center gap-3">
+                  {profileImageUrl ? (
+                    <img src={profileImageUrl} alt="Profil resmi" className="h-20 w-20 rounded-full object-cover border border-border/50" />
+                  ) : (
+                    <div className="h-20 w-20 rounded-full border border-border/50 bg-muted flex items-center justify-center">
+                      <UserRound className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      handleProfileImageUpload(event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                    className="bg-input border-border/50 text-xs"
+                  />
+                  {profileImageUrl && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setProfileImageUrl(""); setIsDirty(true); }} className="h-8 text-xs text-muted-foreground">
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Kaldır
+                    </Button>
+                  )}
+                  <p className="text-[11px] text-muted-foreground text-center">İsteğe bağlıdır. En fazla 5 MB görsel kabul edilir.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl bg-card border border-border/50 flex items-center gap-4">
+                <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Eye className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{pageData.page.views ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Sayfa görüntülenmesi</p>
+                </div>
+              </div>
+              <div className="p-5 rounded-2xl bg-card border border-border/50 flex items-center gap-4">
+                <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <MousePointerClick className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalClicks}</p>
+                  <p className="text-xs text-muted-foreground">Toplam link tıklaması</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-card border border-border/50">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold">Tema ve Renk</h2>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tema</Label>
+                  <Select value={themeConfig.id} onValueChange={handleThemeChange}>
+                    <SelectTrigger className="bg-input border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border/50">
+                      {BIO_THEMES.map(item => (
+                        <SelectItem key={item.id} value={item.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="h-4 w-7 rounded-md border border-border/50" style={getBioThemePreviewStyle(item, item.accent)} />
+                            {item.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  {BIO_THEMES.map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleThemeChange(item.id)}
+                      className={`rounded-xl border p-2 text-left transition-all ${themeConfig.id === item.id ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/40"}`}
+                    >
+                      <div className="mb-2 h-20 rounded-lg border border-white/20" style={getBioThemePreviewStyle(item, item.accent)} />
+                      <div className="mb-2 flex items-center gap-1.5">
+                        {themeHasImageBackground(item) && (
+                          <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            Foto
+                          </span>
+                        )}
+                        {"backgroundAnimation" in item && item.backgroundAnimation && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                            Hareketli
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-medium leading-tight">{item.label}</p>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Vurgu Rengi</Label>
+                  <div className="flex items-center gap-3">
+                    <input type="color" value={activeAccentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} className="h-10 w-16 rounded-lg cursor-pointer border border-border/50 bg-transparent" />
+                    <Input value={accentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} placeholder="#22D3EE" className="bg-input border-border/50 font-mono text-sm" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Renk değişince sağdaki canlı önizleme anında güncellenir.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-card border border-border/50">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="font-semibold">İçerik Blokları</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Blokları sürükleyip sıralayın, tek tek açıp düzenleyin ve bio sayfanızı daha rahat kurun.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 self-start">
+                  <div className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${blocks.length >= 50 ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${blocks.length >= 50 ? "bg-destructive" : "bg-primary"}`} />
+                    {blocks.length}/50 öğe
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setShowCommercePresets(false);
+                      setIsAddBlockDialogOpen(true);
+                    }}
+                    disabled={blocks.length >= 50}
+                    className="bg-primary text-primary-foreground"
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Yeni blok
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Aktif</p>
+                  <p className="mt-1 text-2xl font-semibold">{activeBlockCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Yayında görünen bloklar</p>
+                </div>
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Gizli</p>
+                  <p className="mt-1 text-2xl font-semibold">{hiddenBlockCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Şimdilik kapalı duran bloklar</p>
+                </div>
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Aksiyon</p>
+                  <p className="mt-1 text-2xl font-semibold">{actionBlockCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Link ve sosyal hesap öğeleri</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                {blocks.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-border/50 bg-muted/20 px-4 py-8 text-center">
+                    <p className="text-sm font-medium">Henüz blok eklenmedi</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Sağ üstteki butondan veya aşağıdaki hızlı ekleme alanından başlayabilirsiniz.
+                    </p>
+                  </div>
+                )}
+                {blocks.map((block, index) => (
+                  <div
+                    key={block.tempId}
+                    draggable
+                    onDragStart={() => setDraggingId(block.tempId)}
+                    onDragEnd={() => setDraggingId(null)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => {
+                      if (draggingId) moveBlockTo(draggingId, block.tempId);
+                      setDraggingId(null);
+                    }}
+                    className={`transition-opacity ${draggingId === block.tempId ? "opacity-50" : "opacity-100"}`}
+                  >
+                    <BlockEditor
+                      block={block}
+                      onChange={(data) => updateBlock(block.tempId, data)}
+                      onDelete={() => deleteBlock(block.tempId)}
+                      onToggle={() => toggleBlock(block.tempId)}
+                      onMoveUp={() => moveBlock(block.tempId, "up")}
+                      onMoveDown={() => moveBlock(block.tempId, "down")}
+                      canMoveUp={index > 0}
+                      canMoveDown={index < blocks.length - 1}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                <div className="mb-3 flex items-start gap-2 text-xs text-muted-foreground">
+                  <GripVertical className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                  <p>Blokları oklarla veya sürükle-bırak ile sıralayabilir, anahtarla gizleyebilir ve sağdaki okla detay düzenlemeyi açıp kapatabilirsiniz.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  {BLOCK_TYPES.map(blockType => {
+                    const Icon = BLOCK_ICONS[blockType.type as BlockType];
+                    return (
+                      <button
+                        key={blockType.type}
+                        type="button"
+                        onClick={() => addBlock(blockType.type as BlockType)}
+                        disabled={blocks.length >= 50}
+                        className="flex items-center gap-2.5 rounded-lg border border-border/40 bg-background/60 p-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium">{blockType.label}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{blockType.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 border-t border-border/30 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowCommercePresets(prev => !prev)}
+                    disabled={blocks.length >= 50}
+                    className="flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/60 px-3 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Store className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Hazır e-ticaret siteleri</span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showCommercePresets ? "rotate-180" : ""}`} />
+                  </button>
+                  {showCommercePresets && (
+                    <div className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-3">
+                      {COMMERCE_LINK_PRESETS.map((preset) => (
+                        <button
+                          key={`quick-commerce-${preset.id}`}
+                          type="button"
+                          onClick={() => addCommerceBlock(preset.id)}
+                          disabled={blocks.length >= 50}
+                          className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 p-2 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background/90">
+                            <img src={preset.logoUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                          </div>
+                          <span className="truncate text-xs font-medium">{preset.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Button variant="outline" className="mt-3 w-full border-dashed border-border/50 text-muted-foreground" disabled>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Profil resmi yalnızca üstteki Profil Detayları bölümünden eklenir.
+                </Button>
+              </div>
+
+              {isAddBlockDialogOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
+                  <div className="w-full max-w-2xl rounded-[1.5rem] border border-border/50 bg-card p-5 shadow-2xl">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-semibold">Yeni blok ekle</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Bio sayfanıza eklemek istediğiniz öğeyi seçin. Eklenen blok anında listenize gelir.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCommercePresets(false);
+                          setIsAddBlockDialogOpen(false);
+                        }}
+                        className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label="Pencereyi kapat"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {BLOCK_TYPES.map(blockType => {
+                        const Icon = BLOCK_ICONS[blockType.type as BlockType];
+                        return (
+                          <button
+                            key={`dialog-${blockType.type}`}
+                            type="button"
+                            onClick={() => addBlock(blockType.type as BlockType)}
+                            disabled={blocks.length >= 50}
+                            className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/60 p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                          >
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                              <Icon className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">{blockType.label}</p>
+                              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{blockType.desc}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-5 border-t border-border/30 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowCommercePresets(prev => !prev)}
+                        className="flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Store className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">Hazır e-ticaret siteleri</span>
+                        </span>
+                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showCommercePresets ? "rotate-180" : ""}`} />
+                      </button>
+                      {showCommercePresets && (
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {COMMERCE_LINK_PRESETS.map((preset) => (
+                            <button
+                              key={`commerce-dialog-${preset.id}`}
+                              type="button"
+                              onClick={() => addCommerceBlock(preset.id)}
+                              disabled={blocks.length >= 50}
+                              className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background/90">
+                                <img src={preset.logoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{preset.label}</p>
+                                <p className="truncate text-[11px] text-muted-foreground">{preset.placeholder.replace("https://", "")}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden lg:block">
+            <div className="sticky top-20 space-y-4">
+              <div className="rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">Önizleme modu</p>
+                    <p className="text-xs text-muted-foreground">Sayfayı telefonda veya masaüstünde kontrol edin.</p>
+                  </div>
+                </div>
+                <ToggleGroup
+                  type="single"
+                  value={previewMode}
+                  onValueChange={(value) => {
+                    if (value === "phone" || value === "desktop") {
+                      setPreviewMode(value);
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <ToggleGroupItem value="phone" className="gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    Telefon
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="desktop" className="gap-2">
+                    <Monitor className="h-4 w-4" />
+                    Masaüstü
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              {previewMode === "desktop" ? (
+                <DesktopPreview
+                  blocks={blocks}
+                  page={{
+                    title: pageTitle || pageData.page.title,
+                    description: pageDesc || pageData.page.description,
+                    profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
+                    slug: pageData.page.slug,
+                  }}
+                  accentColor={activeAccentColor}
+                  theme={themeConfig.id}
+                />
+              ) : (
+                <PhonePreview
+                  blocks={blocks}
+                  page={{
+                    title: pageTitle || pageData.page.title,
+                    description: pageDesc || pageData.page.description,
+                    profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
+                    slug: pageData.page.slug,
+                  }}
+                  accentColor={activeAccentColor}
+                  theme={themeConfig.id}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+

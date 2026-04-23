@@ -1,0 +1,1 @@
+ALTER TABLE `bio_blocks` MODIFY COLUMN `data` json;
