@@ -1,4 +1,5 @@
-import { createApp } from "../server/_core/index";
+// @ts-expect-error generated at build time
+import { createApp } from "../dist/api-app.js";
 
 const app = createApp();
 

@@ -16,7 +16,7 @@ export default function Contact() {
             </div>
             <div>
               <p className="font-semibold">E-posta</p>
-              <p className="text-sm text-muted-foreground mt-1">destek@llinktr.com</p>
+              <p className="text-sm text-muted-foreground mt-1">destekmerkezi31@gmail.com</p>
             </div>
           </div>
           <div className="p-6 rounded-2xl bg-card border border-border/50 flex flex-col items-center text-center gap-3">

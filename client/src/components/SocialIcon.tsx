@@ -1,4 +1,4 @@
-// SVG social media icons for 15 platforms
+// SVG social and commerce icons
 interface SocialIconProps {
   platform: string;
   size?: number;
@@ -163,6 +163,26 @@ export function SocialIcon({ platform, size = 20, color }: SocialIconProps) {
           <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
         </svg>
       );
+    case "threads":
+      return <CircleBadge size={s} bg={color || "#111827"} label="@" />;
+    case "behance":
+      return <RoundedBadge size={s} bg={color || "#1769FF"} label="Be" />;
+    case "dribbble":
+      return <CircleBadge size={s} bg={color || "#EA4C89"} label="D" />;
+    case "medium":
+      return <RoundedBadge size={s} bg={color || "#16A34A"} label="M" />;
+    case "kick":
+      return <RoundedBadge size={s} bg={color || "#53FC18"} fg="#111827" label="K" />;
+    case "mastodon":
+      return <RoundedBadge size={s} bg={color || "#6364FF"} label="M" />;
+    case "line":
+      return <RoundedBadge size={s} bg={color || "#06C755"} label="L" />;
+    case "wechat":
+      return <RoundedBadge size={s} bg={color || "#09B83E"} label="W" />;
+    case "vk":
+      return <RoundedBadge size={s} bg={color || "#0077FF"} label="VK" fontSize={7} />;
+    case "tumblr":
+      return <RoundedBadge size={s} bg={color || "#36465D"} label="t" />;
     case "trendyol":
       return <CircleBadge size={s} bg="#F27A1A" label="T" />;
     case "hepsiburada":
@@ -228,6 +248,26 @@ export function SocialIcon({ platform, size = 20, color }: SocialIconProps) {
       return <RoundedBadge size={s} bg="#DC2626" label="i" fontSize={12} />;
     case "pttavm":
       return <RoundedBadge size={s} bg="#F59E0B" label="ptt" fg="#111827" fontSize={6.6} />;
+    case "lcw_store":
+      return <RoundedBadge size={s} bg="#0E7490" label="LCW" fontSize={6.5} />;
+    case "boyner_store":
+      return <RoundedBadge size={s} bg="#B45309" label="BY" />;
+    case "modanisa_store":
+      return <RoundedBadge size={s} bg="#DB2777" label="Md" />;
+    case "teknosa_store":
+      return <RoundedBadge size={s} bg="#1D4ED8" label="Tk" />;
+    case "karaca_store":
+      return <RoundedBadge size={s} bg="#6D28D9" label="Kr" />;
+    case "defacto_store":
+      return <RoundedBadge size={s} bg="#2563EB" label="Df" />;
+    case "flo_store":
+      return <RoundedBadge size={s} bg="#EA580C" label="F" />;
+    case "watsons_store":
+      return <RoundedBadge size={s} bg="#DB2777" label="W" />;
+    case "tozlu_store":
+      return <RoundedBadge size={s} bg="#7C3AED" label="Tz" />;
+    case "morhipo_store":
+      return <RoundedBadge size={s} bg="#9333EA" label="Mh" />;
     default:
       return (
         <svg width={s} height={s} viewBox="0 0 24 24" fill={color || "#888"}>

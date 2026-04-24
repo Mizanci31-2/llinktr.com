@@ -9,13 +9,14 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
-    options ?? {};
+  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } = options ?? {};
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: false,
+    retry: 2,
     refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    placeholderData: (previous) => previous,
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -28,50 +29,64 @@ export function useAuth(options?: UseAuthOptions) {
     try {
       await logoutMutation.mutateAsync();
     } catch (error: unknown) {
-      if (
-        error instanceof TRPCClientError &&
-        error.data?.code === "UNAUTHORIZED"
-      ) {
+      if (error instanceof TRPCClientError && error.data?.code === "UNAUTHORIZED") {
         return;
       }
       throw error;
     } finally {
       utils.auth.me.setData(undefined, null);
+      try {
+        localStorage.removeItem("manus-runtime-user-info");
+      } catch {
+        // no-op
+      }
       await utils.auth.me.invalidate();
     }
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
+    let cachedUser: unknown = null;
+    if (typeof window !== "undefined") {
+      try {
+        cachedUser = JSON.parse(localStorage.getItem("manus-runtime-user-info") || "null");
+      } catch {
+        cachedUser = null;
+      }
+    }
+
+    const fallbackUser = meQuery.isError && cachedUser && typeof cachedUser === "object" ? cachedUser : null;
+    const effectiveUser = (meQuery.data ?? fallbackUser) as typeof meQuery.data | null;
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("manus-runtime-user-info", JSON.stringify(effectiveUser ?? null));
+      } catch {
+        // no-op
+      }
+    }
+
     return {
-      user: meQuery.data ?? null,
+      user: effectiveUser,
       loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
-      isAuthenticated: Boolean(meQuery.data),
+      isAuthenticated: Boolean(effectiveUser),
     };
-  }, [
-    meQuery.data,
-    meQuery.error,
-    meQuery.isLoading,
-    logoutMutation.error,
-    logoutMutation.isPending,
-  ]);
+  }, [meQuery.data, meQuery.error, meQuery.isError, meQuery.isLoading, logoutMutation.error, logoutMutation.isPending]);
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
+    if (meQuery.isError) return;
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    window.location.href = redirectPath;
   }, [
     redirectOnUnauthenticated,
     redirectPath,
     logoutMutation.isPending,
+    meQuery.isError,
     meQuery.isLoading,
     state.user,
   ]);

@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from "react";
+import { useRef } from "react";
 import type { ElementType } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -256,6 +257,7 @@ function BlockEditor({
   onToggle,
   onMoveUp,
   onMoveDown,
+  onTouchDragStart,
   canMoveUp,
   canMoveDown,
 }: {
@@ -265,6 +267,7 @@ function BlockEditor({
   onToggle: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onTouchDragStart: () => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
 }) {
@@ -298,7 +301,17 @@ function BlockEditor({
   return (
     <div className={`overflow-hidden rounded-[1.15rem] border shadow-sm transition-all ${block.isEnabled ? tone.frame : "border-border/40 bg-card/55 opacity-60"}`}>
       <div className={`flex items-center gap-3 px-3.5 py-3.5 ${block.isEnabled ? tone.header : "border-b border-border/30 bg-background/45"}`}>
-        <GripVertical className="h-4 w-4 cursor-grab flex-shrink-0 text-muted-foreground" />
+        <button
+          type="button"
+          onTouchStart={(event) => {
+            event.preventDefault();
+            onTouchDragStart();
+          }}
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          aria-label="Sürükleyerek sırala"
+        >
+          <GripVertical className="h-4 w-4 cursor-grab flex-shrink-0" />
+        </button>
         <div className="flex min-w-0 flex-1 items-start gap-2">
           <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 ${block.isEnabled ? tone.badge : "bg-muted/40 text-muted-foreground"}`}>
             <Icon className={`h-4 w-4 ${block.isEnabled ? tone.icon : "text-muted-foreground"}`} />
@@ -805,7 +818,6 @@ export default function BioBuilder() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { isAuthenticated, loading } = useAuth();
-  const utils = trpc.useUtils();
   const pageId = parseInt(id || "0");
 
   const { data: pageData, isLoading } = trpc.bioPages.getById.useQuery(
@@ -817,14 +829,19 @@ export default function BioBuilder() {
   const [pageTitle, setPageTitle] = useState("");
   const [pageDesc, setPageDesc] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [faviconUrl, setFaviconUrl] = useState("");
   const [theme, setTheme] = useState("dark_grid");
   const [accentColor, setAccentColor] = useState("#22D3EE");
   const [isPublished, setIsPublished] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [isAddBlockDialogOpen, setIsAddBlockDialogOpen] = useState(false);
+  const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
   const [showCommercePresets, setShowCommercePresets] = useState(false);
   const [previewMode, setPreviewMode] = useState<"phone" | "desktop">("phone");
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [touchDragActive, setTouchDragActive] = useState(false);
+  const lastHydratedAtRef = useRef<Date | null>(null);
+  const hydratedPageIdRef = useRef<number | null>(null);
 
   const themeConfig = getBioTheme(theme);
   const activeAccentColor = safeAccentColor(accentColor, themeConfig.accent);
@@ -835,12 +852,47 @@ export default function BioBuilder() {
   const actionBlockCount = blocks.filter(block => block.type === "link" || block.type === "social").length;
 
   useEffect(() => {
+    const defaultIcon = "/favicon.svg";
+    const nextIcon = faviconUrl || defaultIcon;
+    const iconEl = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+    const shortcutEl = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement | null;
+    const previousIcon = iconEl?.href;
+    const previousShortcut = shortcutEl?.href;
+
+    const ensureLink = (rel: "icon" | "shortcut icon") => {
+      let link = document.querySelector(`link[rel='${rel}']`) as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = rel;
+        document.head.appendChild(link);
+      }
+      link.href = nextIcon;
+      return link;
+    };
+
+    ensureLink("icon");
+    ensureLink("shortcut icon");
+
+    return () => {
+      const icon = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+      const shortcut = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement | null;
+      if (icon) icon.href = previousIcon || defaultIcon;
+      if (shortcut) shortcut.href = previousShortcut || defaultIcon;
+    };
+  }, [faviconUrl]);
+
+  useEffect(() => {
     if (!pageData) return;
+    if (hydratedPageIdRef.current === pageId) return;
+    if (isDirty) {
+      return;
+    }
 
     const selectedTheme = getBioTheme(pageData.page.theme);
     setPageTitle(pageData.page.title);
     setPageDesc(pageData.page.description || "");
     setProfileImageUrl(pageData.page.profileImageUrl || "");
+    setFaviconUrl(pageData.page.faviconUrl || "");
     setTheme(selectedTheme.id);
     setAccentColor(pageData.page.accentColor || selectedTheme.accent);
     setIsPublished(pageData.page.isPublished);
@@ -853,11 +905,13 @@ export default function BioBuilder() {
       clicks: block.clicks ?? 0,
       data: (block.data as Record<string, string | boolean | number>) || {},
     }))));
+    lastHydratedAtRef.current = pageData.page.updatedAt;
+    hydratedPageIdRef.current = pageId;
     setIsDirty(false);
-  }, [pageData]);
+  }, [pageData, isDirty, pageId]);
 
   const updatePageMutation = trpc.bioPages.update.useMutation({
-    onSuccess: () => utils.bioPages.getById.invalidate({ id: pageId }),
+    onSuccess: () => undefined,
     onError: (error) => toast.error(error.message),
   });
 
@@ -879,26 +933,31 @@ export default function BioBuilder() {
   });
 
   const handleSave = async () => {
-    await updatePageMutation.mutateAsync({
-      id: pageId,
-      title: pageTitle,
-      description: pageDesc || null,
-      profileImageUrl: profileImageUrl || null,
-      theme,
-      accentColor: activeAccentColor,
-      isPublished,
-    });
+    try {
+      await updatePageMutation.mutateAsync({
+        id: pageId,
+        title: pageTitle,
+        description: pageDesc || null,
+        profileImageUrl: profileImageUrl || null,
+        faviconUrl: faviconUrl || null,
+        theme,
+        accentColor: activeAccentColor,
+        isPublished,
+      });
 
-    await bulkSaveMutation.mutateAsync({
-      pageId,
-      blocks: blocks.map((block, index) => ({
-        id: block.id,
-        type: block.type,
-        sortOrder: index,
-        isEnabled: block.isEnabled,
-        data: block.data,
-      })),
-    });
+      await bulkSaveMutation.mutateAsync({
+        pageId,
+        blocks: blocks.map((block, index) => ({
+          id: block.id,
+          type: block.type,
+          sortOrder: index,
+          isEnabled: block.isEnabled,
+          data: block.data,
+        })),
+      });
+    } catch {
+      toast.error("Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.");
+    }
   };
 
   const addBlock = (type: BlockType) => {
@@ -1002,6 +1061,38 @@ export default function BioBuilder() {
     setIsDirty(true);
   };
 
+  useEffect(() => {
+    if (!touchDragActive || !draggingId) return;
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      event.preventDefault();
+
+      const target = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+      const targetContainer = target?.closest("[data-block-id]") as HTMLElement | null;
+      const targetId = targetContainer?.dataset.blockId;
+      if (!targetId || targetId === draggingId) return;
+
+      moveBlockTo(draggingId, targetId);
+    };
+
+    const handleTouchEnd = () => {
+      setTouchDragActive(false);
+      setDraggingId(null);
+    };
+
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
+    window.addEventListener("touchcancel", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("touchcancel", handleTouchEnd);
+    };
+  }, [draggingId, touchDragActive]);
+
   const handleThemeChange = (themeId: string) => {
     const selectedTheme = getBioTheme(themeId);
     setTheme(selectedTheme.id);
@@ -1015,6 +1106,14 @@ export default function BioBuilder() {
       setProfileImageUrl(dataUrl);
       setIsDirty(true);
     }, "Profil resmi");
+  };
+
+  const handleFaviconUpload = (file?: File) => {
+    if (!file) return;
+    readImageFile(file, (dataUrl) => {
+      setFaviconUrl(dataUrl);
+      setIsDirty(true);
+    }, "Sekme logosu");
   };
 
   if (loading || isLoading) {
@@ -1079,9 +1178,9 @@ export default function BioBuilder() {
       </div>
 
       <div className="flex-1 container py-6">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_560px]">
+        <div className="grid grid-cols-1 gap-8 lg:items-start lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_560px]">
           <div className="space-y-6">
-            <div className="p-5 rounded-2xl bg-card border border-border/50">
+            <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
               <h2 className="font-semibold mb-4">Profil Detayları</h2>
               <div className="grid gap-4 md:grid-cols-[1fr_180px]">
                 <div className="space-y-4">
@@ -1095,10 +1194,16 @@ export default function BioBuilder() {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Profil Resmi URL</Label>
-                    <Input value={profileImageUrl} onChange={(event) => { setProfileImageUrl(event.target.value); setIsDirty(true); }} placeholder="https://..." className="bg-input border-border/50" />
+                    <Input value={profileImageUrl} onChange={(event) => { setProfileImageUrl(event.target.value); setIsDirty(true); }} placeholder="https://..." className="bg-input border-border/60" />
+                    <p className="text-[11px] text-muted-foreground">Isterseniz URL ile, isterseniz asagidan dosya yukleyerek kendi gorselinizi ekleyebilirsiniz.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sekme Logosu URL (Favicon)</Label>
+                    <Input value={faviconUrl} onChange={(event) => { setFaviconUrl(event.target.value); setIsDirty(true); }} placeholder="https://..." className="bg-input border-border/60" />
+                    <p className="text-[11px] text-muted-foreground">Bos birakirsaniz varsayilan llinktr logosu kullanilir.</p>
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex flex-col items-center justify-center gap-3">
+                <div className="panel-strong rounded-xl border border-border/70 bg-muted/20 p-4 flex flex-col items-center justify-center gap-3">
                   {profileImageUrl ? (
                     <img src={profileImageUrl} alt="Profil resmi" className="h-20 w-20 rounded-full object-cover border border-border/50" />
                   ) : (
@@ -1115,10 +1220,29 @@ export default function BioBuilder() {
                     }}
                     className="bg-input border-border/50 text-xs"
                   />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      handleFaviconUpload(event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                    className="bg-input border-border/50 text-xs"
+                  />
+                  <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/50 px-3 py-2">
+                    <img src={faviconUrl || "/favicon.svg"} alt="Sekme logosu" className="h-5 w-5 rounded-sm object-cover" />
+                    <span className="text-[11px] text-muted-foreground">{faviconUrl ? "Ozel sekme logosu secili" : "Varsayilan logo aktif"}</span>
+                  </div>
                   {profileImageUrl && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => { setProfileImageUrl(""); setIsDirty(true); }} className="h-8 text-xs text-muted-foreground">
                       <X className="h-3.5 w-3.5 mr-1" />
                       Kaldır
+                    </Button>
+                  )}
+                  {faviconUrl && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setFaviconUrl(""); setIsDirty(true); }} className="h-8 text-xs text-muted-foreground">
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Sekme logosunu sifirla
                     </Button>
                   )}
                   <p className="text-[11px] text-muted-foreground text-center">İsteğe bağlıdır. En fazla 5 MB görsel kabul edilir.</p>
@@ -1154,48 +1278,21 @@ export default function BioBuilder() {
               </div>
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tema</Label>
-                  <Select value={themeConfig.id} onValueChange={handleThemeChange}>
-                    <SelectTrigger className="bg-input border-border/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border/50">
-                      {BIO_THEMES.map(item => (
-                        <SelectItem key={item.id} value={item.id}>
-                          <div className="flex items-center gap-2">
-                            <div className="h-4 w-7 rounded-md border border-border/50" style={getBioThemePreviewStyle(item, item.accent)} />
-                            {item.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                  {BIO_THEMES.map(item => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleThemeChange(item.id)}
-                      className={`rounded-xl border p-2 text-left transition-all ${themeConfig.id === item.id ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/40"}`}
-                    >
-                      <div className="mb-2 h-20 rounded-lg border border-white/20" style={getBioThemePreviewStyle(item, item.accent)} />
-                      <div className="mb-2 flex items-center gap-1.5">
-                        {themeHasImageBackground(item) && (
-                          <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                            Foto
-                          </span>
-                        )}
-                        {"backgroundAnimation" in item && item.backgroundAnimation && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                            Hareketli
-                          </span>
-                        )}
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tema Seçimi</Label>
+                  <button
+                    type="button"
+                    onClick={() => setIsThemeDialogOpen(true)}
+                    className="w-full rounded-xl border border-border/50 bg-input px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-16 rounded-lg border border-border/50" style={getBioThemePreviewStyle(themeConfig, activeAccentColor)} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-tight">Temaları Aç</p>
+                        <p className="truncate text-xs text-muted-foreground">Seçili tema: {themeConfig.label}</p>
                       </div>
-                      <p className="text-xs font-medium leading-tight">{item.label}</p>
-                    </button>
-                  ))}
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
                 </div>
 
                 <div className="space-y-1.5">
@@ -1237,6 +1334,20 @@ export default function BioBuilder() {
                   </Button>
                 </div>
               </div>
+              <div className="mb-4 border-y border-border/40 py-2.5">
+                <div className="mx-auto w-full max-w-sm">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={isSaving || !isDirty}
+                    className="w-full bg-primary text-primary-foreground shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]"
+                  >
+                    {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+                    Kayıt Et
+                  </Button>
+                </div>
+              </div>
 
               <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
@@ -1268,13 +1379,18 @@ export default function BioBuilder() {
                 {blocks.map((block, index) => (
                   <div
                     key={block.tempId}
+                    data-block-id={block.tempId}
                     draggable
-                    onDragStart={() => setDraggingId(block.tempId)}
+                    onDragStart={() => {
+                      setTouchDragActive(false);
+                      setDraggingId(block.tempId);
+                    }}
                     onDragEnd={() => setDraggingId(null)}
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={() => {
                       if (draggingId) moveBlockTo(draggingId, block.tempId);
                       setDraggingId(null);
+                      setTouchDragActive(false);
                     }}
                     className={`transition-opacity ${draggingId === block.tempId ? "opacity-50" : "opacity-100"}`}
                   >
@@ -1285,6 +1401,10 @@ export default function BioBuilder() {
                       onToggle={() => toggleBlock(block.tempId)}
                       onMoveUp={() => moveBlock(block.tempId, "up")}
                       onMoveDown={() => moveBlock(block.tempId, "down")}
+                      onTouchDragStart={() => {
+                        setDraggingId(block.tempId);
+                        setTouchDragActive(true);
+                      }}
                       canMoveUp={index > 0}
                       canMoveDown={index < blocks.length - 1}
                     />
@@ -1351,9 +1471,9 @@ export default function BioBuilder() {
                     </div>
                   )}
                 </div>
-                <Button variant="outline" className="mt-3 w-full border-dashed border-border/50 text-muted-foreground" disabled>
+                <Button variant="outline" className="mt-3 w-full border-dashed border-border/50 px-3 text-[11px] leading-snug text-muted-foreground whitespace-normal text-center" disabled>
                   <Plus className="h-4 w-4 mr-2" />
-                  Profil resmi yalnızca üstteki Profil Detayları bölümünden eklenir.
+                  Profil resmi üstteki Profil Detayları alanından eklenir.
                 </Button>
               </div>
 
@@ -1441,7 +1561,62 @@ export default function BioBuilder() {
             </div>
           </div>
 
-          <div className="hidden lg:block">
+          <div className="lg:hidden mt-5 space-y-3">
+            <div className="rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur">
+              <div className="mb-2">
+                <p className="text-sm font-medium">Önizleme modu</p>
+                <p className="text-xs text-muted-foreground">Telefon veya masaüstü görünümü arasında geçiş yapın.</p>
+              </div>
+              <ToggleGroup
+                type="single"
+                value={previewMode}
+                onValueChange={(value) => {
+                  if (value === "phone" || value === "desktop") {
+                    setPreviewMode(value);
+                  }
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                <ToggleGroupItem value="phone" className="gap-2">
+                  <Smartphone className="h-4 w-4" />
+                  Telefon
+                </ToggleGroupItem>
+                <ToggleGroupItem value="desktop" className="gap-2">
+                  <Monitor className="h-4 w-4" />
+                  Masaüstü
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
+            {previewMode === "desktop" ? (
+              <DesktopPreview
+                blocks={blocks}
+                page={{
+                  title: pageTitle || pageData.page.title,
+                  description: pageDesc || pageData.page.description,
+                  profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
+                  slug: pageData.page.slug,
+                }}
+                accentColor={activeAccentColor}
+                theme={themeConfig.id}
+              />
+            ) : (
+              <PhonePreview
+                blocks={blocks}
+                page={{
+                  title: pageTitle || pageData.page.title,
+                  description: pageDesc || pageData.page.description,
+                  profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
+                  slug: pageData.page.slug,
+                }}
+                accentColor={activeAccentColor}
+                theme={themeConfig.id}
+              />
+            )}
+          </div>
+
+          <div className="hidden lg:block lg:self-start">
             <div className="sticky top-20 space-y-4">
               <div className="rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur">
                 <div className="mb-2 flex items-center justify-between gap-3">
@@ -1499,6 +1674,58 @@ export default function BioBuilder() {
               )}
             </div>
           </div>
+
+          {isThemeDialogOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
+              <div className="w-full max-w-4xl rounded-[1.5rem] border border-border/50 bg-card p-5 shadow-2xl">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Tema Seçimi</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Tüm temalar tek yerde. Dokunup anında uygulayın.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsThemeDialogOpen(false)}
+                    className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label="Tema penceresini kapat"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
+                    {BIO_THEMES.map(item => (
+                      <button
+                        key={`theme-modal-${item.id}`}
+                        type="button"
+                        onClick={() => {
+                          handleThemeChange(item.id);
+                          setIsThemeDialogOpen(false);
+                        }}
+                        className={`rounded-xl border p-2 text-left transition-all ${themeConfig.id === item.id ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/40"}`}
+                      >
+                        <div className="mb-2 h-20 rounded-lg border border-white/20" style={getBioThemePreviewStyle(item, item.accent)} />
+                        <div className="mb-2 flex items-center gap-1.5">
+                          {themeHasImageBackground(item) && (
+                            <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              Foto
+                            </span>
+                          )}
+                          {"backgroundAnimation" in item && item.backgroundAnimation && (
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                              Hareketli
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-medium leading-tight">{item.label}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,10 +1,11 @@
 {
-  "buildCommand": "pnpm build",
+  "buildCommand": "vite build",
   "installCommand": "pnpm install --frozen-lockfile",
   "outputDirectory": "dist/public",
   "functions": {
     "api/index.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "dist/api-app.js"
     }
   },
   "rewrites": [

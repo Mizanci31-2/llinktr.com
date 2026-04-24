@@ -10,7 +10,7 @@ import {
   getBioTheme,
   safeAccentColor,
 } from "@/lib/constants";
-import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check } from "lucide-react";
+import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle } from "lucide-react";
 import { Link } from "wouter";
 import { SocialIcon } from "@/components/SocialIcon";
 
@@ -35,6 +35,42 @@ export default function PublicBioPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!data?.page) return;
+
+    const defaultIcon = "/favicon.svg";
+    const nextIcon = data.page.faviconUrl || defaultIcon;
+
+    const iconEl = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+    const shortcutEl = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement | null;
+    const prevIcon = iconEl?.href;
+    const prevShortcut = shortcutEl?.href;
+    const prevTitle = document.title;
+
+    const ensureLink = (rel: "icon" | "shortcut icon") => {
+      let link = document.querySelector(`link[rel='${rel}']`) as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = rel;
+        document.head.appendChild(link);
+      }
+      link.href = nextIcon;
+      return link;
+    };
+
+    ensureLink("icon");
+    ensureLink("shortcut icon");
+    document.title = `${data.page.title} | llinktr`;
+
+    return () => {
+      const icon = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+      const shortcut = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement | null;
+      if (icon) icon.href = prevIcon || defaultIcon;
+      if (shortcut) shortcut.href = prevShortcut || defaultIcon;
+      document.title = prevTitle || "llinktr";
+    };
+  }, [data?.page]);
 
   useEffect(() => {
     if (!shareOpen || !pageUrl) return;
@@ -102,6 +138,23 @@ export default function PublicBioPage() {
         <Globe className="h-12 w-12 text-gray-600 mb-4" />
         <h1 className="text-2xl font-bold mb-2">Sayfa bulunamadı</h1>
         <p className="text-gray-400 mb-6 text-center">Bu bio sayfası mevcut değil, kaldırılmış veya yayını durdurulmuş.</p>
+        <Link href="/">
+          <button className="px-4 py-2 rounded-lg bg-[#22D3EE] text-black text-sm font-semibold">
+            Ana Sayfaya Dön
+          </button>
+        </Link>
+      </div>
+    );
+  }
+
+  const isPaused = Boolean((data as { isPaused?: boolean })?.isPaused || !data.page?.isPublished);
+
+  if (isPaused) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#05070d] text-white px-4">
+        <PauseCircle className="h-12 w-12 text-amber-300 mb-4" />
+        <h1 className="text-2xl font-bold mb-2">Bu sayfa şuanlık tatil modunda</h1>
+        <p className="text-gray-300 mb-6 text-center">Sayfa sahibi yayını geçici olarak durdurdu. Lütfen daha sonra tekrar ziyaret edin.</p>
         <Link href="/">
           <button className="px-4 py-2 rounded-lg bg-[#22D3EE] text-black text-sm font-semibold">
             Ana Sayfaya Dön

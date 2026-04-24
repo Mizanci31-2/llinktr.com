@@ -1,4 +1,4 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+﻿import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
@@ -23,6 +23,9 @@ const localAccounts = new Map<string, LocalAccount>([
   [HIDDEN_DEMO_ACCOUNT.email.toLowerCase(), HIDDEN_DEMO_ACCOUNT],
 ]);
 
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? "";
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY ?? "";
+
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
   return typeof value === "string" ? value : undefined;
@@ -43,8 +46,93 @@ function normalizeName(value: unknown) {
 }
 
 function createLocalOpenId(email: string) {
-  const safe = email.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "local-user";
+  const safe =
+    email
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase() || "local-user";
   return `local-${safe}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isSupabaseConfigured() {
+  return SUPABASE_URL.length > 0 && SUPABASE_ANON_KEY.length > 0;
+}
+
+function isRateLimitMessage(rawMessage: string) {
+  const msg = rawMessage.toLowerCase();
+  return (
+    msg.includes("too many") ||
+    msg.includes("rate") ||
+    msg.includes("429") ||
+    msg.includes("security purposes") ||
+    msg.includes("request this after")
+  );
+}
+
+function isAlreadyRegisteredMessage(rawMessage: string) {
+  const msg = rawMessage.toLowerCase();
+  return (
+    msg.includes("already registered") ||
+    msg.includes("already been registered") ||
+    msg.includes("already exists") ||
+    msg.includes("user already exists") ||
+    msg.includes("bu e-posta zaten")
+  );
+}
+
+async function supabaseSignUp(email: string, password: string, name: string) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      email,
+      password,
+      data: { name },
+    }),
+  });
+  const data = await response.json().catch(() => null);
+  return { ok: response.ok, data };
+}
+
+async function supabaseSignIn(email: string, password: string) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  });
+  const data = await response.json().catch(() => null);
+  return { ok: response.ok, data };
+}
+
+async function isSupabaseGoogleEnabled() {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/settings`, {
+    method: "GET",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  const data = await response.json().catch(() => null);
+  return Boolean(response.ok && data?.external?.google);
+}
+
+async function getSupabaseAuthStatus() {
+  if (!isSupabaseConfigured()) {
+    return { configured: false, googleEnabled: false };
+  }
+  const googleEnabled = await isSupabaseGoogleEnabled();
+  return { configured: true, googleEnabled };
 }
 
 async function seedLocalDemoContent(openId: string) {
@@ -55,7 +143,9 @@ async function seedLocalDemoContent(openId: string) {
 
   const pages = await db.getBioPagesByUserId(user.id);
   if (pages.length === 0) {
-    const slug = await db.checkSlugAvailable("mizanci31") ? "mizanci31" : "mizanci31-2026";
+    const slugBase = "mizanci31";
+    const slug = (await db.checkSlugAvailable(slugBase)) ? slugBase : `${slugBase}-2026`;
+
     await db.createBioPage({
       userId: user.id,
       slug,
@@ -106,34 +196,26 @@ async function seedLocalDemoContent(openId: string) {
       });
     }
   }
-
-  const shortLinks = await db.getShortLinksByUserId(user.id);
-  if (shortLinks.length === 0) {
-    const fallbackCode = await db.getShortLinkByCode("mizanci31")
-      ? await db.getShortLinkByCode("mizanci31-shopify")
-        ? `mizanci-${Date.now()}`
-        : "mizanci31-shopify"
-      : "mizanci31";
-    await db.createShortLink({
-      userId: user.id,
-      originalUrl: "https://www.shopify.com",
-      code: fallbackCode,
-      clicks: 0,
-    });
-  }
 }
 
 async function signInLocalAccount(req: Request, res: Response, account: LocalAccount, loginMethod: "local" | "google" = "local") {
   const existingUser = await db.getUserByOpenId(account.openId);
   const effectiveName = existingUser?.name?.trim() || account.name;
   const effectiveEmail = existingUser?.email?.trim() || account.email;
+  const effectiveLoginMethod = loginMethod === "local" ? `local_password:${account.password}` : loginMethod;
 
   await db.upsertUser({
     openId: account.openId,
     name: effectiveName,
     email: effectiveEmail,
-    loginMethod,
+    loginMethod: effectiveLoginMethod,
     lastSignedIn: new Date(),
+  });
+
+  localAccounts.set(account.email.toLowerCase(), {
+    ...account,
+    name: effectiveName,
+    email: effectiveEmail,
   });
 
   await seedLocalDemoContent(account.openId);
@@ -147,31 +229,105 @@ async function signInLocalAccount(req: Request, res: Response, account: LocalAcc
   res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 }
 
-export function registerOAuthRoutes(app: Express) {
-  app.get("/api/dev-login", async (req: Request, res: Response) => {
-    if (ENV.oAuthServerUrl && ENV.appId) {
-      res.redirect(302, "/giris");
-      return;
-    }
+async function getStoredAccountByEmail(email: string) {
+  const cached = localAccounts.get(email);
+  if (cached) return cached;
 
+  const user = await db.getUserByEmail(email);
+  if (!user) return null;
+
+  const raw = user.loginMethod ?? "";
+  if (!raw.startsWith("local_password:")) return null;
+  const password = raw.slice("local_password:".length);
+
+  const restored: LocalAccount = {
+    openId: user.openId,
+    name: user.name || email.split("@")[0] || "Kullanici",
+    email,
+    password,
+  };
+  localAccounts.set(email, restored);
+  return restored;
+}
+
+async function registerOrSignInLocalFallback(
+  req: Request,
+  res: Response,
+  payload: { name: string; email: string; password: string; redirect: string },
+) {
+  const existing = await getStoredAccountByEmail(payload.email);
+  if (existing) {
+    res.status(409).json({
+      success: false,
+      message: "Bu e-posta zaten kayitli. Lutfen Giris Yap sekmesini kullanin.",
+    });
+    return;
+  }
+
+  const account: LocalAccount = {
+    openId: createLocalOpenId(payload.email),
+    name: payload.name,
+    email: payload.email,
+    password: payload.password,
+  };
+  await signInLocalAccount(req, res, account);
+  res.json({ success: true, redirect: payload.redirect, source: "local_fallback_new" });
+}
+
+export function registerOAuthRoutes(app: Express) {
+  app.get("/api/dev-auth-status", async (_req: Request, res: Response) => {
+    try {
+      const status = await getSupabaseAuthStatus();
+      res.json({ success: true, ...status });
+    } catch (error) {
+      console.error("[AuthStatus] Failed", error);
+      res.status(500).json({ success: false, message: "Auth durumu alinamadi" });
+    }
+  });
+
+  app.get("/api/dev-login", async (req: Request, res: Response) => {
     const redirect = normalizeRedirectPath(getQueryParam(req, "redirect"));
     await signInLocalAccount(req, res, HIDDEN_DEMO_ACCOUNT);
     res.redirect(302, redirect);
   });
 
   app.post("/api/dev-login", async (req: Request, res: Response) => {
-    if (ENV.oAuthServerUrl && ENV.appId) {
-      res.status(400).json({ success: false, message: "Yerel giriş bu ortamda kapalı" });
-      return;
-    }
-
     const email = normalizeEmail(req.body?.email);
     const password = typeof req.body?.password === "string" ? req.body.password : "";
     const redirect = normalizeRedirectPath(typeof req.body?.redirect === "string" ? req.body.redirect : undefined);
-    const account = localAccounts.get(email);
 
+    if (!email || !password) {
+      res.status(400).json({ success: false, message: "E-posta ve sifre gerekli" });
+      return;
+    }
+
+    if (isSupabaseConfigured()) {
+      const { ok, data } = await supabaseSignIn(email, password);
+      if (ok && data?.user?.id && data?.user?.email) {
+        await signInLocalAccount(req, res, {
+          openId: `supabase-${data.user.id}`,
+          name: data.user.user_metadata?.name || data.user.email.split("@")[0] || "Kullanici",
+          email: data.user.email,
+          password,
+        });
+        res.json({ success: true, redirect });
+        return;
+      }
+
+      const account = await getStoredAccountByEmail(email);
+      if (account && account.password === password) {
+        await signInLocalAccount(req, res, account);
+        res.json({ success: true, redirect, source: "local_fallback_login" });
+        return;
+      }
+
+      res.status(401).json({ success: false, message: "E-posta veya sifre hatali" });
+      return;
+    }
+
+    const account = await getStoredAccountByEmail(email);
     if (!account || account.password !== password) {
-      res.status(401).json({ success: false, message: "E-posta veya şifre hatalı" });
+      res.status(401).json({ success: false, message: "E-posta veya sifre hatali" });
       return;
     }
 
@@ -180,23 +336,79 @@ export function registerOAuthRoutes(app: Express) {
   });
 
   app.post("/api/dev-register", async (req: Request, res: Response) => {
-    if (ENV.oAuthServerUrl && ENV.appId) {
-      res.status(400).json({ success: false, message: "Yerel kayıt bu ortamda kapalı" });
-      return;
-    }
-
     const name = normalizeName(req.body?.name);
     const email = normalizeEmail(req.body?.email);
     const password = typeof req.body?.password === "string" ? req.body.password.trim() : "";
     const redirect = normalizeRedirectPath(typeof req.body?.redirect === "string" ? req.body.redirect : undefined);
 
     if (!name || !email || !password) {
-      res.status(400).json({ success: false, message: "Lütfen tüm alanları doldurun" });
+      res.status(400).json({ success: false, message: "Lutfen tum alanlari doldurun" });
       return;
     }
 
-    if (localAccounts.has(email)) {
-      res.status(409).json({ success: false, message: "Bu e-posta ile kayıtlı bir hesap var" });
+    if (password.length < 6) {
+      res.status(400).json({ success: false, message: "Sifre en az 6 karakter olmali" });
+      return;
+    }
+
+    if (isSupabaseConfigured()) {
+      const { ok, data } = await supabaseSignUp(email, password, name);
+      if (!ok || !data?.user?.id || !data?.user?.email) {
+        const rawMessage = typeof data?.msg === "string"
+          ? data.msg
+          : typeof data?.error_description === "string"
+            ? data.error_description
+            : typeof data?.error === "string"
+              ? data.error
+              : "Kayit islemi basarisiz";
+
+        if (isRateLimitMessage(rawMessage)) {
+          await registerOrSignInLocalFallback(req, res, { name, email, password, redirect });
+          return;
+        }
+
+        if (isAlreadyRegisteredMessage(rawMessage)) {
+          res.status(409).json({
+            success: false,
+            message: "Bu e-posta zaten kayitli. Lutfen Giris Yap sekmesini kullanin.",
+          });
+          return;
+        }
+        const msgLower = rawMessage.toLowerCase();
+
+        if (
+          msgLower.includes("too many") ||
+          msgLower.includes("rate") ||
+          msgLower.includes("429") ||
+          msgLower.includes("security purposes") ||
+          msgLower.includes("request this after")
+        ) {
+          await registerOrSignInLocalFallback(req, res, { name, email, password, redirect });
+          return;
+        }
+
+        const message = typeof data?.msg === "string"
+          ? data.msg
+          : typeof data?.error_description === "string"
+            ? data.error_description
+            : "Kayit islemi basarisiz";
+        res.status(400).json({ success: false, message });
+        return;
+      }
+
+      await signInLocalAccount(req, res, {
+        openId: `supabase-${data.user.id}`,
+        name: data.user.user_metadata?.name || name,
+        email: data.user.email,
+        password,
+      });
+      res.json({ success: true, redirect });
+      return;
+    }
+
+    const existing = await db.getUserByEmail(email);
+    if (existing) {
+      res.status(409).json({ success: false, message: "Bu e-posta zaten kayitli" });
       return;
     }
 
@@ -207,30 +419,87 @@ export function registerOAuthRoutes(app: Express) {
       password,
     };
 
-    localAccounts.set(email, account);
     await signInLocalAccount(req, res, account);
     res.json({ success: true, redirect });
   });
 
   app.post("/api/dev-social-auth", async (req: Request, res: Response) => {
-    if (ENV.oAuthServerUrl && ENV.appId) {
-      res.status(400).json({ success: false, message: "Sosyal giriş bu ortamda OAuth üzerinden çalışır" });
-      return;
-    }
-
     const provider = typeof req.body?.provider === "string" ? req.body.provider : "google";
     const redirect = normalizeRedirectPath(typeof req.body?.redirect === "string" ? req.body.redirect : undefined);
+    const mode = req.body?.mode === "signUp" ? "signUp" : "signIn";
 
     if (provider !== "google") {
-      res.status(400).json({ success: false, message: "Bu sağlayıcı şu anda desteklenmiyor" });
+      res.status(400).json({ success: false, message: "Bu saglayici su anda desteklenmiyor" });
       return;
     }
 
-    res.status(400).json({
-      success: false,
-      message: "Google ile giriş yerelde otomatik açılmaz. Canlıda OAuth bağladığınızda aktif olur.",
-      redirect,
-    });
+    if (ENV.oAuthServerUrl && ENV.appId) {
+      const forwardedProto = req.headers["x-forwarded-proto"];
+      const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
+      const forwardedHost = req.headers["x-forwarded-host"];
+      const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host");
+      const redirectUri = `${proto}://${host}/api/oauth/callback`;
+      const state = Buffer.from(redirectUri).toString("base64");
+      const oauthUrl = new URL("/app-auth", ENV.oAuthServerUrl);
+      oauthUrl.searchParams.set("appId", ENV.appId);
+      oauthUrl.searchParams.set("redirectUri", redirectUri);
+      oauthUrl.searchParams.set("state", state);
+      oauthUrl.searchParams.set("type", mode);
+      oauthUrl.searchParams.set("provider", "google");
+      res.json({ success: true, redirect: oauthUrl.toString() });
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      res.status(400).json({
+        success: false,
+        message: "Google girisi icin Supabase ayarlari eksik",
+      });
+      return;
+    }
+
+    const googleEnabled = await isSupabaseGoogleEnabled();
+    if (!googleEnabled) {
+      res.status(400).json({
+        success: false,
+        message: "Google girisi aktif degil. Supabase panelinde Authentication > Providers > Google acilmali.",
+      });
+      return;
+    }
+
+    const forwardedProto = req.headers["x-forwarded-proto"];
+    const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
+    const forwardedHost = req.headers["x-forwarded-host"];
+    const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host");
+    const redirectTo = `${proto}://${host}/giris?social=google&next=${encodeURIComponent(redirect)}`;
+    const oauthUrl = new URL("/auth/v1/authorize", SUPABASE_URL);
+    oauthUrl.searchParams.set("provider", "google");
+    oauthUrl.searchParams.set("redirect_to", redirectTo);
+    oauthUrl.searchParams.set("scopes", "email profile");
+
+    res.json({ success: true, redirect: oauthUrl.toString() });
+  });
+
+  app.post("/api/dev-social-complete", async (req: Request, res: Response) => {
+    const email = normalizeEmail(req.body?.email);
+    const name = normalizeName(req.body?.name) || "Kullanici";
+    const providerUserId = typeof req.body?.providerUserId === "string" ? req.body.providerUserId : "";
+    const redirect = normalizeRedirectPath(typeof req.body?.redirect === "string" ? req.body.redirect : undefined);
+
+    if (!email || !providerUserId) {
+      res.status(400).json({ success: false, message: "Google bilgileri eksik" });
+      return;
+    }
+
+    const account: LocalAccount = {
+      openId: `google-${providerUserId}`,
+      name,
+      email,
+      password: "",
+    };
+
+    await signInLocalAccount(req, res, account, "google");
+    res.json({ success: true, redirect });
   });
 
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
@@ -273,3 +542,4 @@ export function registerOAuthRoutes(app: Express) {
     }
   });
 }
+

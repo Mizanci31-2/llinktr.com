@@ -153,57 +153,62 @@ export default function Dashboard() {
 
       <div className="flex-1 container py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
+        <div className="mb-8 rounded-2xl border border-border/70 bg-card/70 px-4 py-4 panel-strong sm:px-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
             <h1 className="text-3xl font-bold">Panel</h1>
             <p className="text-muted-foreground mt-1">Hoş geldin, {user?.name || "kullanıcı"}</p>
             <p className="text-xs text-muted-foreground mt-2">{pageCount}/{MAX_BIO_PAGES} sayfa kullanılıyor</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDisplayName(user?.name ?? "");
-                setProfileOpen(true);
-              }}
-              className="border-border/50"
-            >
-              <UserRound className="h-4 w-4 mr-2" />
-              Kullanıcı Adı
-            </Button>
-            <Button
-              onClick={() => setCreateOpen(true)}
-              disabled={reachedPageLimit}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {reachedPageLimit ? "Limit Doldu" : "Yeni Sayfa"}
-            </Button>
+            <p className="mt-2 inline-flex items-center rounded-full border border-primary/70 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">%100 ücretsiz</p>
+            </div>
+            <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 sm:gap-3">
+              <Button
+                onClick={() => setCreateOpen(true)}
+                disabled={reachedPageLimit}
+                className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)] sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {reachedPageLimit ? "Limit Doldu" : "Yeni Sayfa"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDisplayName(user?.name ?? "");
+                  setProfileOpen(true);
+                }}
+                className="h-10 w-full border-border/60 sm:w-auto"
+              >
+                <UserRound className="h-4 w-4 mr-2" />
+                Kullanıcı Adı
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Quick Tools */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <Link href="/shortener">
-            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-all cursor-pointer flex items-center gap-4 group">
+            <div className="panel-strong group flex cursor-pointer items-center gap-4 rounded-xl border border-border/70 bg-card p-4 transition-all hover:border-primary/40">
               <div className="h-10 w-10 rounded-lg bg-blue-400/10 flex items-center justify-center">
                 <Link2 className="h-5 w-5 text-blue-400" />
               </div>
               <div>
                 <p className="font-semibold text-sm">Link Kısaltıcı</p>
                 <p className="text-xs text-muted-foreground">Uzun URL'leri kısalt</p>
+                <p className="text-[11px] text-primary font-medium mt-1">%100 ücretsiz</p>
               </div>
               <ExternalLink className="h-4 w-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </Link>
           <Link href="/qr">
-            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-all cursor-pointer flex items-center gap-4 group">
+            <div className="panel-strong group flex cursor-pointer items-center gap-4 rounded-xl border border-border/70 bg-card p-4 transition-all hover:border-primary/40">
               <div className="h-10 w-10 rounded-lg bg-purple-400/10 flex items-center justify-center">
                 <QrCode className="h-5 w-5 text-purple-400" />
               </div>
               <div>
                 <p className="font-semibold text-sm">QR Oluşturucu</p>
                 <p className="text-xs text-muted-foreground">QR kod oluştur ve indir</p>
+                <p className="text-[11px] text-primary font-medium mt-1">%100 ücretsiz</p>
               </div>
               <ExternalLink className="h-4 w-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
@@ -218,7 +223,7 @@ export default function Dashboard() {
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : !pages || pages.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl border border-dashed border-border/50">
+            <div className="panel-strong rounded-2xl border border-dashed border-border/70 py-16 text-center">
               <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Henüz bio sayfanız yok</h3>
               <p className="text-muted-foreground text-sm mb-6">İlk bio sayfanızı oluşturun ve linklerinizi paylaşmaya başlayın.</p>
@@ -234,7 +239,7 @@ export default function Dashboard() {
                 const accent = safeAccentColor(page.accentColor, theme.accent);
 
                 return (
-                <div key={page.id} className="group p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/30 transition-all">
+                <div key={page.id} className="panel-strong group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-primary/40">
                   {/* Page header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">

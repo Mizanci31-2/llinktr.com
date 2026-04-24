@@ -1,65 +1,66 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Zap, Link2, QrCode, Palette } from "lucide-react";
+import { Link2, Palette, QrCode, Zap } from "lucide-react";
 
 export default function About() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
-      <div className="flex-1 container py-12 max-w-3xl">
-        <div className="text-center mb-12">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-4">
+      <div className="container max-w-3xl flex-1 py-12">
+        <div className="mb-12 text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
             <Zap className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold mb-3">llinktr Hakkında</h1>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Dijital varlığınızı tek bir noktadan yönetmenizi sağlayan modern bir link yönetim platformu.
+          <h1 className="mb-3 text-3xl font-bold">llinktr Hakkinda</h1>
+          <p className="mx-auto max-w-xl text-lg text-muted-foreground">
+            Dijital varliginizi tek bir panelde yonetmenizi saglayan modern bio link platformu.
           </p>
         </div>
 
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-card border border-border/50">
-            <h2 className="text-xl font-semibold mb-3">Misyonumuz</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              llinktr, içerik üreticilerinin, girişimcilerin ve markaların dijital varlıklarını en etkili şekilde yönetmelerine yardımcı olmak için tasarlandı. Bio link, link kısaltma ve QR kod araçlarını tek bir platformda bir araya getirerek dijital pazarlama süreçlerinizi basitleştiriyoruz.
+          <section className="rounded-2xl border border-border/50 bg-card p-6">
+            <h2 className="mb-3 text-xl font-semibold">Misyonumuz</h2>
+            <p className="leading-relaxed text-muted-foreground">
+              llinktr ile bio link, link kisaltma ve QR kod hizmetlerini tek bir yerden yonetebilir,
+              profilinizi hizli sekilde yayina alabilirsiniz.
             </p>
-          </div>
+          </section>
 
-          <div className="grid grid-cols-2 gap-4">
+          <section className="grid grid-cols-2 gap-4">
             {[
-              { icon: Zap, title: "Bio Link Düzenleyici", desc: "Özelleştirilebilir bio sayfaları", color: "text-primary", bg: "bg-primary/10" },
-              { icon: Link2, title: "Link Kısaltıcı", desc: "Akılda kalıcı kısa linkler", color: "text-blue-400", bg: "bg-blue-400/10" },
-              { icon: QrCode, title: "QR Oluşturucu", desc: "Yüksek kaliteli QR kodlar", color: "text-purple-400", bg: "bg-purple-400/10" },
-              { icon: Palette, title: "Özel Temalar", desc: "10 hazır tema seçeneği", color: "text-pink-400", bg: "bg-pink-400/10" },
-            ].map((item, i) => (
-              <div key={i} className="p-5 rounded-xl bg-card border border-border/50">
-                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-lg ${item.bg} mb-3`}>
+              { icon: Zap, title: "Bio Link", desc: "Profilinize ozel bio sayfasi", color: "text-primary", bg: "bg-primary/10" },
+              { icon: Link2, title: "Link Kisaltici", desc: "Uzun URLleri hizla kisaltin", color: "text-blue-400", bg: "bg-blue-400/10" },
+              { icon: QrCode, title: "QR Olusturucu", desc: "Linkler icin anlik QR kod", color: "text-violet-400", bg: "bg-violet-400/10" },
+              { icon: Palette, title: "Tema Kutuphanesi", desc: "bir cok hazir tema secenegi", color: "text-pink-400", bg: "bg-pink-400/10" },
+            ].map((item) => (
+              <div key={item.title} className="rounded-xl border border-border/50 bg-card p-5">
+                <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg ${item.bg}`}>
                   <item.icon className={`h-5 w-5 ${item.color}`} />
                 </div>
-                <p className="font-semibold text-sm">{item.title}</p>
-                <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
+                <p className="text-sm font-semibold">{item.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{item.desc}</p>
               </div>
             ))}
-          </div>
+          </section>
 
-          <div className="p-6 rounded-2xl bg-card border border-border/50">
-            <h2 className="text-xl font-semibold mb-3">Neden llinktr?</h2>
-            <ul className="space-y-2 text-muted-foreground">
+          <section className="rounded-2xl border border-border/50 bg-card p-6">
+            <h2 className="mb-3 text-xl font-semibold">Neden llinktr?</h2>
+            <ul className="space-y-2 text-sm text-muted-foreground">
               {[
-                "Tamamen ücretsiz temel özellikler",
-                "Kolay kullanım, teknik bilgi gerektirmez",
-                "Anlık canlı önizleme ile tasarım",
-                "15 sosyal medya platformu desteği",
-                "10 hazır tema ve özel renk seçimi",
-                "Mobil uyumlu, hızlı yüklenen sayfalar",
-              ].map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                "Tamamen ucretsiz hizmet",
+                "Kolay kullanim, teknik bilgi gerektirmez",
+                "Anlik canli onizleme ile hizli duzenleme",
+                "bir cok hazir sosyal medya platformu destegi",
+                "bir cok hazir tema ve ozel renk secimi",
+                "Mobil uyumlu hizli sayfalar",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
                   {item}
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         </div>
       </div>
       <Footer />
