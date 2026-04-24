@@ -246,7 +246,7 @@ export default function Dashboard() {
                       <h3 className="font-semibold truncate">{page.title}</h3>
                       <div className="flex items-center gap-1.5 mt-1">
                         <Globe className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="text-xs text-muted-foreground truncate">llinktr.com/p/{page.slug}</span>
+                        <span className="text-xs text-muted-foreground truncate">llinktr.com/{page.slug}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 ml-2">
@@ -289,7 +289,7 @@ export default function Dashboard() {
                         Düzenle
                       </Button>
                     </Link>
-                    <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer">
+                    <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer">
                       <Button variant="outline" size="sm" className="border-border/50 text-xs">
                         <Eye className="h-3 w-3" />
                       </Button>
@@ -374,7 +374,7 @@ export default function Dashboard() {
               </Label>
               <div className="flex items-center gap-0">
                 <span className="px-3 py-2 bg-muted rounded-l-lg border border-r-0 border-border/50 text-sm text-muted-foreground whitespace-nowrap">
-                  llinktr.com/p/
+                  llinktr.com/
                 </span>
                 <Input
                   id="slug"

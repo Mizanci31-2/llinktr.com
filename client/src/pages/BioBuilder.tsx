@@ -756,9 +756,9 @@ function PhonePreview({
         </div>
         <div className="mt-3 text-center">
           <p className="text-xs text-muted-foreground">Canlı Önizleme</p>
-          <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center justify-center gap-1 text-xs text-primary hover:underline">
+          <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center justify-center gap-1 text-xs text-primary hover:underline">
             <Globe className="h-3 w-3" />
-            llinktr.com/p/{page.slug}
+            llinktr.com/{page.slug}
           </a>
         </div>
       </div>
@@ -791,7 +791,7 @@ function DesktopPreview({
           </div>
           <div className="hidden flex-1 justify-center md:flex">
             <div className="w-full max-w-[18rem] rounded-full border border-border/50 bg-background/80 px-4 py-1.5 text-center text-[11px] text-muted-foreground">
-              https://llinktr.com/p/{page.slug}
+              https://llinktr.com/{page.slug}
             </div>
           </div>
           <div className="rounded-full border border-border/50 px-3 py-1 text-[11px] text-muted-foreground">
@@ -805,9 +805,9 @@ function DesktopPreview({
         </div>
       </div>
       <div className="mt-3 text-center">
-        <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center justify-center gap-1 text-xs text-primary hover:underline">
+        <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center justify-center gap-1 text-xs text-primary hover:underline">
           <Globe className="h-3 w-3" />
-          llinktr.com/p/{page.slug}
+          llinktr.com/{page.slug}
         </a>
       </div>
     </div>
@@ -850,36 +850,6 @@ export default function BioBuilder() {
   const activeBlockCount = blocks.filter(block => block.isEnabled).length;
   const hiddenBlockCount = blocks.length - activeBlockCount;
   const actionBlockCount = blocks.filter(block => block.type === "link" || block.type === "social").length;
-
-  useEffect(() => {
-    const defaultIcon = "/favicon.svg";
-    const nextIcon = faviconUrl || defaultIcon;
-    const iconEl = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
-    const shortcutEl = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement | null;
-    const previousIcon = iconEl?.href;
-    const previousShortcut = shortcutEl?.href;
-
-    const ensureLink = (rel: "icon" | "shortcut icon") => {
-      let link = document.querySelector(`link[rel='${rel}']`) as HTMLLinkElement | null;
-      if (!link) {
-        link = document.createElement("link");
-        link.rel = rel;
-        document.head.appendChild(link);
-      }
-      link.href = nextIcon;
-      return link;
-    };
-
-    ensureLink("icon");
-    ensureLink("shortcut icon");
-
-    return () => {
-      const icon = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
-      const shortcut = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement | null;
-      if (icon) icon.href = previousIcon || defaultIcon;
-      if (shortcut) shortcut.href = previousShortcut || defaultIcon;
-    };
-  }, [faviconUrl]);
 
   useEffect(() => {
     if (!pageData) return;
@@ -1156,7 +1126,7 @@ export default function BioBuilder() {
             <div className="h-4 w-px bg-border" />
             <div className="min-w-0">
               <h1 className="text-sm font-semibold truncate">{pageData.page.title}</h1>
-              <p className="text-xs text-muted-foreground truncate">llinktr.com/p/{pageData.page.slug}</p>
+              <p className="text-xs text-muted-foreground truncate">llinktr.com/{pageData.page.slug}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1164,7 +1134,7 @@ export default function BioBuilder() {
               <span className="text-xs text-muted-foreground">{isPublished ? "Yayında" : "Durduruldu"}</span>
               <Switch checked={isPublished} onCheckedChange={(checked) => { setIsPublished(checked); setIsDirty(true); }} className="scale-75" />
             </div>
-            <a href={`/p/${pageData.page.slug}`} target="_blank" rel="noopener noreferrer">
+            <a href={`/${pageData.page.slug}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="border-border/50 text-xs">
                 <Eye className="h-3.5 w-3.5 mr-1.5" />
                 Görüntüle
@@ -1178,7 +1148,7 @@ export default function BioBuilder() {
       </div>
 
       <div className="flex-1 container py-6">
-        <div className="grid grid-cols-1 gap-8 lg:items-start lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_560px]">
+        <div className="grid grid-cols-1 gap-8 lg:items-start lg:grid-cols-[minmax(0,1fr)_minmax(460px,580px)] xl:grid-cols-[minmax(0,1fr)_minmax(520px,640px)]">
           <div className="space-y-6">
             <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
               <h2 className="font-semibold mb-4">Profil Detayları</h2>
@@ -1617,7 +1587,7 @@ export default function BioBuilder() {
           </div>
 
           <div className="hidden lg:block lg:self-start">
-            <div className="sticky top-20 space-y-4">
+            <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1 space-y-4">
               <div className="rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div>

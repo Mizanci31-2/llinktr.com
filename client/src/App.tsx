@@ -37,9 +37,9 @@ function Router() {
       <Route path="/cookie-policy" component={CookiePolicy} />
       <Route path="/kvkk" component={Kvkk} />
       <Route path="/p/:slug" component={PublicBioPage} />
+      <Route path="/u/:username" component={PublicProfile} />
+      <Route path="/:slug" component={PublicBioPage} />
       <Route path="/404" component={NotFound} />
-      {/* Public profile pages - must be last, catches /:username */}
-      <Route path="/:username" component={PublicProfile} />
       <Route component={NotFound} />
     </Switch>
   );

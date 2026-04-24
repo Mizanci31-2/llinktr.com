@@ -31,7 +31,7 @@ export default function PublicBioPage() {
     { slug: slug || "" },
     { enabled: !!slug },
   );
-  const pageUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/p/${slug}` : "";
+  const pageUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/${slug}` : "";
   const [shareOpen, setShareOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
