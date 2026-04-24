@@ -1266,12 +1266,12 @@ export default function BioBuilder() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Vurgu Rengi</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Arka Plan ve Vurgu Rengi</Label>
                   <div className="flex items-center gap-3">
                     <input type="color" value={activeAccentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} className="h-10 w-16 rounded-lg cursor-pointer border border-border/50 bg-transparent" />
                     <Input value={accentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} placeholder="#22D3EE" className="bg-input border-border/50 font-mono text-sm" />
                   </div>
-                  <p className="text-xs text-muted-foreground">Renk değişince sağdaki canlı önizleme anında güncellenir.</p>
+                  <p className="text-xs text-muted-foreground">Seçtiğiniz renk arka plana ton verir ve buton vurgularını anında günceller.</p>
                 </div>
               </div>
             </div>

@@ -1084,8 +1084,13 @@ export function themeHasImageBackground(theme: BioTheme) {
 }
 
 export function getBioBackgroundStyle(theme: BioTheme, accentColor: string): CSSProperties {
+  const resolvedBg = resolveThemeValue(theme.bg, accentColor);
+  const needsTintLayer = !resolvedBg.includes("{accent}");
+  const tintLayer = `linear-gradient(${hexToRgba(accentColor, theme.backgroundStyle === "color" ? 0.2 : 0.14)}, ${hexToRgba(accentColor, theme.backgroundStyle === "color" ? 0.2 : 0.14)})`;
+
   return {
-    background: resolveThemeValue(theme.bg, accentColor),
+    background: needsTintLayer ? `${tintLayer}, ${resolvedBg}` : resolvedBg,
+    backgroundBlendMode: needsTintLayer ? "soft-light, normal" : undefined,
     backgroundSize: theme.backgroundSize,
     backgroundPosition: theme.backgroundPosition,
     animation: theme.backgroundAnimation,
@@ -1096,9 +1101,14 @@ export function getBioBackgroundStyle(theme: BioTheme, accentColor: string): CSS
 
 export function getBioThemePreviewStyle(theme: BioTheme, accentColor: string): CSSProperties {
   const style = getBioBackgroundStyle(theme, accentColor);
+  const resolvedPreviewBg = resolveThemeValue(theme.previewBg ?? theme.bg, accentColor);
+  const needsTintLayer = !resolvedPreviewBg.includes("{accent}");
+  const tintLayer = `linear-gradient(${hexToRgba(accentColor, theme.backgroundStyle === "color" ? 0.2 : 0.14)}, ${hexToRgba(accentColor, theme.backgroundStyle === "color" ? 0.2 : 0.14)})`;
+
   return {
     ...style,
-    background: resolveThemeValue(theme.previewBg ?? theme.bg, accentColor),
+    background: needsTintLayer ? `${tintLayer}, ${resolvedPreviewBg}` : resolvedPreviewBg,
+    backgroundBlendMode: needsTintLayer ? "soft-light, normal" : undefined,
     backgroundAttachment: undefined,
   };
 }

@@ -124,7 +124,17 @@ async function isSupabaseGoogleEnabled() {
     },
   });
   const data = await response.json().catch(() => null);
-  return Boolean(response.ok && data?.external?.google);
+  if (!response.ok) return false;
+
+  const googleConfig = data?.external?.google;
+  if (googleConfig === true) return true;
+  if (googleConfig === false || googleConfig == null) return false;
+  if (typeof googleConfig === "object") {
+    const enabled = (googleConfig as { enabled?: boolean }).enabled;
+    return enabled === true;
+  }
+
+  return false;
 }
 
 async function getSupabaseAuthStatus() {
@@ -227,6 +237,29 @@ async function signInLocalAccount(req: Request, res: Response, account: LocalAcc
 
   const cookieOptions = getSessionCookieOptions(req);
   res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+}
+
+async function trySupabasePasswordLogin(
+  req: Request,
+  res: Response,
+  payload: { email: string; password: string; fallbackName: string; redirect: string },
+) {
+  if (!isSupabaseConfigured()) return false;
+
+  const { ok, data } = await supabaseSignIn(payload.email, payload.password);
+  if (!ok || !data?.user?.id || !data?.user?.email) {
+    return false;
+  }
+
+  await signInLocalAccount(req, res, {
+    openId: `supabase-${data.user.id}`,
+    name: data.user.user_metadata?.name || payload.fallbackName,
+    email: data.user.email,
+    password: payload.password,
+  });
+
+  res.json({ success: true, redirect: payload.redirect, source: "supabase_existing_login" });
+  return true;
 }
 
 async function getStoredAccountByEmail(email: string) {
@@ -361,6 +394,14 @@ export function registerOAuthRoutes(app: Express) {
             : typeof data?.error === "string"
               ? data.error
               : "Kayit islemi basarisiz";
+
+        const existingLoginSucceeded = await trySupabasePasswordLogin(req, res, {
+          email,
+          password,
+          fallbackName: name,
+          redirect,
+        });
+        if (existingLoginSucceeded) return;
 
         if (isRateLimitMessage(rawMessage)) {
           await registerOrSignInLocalFallback(req, res, { name, email, password, redirect });

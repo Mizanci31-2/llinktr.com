@@ -3,7 +3,9 @@
 .pnpm-store/
 
 # Build outputs
-dist/
+dist/*
+!dist/api-app.js
+!dist/index.js
 build/
 *.dist
 
