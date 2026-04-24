@@ -1864,6 +1864,9 @@ var bioBlocksRouter = router({
     if (!page) throw new Error("Sayfa bulunamad\u0131");
     if (input.blocks.length > 50) throw new Error("Maksimum 50 \xF6\u011Fe s\u0131n\u0131r\u0131na ula\u015Ft\u0131n\u0131z");
     const existingBlocks = await getBioBlocksByPageId(input.pageId);
+    if (input.blocks.length === 0 && existingBlocks.length > 0) {
+      throw new Error("Bo\u015F i\xE7erik kayd\u0131 engellendi. T\xFCm bloklar\u0131 silmek istiyorsan\u0131z \xF6nce tek tek kald\u0131r\u0131n.");
+    }
     const incomingIds = new Set(input.blocks.map((block) => block.id).filter((id) => typeof id === "number"));
     for (const block of existingBlocks) {
       if (!incomingIds.has(block.id)) {

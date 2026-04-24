@@ -904,6 +904,14 @@ export default function BioBuilder() {
 
   const handleSave = async () => {
     try {
+      const existingBlockCount = pageData?.blocks?.length ?? 0;
+      if (blocks.length === 0 && existingBlockCount > 0) {
+        const confirmed = window.confirm(
+          "Tüm içerik blokları silinecek. Boş olarak kaydetmek istediğinize emin misiniz?",
+        );
+        if (!confirmed) return;
+      }
+
       await updatePageMutation.mutateAsync({
         id: pageId,
         title: pageTitle,
