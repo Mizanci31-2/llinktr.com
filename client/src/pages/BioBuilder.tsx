@@ -44,6 +44,7 @@ import {
   GripVertical,
   Heading1,
   Image,
+  Info,
   Link,
   Loader2,
   Minus,
@@ -108,7 +109,7 @@ function readImageFile(file: File, onLoaded: (dataUrl: string) => void, label = 
   }
 
   if (file.size > MAX_PROFILE_IMAGE_BYTES) {
-    toast.error(`${label} en fazla 5 MB olabilir`);
+    toast.error(`${label} en fazla 7 MB olabilir`);
     return;
   }
 
@@ -248,6 +249,17 @@ function LinkLogo({
   }
 
   return null;
+}
+
+function ImageUploadHint({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-border/70 bg-background/55 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+      <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
+        <Info className="h-3 w-3" />
+      </span>
+      <span>{text}</span>
+    </div>
+  );
 }
 
 function BlockEditor({
@@ -485,7 +497,7 @@ function BlockEditor({
                         Hazır e-ticaret seçiminde logo otomatik gelir. Bu blokta ayrıca logo değiştirmeniz gerekmez.
                       </p>
                     ) : (
-                      <p className="text-[11px] text-muted-foreground">İsteğe bağlıdır. Her link için 1 görsel, en fazla 5 MB.</p>
+                      <ImageUploadHint text="Link logosu için önerilen boyut 512 x 512 px, oran 1:1 kare. Yuvarlak alana tam oturması için PNG/JPG kullanın. Maksimum 7 MB." />
                     )}
                   </div>
                 </div>
@@ -1173,12 +1185,12 @@ export default function BioBuilder() {
                   <div className="space-y-1.5">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Profil Resmi URL</Label>
                     <Input value={profileImageUrl} onChange={(event) => { setProfileImageUrl(event.target.value); setIsDirty(true); }} placeholder="https://..." className="bg-input border-border/60" />
-                    <p className="text-[11px] text-muted-foreground">Isterseniz URL ile, isterseniz asagidan dosya yukleyerek kendi gorselinizi ekleyebilirsiniz.</p>
+                    <ImageUploadHint text="Profil resmi için önerilen boyut 800 x 800 px, oran 1:1 kare. Yuvarlak alana tam oturur. Maksimum 7 MB." />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sekme Logosu URL (Favicon)</Label>
                     <Input value={faviconUrl} onChange={(event) => { setFaviconUrl(event.target.value); setIsDirty(true); }} placeholder="https://..." className="bg-input border-border/60" />
-                    <p className="text-[11px] text-muted-foreground">Bos birakirsaniz varsayilan llinktr logosu kullanilir.</p>
+                    <ImageUploadHint text="Sekme logosu için önerilen boyut 512 x 512 px, oran 1:1 kare. Boş bırakırsanız varsayılan llinktr logosu kullanılır. Maksimum 7 MB." />
                   </div>
                 </div>
                 <div className="panel-strong rounded-xl border border-border/70 bg-muted/20 p-4 flex flex-col items-center justify-center gap-3">
@@ -1223,7 +1235,7 @@ export default function BioBuilder() {
                       Sekme logosunu sifirla
                     </Button>
                   )}
-                  <p className="text-[11px] text-muted-foreground text-center">İsteğe bağlıdır. En fazla 5 MB görsel kabul edilir.</p>
+                  <p className="text-[11px] text-muted-foreground text-center">İsteğe bağlıdır. En fazla 7 MB görsel kabul edilir.</p>
                 </div>
               </div>
             </div>

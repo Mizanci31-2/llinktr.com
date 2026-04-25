@@ -210,12 +210,21 @@ async function seedLocalDemoContent(openId: string) {
 
 async function signInLocalAccount(req: Request, res: Response, account: LocalAccount, loginMethod: "local" | "google" = "local") {
   const existingUser = await db.getUserByOpenId(account.openId);
-  const effectiveName = existingUser?.name?.trim() || account.name;
-  const effectiveEmail = existingUser?.email?.trim() || account.email;
-  const effectiveLoginMethod = loginMethod === "local" ? `local_password:${account.password}` : loginMethod;
+  const emailOwner = await db.getUserByEmail(account.email);
+  const canonicalUser = existingUser || emailOwner;
+  const canonicalOpenId = canonicalUser?.openId || account.openId;
+  const existingLoginMethod = canonicalUser?.loginMethod ?? "";
+  const effectiveName = canonicalUser?.name?.trim() || account.name;
+  const effectiveEmail = canonicalUser?.email?.trim() || account.email;
+  const effectiveLoginMethod =
+    loginMethod === "local"
+      ? `local_password:${account.password}`
+      : existingLoginMethod.startsWith("local_password:")
+        ? existingLoginMethod
+        : loginMethod;
 
   await db.upsertUser({
-    openId: account.openId,
+    openId: canonicalOpenId,
     name: effectiveName,
     email: effectiveEmail,
     loginMethod: effectiveLoginMethod,
@@ -224,13 +233,14 @@ async function signInLocalAccount(req: Request, res: Response, account: LocalAcc
 
   localAccounts.set(account.email.toLowerCase(), {
     ...account,
+    openId: canonicalOpenId,
     name: effectiveName,
     email: effectiveEmail,
   });
 
-  await seedLocalDemoContent(account.openId);
+  await seedLocalDemoContent(canonicalOpenId);
 
-  const sessionToken = await sdk.createSessionToken(account.openId, {
+  const sessionToken = await sdk.createSessionToken(canonicalOpenId, {
     name: effectiveName,
     expiresInMs: ONE_YEAR_MS,
   });

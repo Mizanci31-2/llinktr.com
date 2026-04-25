@@ -1,7 +1,7 @@
 ﻿import type { CSSProperties } from "react";
 
-export const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
-export const MAX_PROFILE_IMAGE_DATA_URL_LENGTH = 7_200_000;
+export const MAX_PROFILE_IMAGE_BYTES = 7 * 1024 * 1024;
+export const MAX_PROFILE_IMAGE_DATA_URL_LENGTH = 10_000_000;
 
 export const SOCIAL_PLATFORMS = [
   { id: "instagram", label: "Instagram", color: "#E1306C", placeholder: "https://instagram.com/kullanici" },

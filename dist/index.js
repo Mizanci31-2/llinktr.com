@@ -1160,11 +1160,15 @@ async function seedLocalDemoContent(openId) {
 }
 async function signInLocalAccount(req, res, account, loginMethod = "local") {
   const existingUser = await getUserByOpenId(account.openId);
-  const effectiveName = existingUser?.name?.trim() || account.name;
-  const effectiveEmail = existingUser?.email?.trim() || account.email;
-  const effectiveLoginMethod = loginMethod === "local" ? `local_password:${account.password}` : loginMethod;
+  const emailOwner = await getUserByEmail(account.email);
+  const canonicalUser = existingUser || emailOwner;
+  const canonicalOpenId = canonicalUser?.openId || account.openId;
+  const existingLoginMethod = canonicalUser?.loginMethod ?? "";
+  const effectiveName = canonicalUser?.name?.trim() || account.name;
+  const effectiveEmail = canonicalUser?.email?.trim() || account.email;
+  const effectiveLoginMethod = loginMethod === "local" ? `local_password:${account.password}` : existingLoginMethod.startsWith("local_password:") ? existingLoginMethod : loginMethod;
   await upsertUser({
-    openId: account.openId,
+    openId: canonicalOpenId,
     name: effectiveName,
     email: effectiveEmail,
     loginMethod: effectiveLoginMethod,
@@ -1172,11 +1176,12 @@ async function signInLocalAccount(req, res, account, loginMethod = "local") {
   });
   localAccounts.set(account.email.toLowerCase(), {
     ...account,
+    openId: canonicalOpenId,
     name: effectiveName,
     email: effectiveEmail
   });
-  await seedLocalDemoContent(account.openId);
-  const sessionToken = await sdk.createSessionToken(account.openId, {
+  await seedLocalDemoContent(canonicalOpenId);
+  const sessionToken = await sdk.createSessionToken(canonicalOpenId, {
     name: effectiveName,
     expiresInMs: ONE_YEAR_MS
   });
@@ -1641,7 +1646,7 @@ var systemRouter = router({
 });
 
 // server/routers.ts
-var MAX_PROFILE_IMAGE_DATA_URL_LENGTH = 72e5;
+var MAX_PROFILE_IMAGE_DATA_URL_LENGTH = 1e7;
 var MAX_BIO_PAGES_PER_USER = 5;
 var SHORT_CODE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
 function isIpAddress(hostname) {
@@ -1715,7 +1720,7 @@ var customShortCodeSchema = z2.preprocess(
   (value) => typeof value === "string" && value.trim() === "" ? void 0 : value,
   z2.string().trim().toLowerCase().min(3, "K\u0131sa ad en az 3 karakter olmal\u0131").max(20, "K\u0131sa ad en fazla 20 karakter olabilir").regex(/^[a-z0-9-]+$/, "K\u0131sa adda sadece harf, rakam ve tire kullan\u0131n").optional()
 );
-var profileImageUrlSchema = z2.string().max(MAX_PROFILE_IMAGE_DATA_URL_LENGTH, "Profil resmi en fazla 5 MB olabilir").refine((value) => {
+var profileImageUrlSchema = z2.string().max(MAX_PROFILE_IMAGE_DATA_URL_LENGTH, "Profil resmi en fazla 7 MB olabilir").refine((value) => {
   if (value.startsWith("data:image/")) return true;
   try {
     const parsed = new URL(value);
@@ -1724,7 +1729,7 @@ var profileImageUrlSchema = z2.string().max(MAX_PROFILE_IMAGE_DATA_URL_LENGTH, "
     return false;
   }
 }, "Ge\xE7erli bir profil resmi URL'si veya g\xF6rsel dosyas\u0131 girin");
-var faviconUrlSchema = z2.string().max(MAX_PROFILE_IMAGE_DATA_URL_LENGTH, "Sekme logosu en fazla 5 MB olabilir").refine((value) => {
+var faviconUrlSchema = z2.string().max(MAX_PROFILE_IMAGE_DATA_URL_LENGTH, "Sekme logosu en fazla 7 MB olabilir").refine((value) => {
   if (value.startsWith("data:image/")) return true;
   try {
     const parsed = new URL(value);
