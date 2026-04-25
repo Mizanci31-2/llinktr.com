@@ -982,16 +982,19 @@ async function isSupabaseGoogleEnabled() {
 async function getSupabaseAuthStatus() {
   const databaseUrl = process.env.DATABASE_URL ?? "";
   let databaseHost = "";
+  let databaseUser = "";
   try {
-    databaseHost = databaseUrl ? new URL(databaseUrl).hostname : "";
+    const parsedDatabaseUrl = databaseUrl ? new URL(databaseUrl) : null;
+    databaseHost = parsedDatabaseUrl?.hostname || "";
+    databaseUser = parsedDatabaseUrl?.username || "";
   } catch {
     databaseHost = "invalid";
   }
   if (!isSupabaseConfigured()) {
-    return { configured: false, googleEnabled: false, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseLastError: lastRemoteSnapshotError, memoryCounts: { users: memory.users.length, pages: memory.pages.length, blocks: memory.blocks.length, shortLinks: memory.shortLinks.length } };
+    return { configured: false, googleEnabled: false, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseUser, databaseLastError: lastRemoteSnapshotError, memoryCounts: { users: memory.users.length, pages: memory.pages.length, blocks: memory.blocks.length, shortLinks: memory.shortLinks.length } };
   }
   const googleEnabled = await isSupabaseGoogleEnabled();
-  return { configured: true, googleEnabled, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseLastError: lastRemoteSnapshotError, memoryCounts: { users: memory.users.length, pages: memory.pages.length, blocks: memory.blocks.length, shortLinks: memory.shortLinks.length } };
+  return { configured: true, googleEnabled, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseUser, databaseLastError: lastRemoteSnapshotError, memoryCounts: { users: memory.users.length, pages: memory.pages.length, blocks: memory.blocks.length, shortLinks: memory.shortLinks.length } };
 }
 async function seedLocalDemoContent(openId) {
   if (openId !== HIDDEN_DEMO_ACCOUNT.openId) return;
