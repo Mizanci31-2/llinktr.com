@@ -976,11 +976,18 @@ async function isSupabaseGoogleEnabled() {
   return false;
 }
 async function getSupabaseAuthStatus() {
+  const databaseUrl = process.env.DATABASE_URL ?? "";
+  let databaseHost = "";
+  try {
+    databaseHost = databaseUrl ? new URL(databaseUrl).hostname : "";
+  } catch {
+    databaseHost = "invalid";
+  }
   if (!isSupabaseConfigured()) {
-    return { configured: false, googleEnabled: false };
+    return { configured: false, googleEnabled: false, databaseConfigured: databaseUrl.length > 0, databaseHost };
   }
   const googleEnabled = await isSupabaseGoogleEnabled();
-  return { configured: true, googleEnabled };
+  return { configured: true, googleEnabled, databaseConfigured: databaseUrl.length > 0, databaseHost };
 }
 async function seedLocalDemoContent(openId) {
   if (openId !== HIDDEN_DEMO_ACCOUNT.openId) return;
