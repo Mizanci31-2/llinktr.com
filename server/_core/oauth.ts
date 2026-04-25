@@ -25,6 +25,7 @@ const localAccounts = new Map<string, LocalAccount>([
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY ?? "";
+const PUBLIC_SITE_URL = "https://www.llinktr.com";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -43,6 +44,20 @@ function normalizeEmail(value: unknown) {
 
 function normalizeName(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getAuthRequestOrigin(req: Request) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
+  const forwardedHost = req.headers["x-forwarded-host"];
+  const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host") || "";
+  const isLocalHost =
+    host.startsWith("localhost") ||
+    host.startsWith("127.0.0.1") ||
+    host.startsWith("[::1]");
+
+  if (!host || isLocalHost) return PUBLIC_SITE_URL;
+  return `${proto}://${host}`;
 }
 
 function createLocalOpenId(email: string) {
@@ -506,11 +521,7 @@ export function registerOAuthRoutes(app: Express) {
       return;
     }
 
-    const forwardedProto = req.headers["x-forwarded-proto"];
-    const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
-    const forwardedHost = req.headers["x-forwarded-host"];
-    const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host");
-    const redirectTo = `${proto}://${host}/giris?reset=1`;
+    const redirectTo = `${getAuthRequestOrigin(req)}/giris?reset=1`;
 
     const { ok, data } = await supabaseRecoverPassword(email, redirectTo);
     if (!ok) {
@@ -583,11 +594,7 @@ export function registerOAuthRoutes(app: Express) {
       return;
     }
 
-    const forwardedProto = req.headers["x-forwarded-proto"];
-    const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
-    const forwardedHost = req.headers["x-forwarded-host"];
-    const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host");
-    const redirectTo = `${proto}://${host}/giris?social=google&next=${encodeURIComponent(redirect)}`;
+    const redirectTo = `${getAuthRequestOrigin(req)}/giris?social=google&next=${encodeURIComponent(redirect)}`;
     const oauthUrl = new URL("/auth/v1/authorize", SUPABASE_URL);
     oauthUrl.searchParams.set("provider", "google");
     oauthUrl.searchParams.set("redirect_to", redirectTo);

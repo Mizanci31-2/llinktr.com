@@ -1012,6 +1012,7 @@ var localAccounts = /* @__PURE__ */ new Map([
 ]);
 var SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? "";
 var SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY ?? "";
+var PUBLIC_SITE_URL = "https://www.llinktr.com";
 function getQueryParam(req, key) {
   const value = req.query[key];
   return typeof value === "string" ? value : void 0;
@@ -1026,6 +1027,15 @@ function normalizeEmail(value) {
 }
 function normalizeName(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+function getAuthRequestOrigin(req) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
+  const forwardedHost = req.headers["x-forwarded-host"];
+  const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host") || "";
+  const isLocalHost = host.startsWith("localhost") || host.startsWith("127.0.0.1") || host.startsWith("[::1]");
+  if (!host || isLocalHost) return PUBLIC_SITE_URL;
+  return `${proto}://${host}`;
 }
 function createLocalOpenId(email) {
   const safe = email.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "local-user";
@@ -1384,11 +1394,7 @@ function registerOAuthRoutes(app) {
       });
       return;
     }
-    const forwardedProto = req.headers["x-forwarded-proto"];
-    const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
-    const forwardedHost = req.headers["x-forwarded-host"];
-    const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host");
-    const redirectTo = `${proto}://${host}/giris?reset=1`;
+    const redirectTo = `${getAuthRequestOrigin(req)}/giris?reset=1`;
     const { ok, data } = await supabaseRecoverPassword(email, redirectTo);
     if (!ok) {
       const rawMessage = typeof data?.msg === "string" ? data.msg : typeof data?.error_description === "string" ? data.error_description : "Sifre yenileme e-postasi gonderilemedi";
@@ -1446,11 +1452,7 @@ function registerOAuthRoutes(app) {
       });
       return;
     }
-    const forwardedProto = req.headers["x-forwarded-proto"];
-    const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
-    const forwardedHost = req.headers["x-forwarded-host"];
-    const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host");
-    const redirectTo = `${proto}://${host}/giris?social=google&next=${encodeURIComponent(redirect)}`;
+    const redirectTo = `${getAuthRequestOrigin(req)}/giris?social=google&next=${encodeURIComponent(redirect)}`;
     const oauthUrl = new URL("/auth/v1/authorize", SUPABASE_URL);
     oauthUrl.searchParams.set("provider", "google");
     oauthUrl.searchParams.set("redirect_to", redirectTo);
