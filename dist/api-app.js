@@ -112,6 +112,7 @@ var memory = {
 var memorySnapshotPath = process.env.LLINKTR_MEMORY_PATH || path.join(os.tmpdir(), "llinktr-memory-db.json");
 var remoteSnapshotClient = null;
 var remoteSnapshotHydrated = false;
+var lastRemoteSnapshotError = "";
 function now() {
   return /* @__PURE__ */ new Date();
 }
@@ -171,6 +172,7 @@ async function ensureRemoteSnapshotHydrated() {
   } catch (error) {
     remoteSnapshotHydrated = false;
     remoteSnapshotClient = null;
+    lastRemoteSnapshotError = error instanceof Error ? error.message : String(error);
     console.warn("[Database] Remote snapshot init failed:", error);
   }
 }
@@ -188,6 +190,7 @@ function persistMemorySnapshot() {
       if (!remoteSnapshotClient) return;
       await remoteSnapshotClient`insert into llinktr_state (id, data, updated_at) values ('global', ${JSON.stringify(memory)}::jsonb, now()) on conflict (id) do update set data = excluded.data, updated_at = excluded.updated_at`;
     } catch (error) {
+      lastRemoteSnapshotError = error instanceof Error ? error.message : String(error);
       console.warn("[Database] Remote snapshot save failed:", error);
     }
   })();
@@ -205,6 +208,7 @@ async function persistMemorySnapshotNow() {
     if (!remoteSnapshotClient) return;
     await remoteSnapshotClient`insert into llinktr_state (id, data, updated_at) values ('global', ${JSON.stringify(memory)}::jsonb, now()) on conflict (id) do update set data = excluded.data, updated_at = excluded.updated_at`;
   } catch (error) {
+    lastRemoteSnapshotError = error instanceof Error ? error.message : String(error);
     console.warn("[Database] Remote snapshot save failed:", error);
   }
 }
@@ -984,10 +988,10 @@ async function getSupabaseAuthStatus() {
     databaseHost = "invalid";
   }
   if (!isSupabaseConfigured()) {
-    return { configured: false, googleEnabled: false, databaseConfigured: databaseUrl.length > 0, databaseHost };
+    return { configured: false, googleEnabled: false, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseLastError: lastRemoteSnapshotError };
   }
   const googleEnabled = await isSupabaseGoogleEnabled();
-  return { configured: true, googleEnabled, databaseConfigured: databaseUrl.length > 0, databaseHost };
+  return { configured: true, googleEnabled, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseLastError: lastRemoteSnapshotError };
 }
 async function seedLocalDemoContent(openId) {
   if (openId !== HIDDEN_DEMO_ACCOUNT.openId) return;
