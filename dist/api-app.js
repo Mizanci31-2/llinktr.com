@@ -247,7 +247,7 @@ async function upsertUser(user) {
       existing.role = role;
       existing.lastSignedIn = signedInAt;
       existing.updatedAt = now();
-      persistMemorySnapshot();
+      await persistMemorySnapshotNow();
       return;
     }
     memory.users.push({
@@ -261,7 +261,7 @@ async function upsertUser(user) {
       updatedAt: now(),
       lastSignedIn: signedInAt
     });
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   try {
@@ -321,7 +321,7 @@ async function updateUserProfileById(id, data) {
     const user = memory.users.find((item) => item.id === id);
     if (!user) return void 0;
     Object.assign(user, updateData);
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return user;
   }
   await db.update(users).set(updateData).where(eq(users.id, id));
@@ -407,7 +407,7 @@ async function createBioPage(data) {
       createdAt: now(),
       updatedAt: now()
     });
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   await db.insert(bioPages).values({
@@ -427,7 +427,7 @@ async function updateBioPage(id, userId, data) {
     const page = memory.pages.find((item) => item.id === id && item.userId === userId);
     if (!page) return;
     Object.assign(page, data, { updatedAt: now() });
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   await db.update(bioPages).set(data).where(and(eq(bioPages.id, id), eq(bioPages.userId, userId)));
@@ -439,7 +439,7 @@ async function incrementBioPageViews(id) {
     const page = memory.pages.find((item) => item.id === id);
     if (page) {
       page.views += 1;
-      persistMemorySnapshot();
+      await persistMemorySnapshotNow();
     }
     return;
   }
@@ -453,7 +453,7 @@ async function deleteBioPage(id, userId) {
     usingMemoryDb();
     memory.blocks = memory.blocks.filter((block) => block.pageId !== id);
     memory.pages = memory.pages.filter((page) => !(page.id === id && page.userId === userId));
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   await db.delete(bioBlocks).where(eq(bioBlocks.pageId, id));
@@ -492,7 +492,7 @@ async function createBioBlock(data) {
       createdAt: now(),
       updatedAt: now()
     });
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   await db.insert(bioBlocks).values({
@@ -510,7 +510,7 @@ async function updateBioBlock(id, data) {
     const block = memory.blocks.find((item) => item.id === id);
     if (!block) return;
     Object.assign(block, data, { updatedAt: now() });
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   await db.update(bioBlocks).set(data).where(eq(bioBlocks.id, id));
@@ -522,7 +522,7 @@ async function incrementBioBlockClicks(id) {
     const block2 = memory.blocks.find((item) => item.id === id);
     if (block2) {
       block2.clicks += 1;
-      persistMemorySnapshot();
+      await persistMemorySnapshotNow();
     }
     return;
   }
@@ -536,7 +536,7 @@ async function deleteBioBlock(id) {
   if (!db) {
     usingMemoryDb();
     memory.blocks = memory.blocks.filter((block) => block.id !== id);
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   await db.delete(bioBlocks).where(eq(bioBlocks.id, id));
@@ -549,7 +549,7 @@ async function reorderBioBlocks(updates) {
       const block = memory.blocks.find((item) => item.id === update.id);
       if (block) block.sortOrder = update.sortOrder;
     });
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   for (const update of updates) {
@@ -568,7 +568,7 @@ async function createShortLink(data) {
       clicks: data.clicks,
       createdAt: now()
     });
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   await db.insert(shortLinks).values({
@@ -592,7 +592,7 @@ async function deleteShortLink(id, userId) {
   if (!db) {
     usingMemoryDb();
     memory.shortLinks = memory.shortLinks.filter((link) => !(link.id === id && link.userId === userId));
-    persistMemorySnapshot();
+    await persistMemorySnapshotNow();
     return;
   }
   await db.delete(shortLinks).where(and(eq(shortLinks.id, id), eq(shortLinks.userId, userId)));
@@ -613,7 +613,7 @@ async function incrementShortLinkClicks(code) {
     const link2 = memory.shortLinks.find((item) => item.code === code);
     if (link2) {
       link2.clicks += 1;
-      persistMemorySnapshot();
+      await persistMemorySnapshotNow();
     }
     return;
   }
