@@ -988,10 +988,10 @@ async function getSupabaseAuthStatus() {
     databaseHost = "invalid";
   }
   if (!isSupabaseConfigured()) {
-    return { configured: false, googleEnabled: false, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseLastError: lastRemoteSnapshotError };
+    return { configured: false, googleEnabled: false, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseLastError: lastRemoteSnapshotError, memoryCounts: { users: memory.users.length, pages: memory.pages.length, blocks: memory.blocks.length, shortLinks: memory.shortLinks.length } };
   }
   const googleEnabled = await isSupabaseGoogleEnabled();
-  return { configured: true, googleEnabled, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseLastError: lastRemoteSnapshotError };
+  return { configured: true, googleEnabled, databaseConfigured: databaseUrl.length > 0, databaseHost, databaseLastError: lastRemoteSnapshotError, memoryCounts: { users: memory.users.length, pages: memory.pages.length, blocks: memory.blocks.length, shortLinks: memory.shortLinks.length } };
 }
 async function seedLocalDemoContent(openId) {
   if (openId !== HIDDEN_DEMO_ACCOUNT.openId) return;
