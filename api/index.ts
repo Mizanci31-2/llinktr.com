@@ -1,4 +1,4 @@
-// @ts-expect-error generated at build time
+// @ts-ignore generated at build time
 import { createApp } from "../dist/api-app.js";
 
 const app = createApp();
