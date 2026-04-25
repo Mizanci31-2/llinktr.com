@@ -138,19 +138,11 @@ async function isSupabaseGoogleEnabled() {
 }
 
 async function getSupabaseAuthStatus() {
-  const databaseUrl = process.env.DATABASE_URL ?? "";
-  let databaseHost = "";
-  try {
-    databaseHost = databaseUrl ? new URL(databaseUrl).hostname : "";
-  } catch {
-    databaseHost = "invalid";
-  }
-
   if (!isSupabaseConfigured()) {
-    return { configured: false, googleEnabled: false, databaseConfigured: databaseUrl.length > 0, databaseHost };
+    return { configured: false, googleEnabled: false };
   }
   const googleEnabled = await isSupabaseGoogleEnabled();
-  return { configured: true, googleEnabled, databaseConfigured: databaseUrl.length > 0, databaseHost };
+  return { configured: true, googleEnabled };
 }
 
 async function seedLocalDemoContent(openId: string) {
