@@ -115,6 +115,23 @@ async function supabaseSignIn(email: string, password: string) {
   return { ok: response.ok, data };
 }
 
+async function supabaseRecoverPassword(email: string, redirectTo: string) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      email,
+      redirect_to: redirectTo,
+    }),
+  });
+  const data = await response.json().catch(() => null);
+  return { ok: response.ok, data };
+}
+
 async function isSupabaseGoogleEnabled() {
   const response = await fetch(`${SUPABASE_URL}/auth/v1/settings`, {
     method: "GET",
@@ -472,6 +489,54 @@ export function registerOAuthRoutes(app: Express) {
 
     await signInLocalAccount(req, res, account);
     res.json({ success: true, redirect });
+  });
+
+  app.post("/api/dev-password-reset-request", async (req: Request, res: Response) => {
+    const email = normalizeEmail(req.body?.email);
+    if (!email) {
+      res.status(400).json({ success: false, message: "E-posta adresi gerekli" });
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      res.status(400).json({
+        success: false,
+        message: "Sifre yenileme icin Supabase ayarlari gerekli",
+      });
+      return;
+    }
+
+    const forwardedProto = req.headers["x-forwarded-proto"];
+    const proto = typeof forwardedProto === "string" ? forwardedProto : req.protocol || "https";
+    const forwardedHost = req.headers["x-forwarded-host"];
+    const host = typeof forwardedHost === "string" ? forwardedHost : req.get("host");
+    const redirectTo = `${proto}://${host}/giris?reset=1`;
+
+    const { ok, data } = await supabaseRecoverPassword(email, redirectTo);
+    if (!ok) {
+      const rawMessage =
+        typeof data?.msg === "string"
+          ? data.msg
+          : typeof data?.error_description === "string"
+            ? data.error_description
+            : "Sifre yenileme e-postasi gonderilemedi";
+
+      if (isRateLimitMessage(rawMessage)) {
+        res.status(429).json({
+          success: false,
+          message: "Cok sık deneme yaptınız. Lutfen 1 dakika bekleyip tekrar deneyin.",
+        });
+        return;
+      }
+
+      res.status(400).json({ success: false, message: rawMessage });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: "Eger bu e-posta ile kayitli bir hesap varsa sifre yenileme baglantisi gonderildi.",
+    });
   });
 
   app.post("/api/dev-social-auth", async (req: Request, res: Response) => {

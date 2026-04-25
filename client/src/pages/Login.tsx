@@ -8,7 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 
-type AuthMode = "signIn" | "signUp";
+type AuthMode = "signIn" | "signUp" | "forgot" | "reset";
 
 const GOOGLE_ICON = (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
@@ -38,6 +38,8 @@ export default function Login() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [resetAccessToken, setResetAccessToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleStatusLoading, setGoogleStatusLoading] = useState(true);
@@ -84,6 +86,14 @@ export default function Login() {
     const params = new URLSearchParams(hash.replace(/^#/, ""));
     const accessToken = params.get("access_token");
     if (!accessToken) return;
+
+    const type = params.get("type");
+    if (type === "recovery" || new URLSearchParams(window.location.search).get("reset") === "1") {
+      setResetAccessToken(accessToken);
+      setMode("reset");
+      window.history.replaceState(null, "", "/giris?reset=1");
+      return;
+    }
 
     const finishGoogleSignIn = async () => {
       try {
@@ -175,6 +185,73 @@ export default function Login() {
     }
   };
 
+  const submitPasswordResetRequest = async (event: FormEvent) => {
+    event.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const response = await fetch("/api/dev-password-reset-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Sifre yenileme baslatilamadi");
+      }
+
+      toast.success(data.message || "Sifre yenileme baglantisi gonderildi");
+      setMode("signIn");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Sifre yenileme baslatilamadi");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitNewPassword = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (newPassword.trim().length < 6) {
+      toast.error("Yeni sifre en az 6 karakter olmali");
+      return;
+    }
+
+    if (!resetAccessToken) {
+      toast.error("Sifre yenileme oturumu bulunamadi. Lutfen e-postadaki baglantiya tekrar basin.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${resetAccessToken}`,
+        },
+        body: JSON.stringify({ password: newPassword.trim() }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.msg || data?.error_description || "Sifre guncellenemedi");
+      }
+
+      toast.success("Sifreniz guncellendi. Yeni sifrenizle giris yapabilirsiniz.");
+      setPassword("");
+      setNewPassword("");
+      setResetAccessToken("");
+      setMode("signIn");
+      window.history.replaceState(null, "", "/giris");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Sifre guncellenemedi");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const continueWithGoogle = async () => {
     if (!googleEnabled) {
       toast.error(googleDisabledReason || "Google girisi aktif degil.");
@@ -233,7 +310,15 @@ export default function Login() {
                 <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
                   llinktr hesabiniza
                   <br />
-                  <span className="text-primary">{mode === "signIn" ? "giris yapin." : "kayit olun."}</span>
+                  <span className="text-primary">
+                    {mode === "signIn"
+                      ? "giris yapin."
+                      : mode === "signUp"
+                        ? "kayit olun."
+                        : mode === "forgot"
+                          ? "sifrenizi yenileyin."
+                          : "yeni sifre belirleyin."}
+                  </span>
                 </h1>
                 <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
                   Bio sayfalarinizi olusturun, linklerinizi kisaltin, QR kodlarinizi yonetin ve tum iceriginizi tek yerden yayinlayin.
@@ -275,99 +360,193 @@ export default function Login() {
 
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-2xl font-semibold">{mode === "signIn" ? "Hesabiniza giris yapin" : "Yeni hesap olusturun"}</h2>
+                    <h2 className="text-2xl font-semibold">
+                      {mode === "signIn"
+                        ? "Hesabiniza giris yapin"
+                        : mode === "signUp"
+                          ? "Yeni hesap olusturun"
+                          : mode === "forgot"
+                            ? "Sifrenizi yenileyin"
+                            : "Yeni sifrenizi belirleyin"}
+                    </h2>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      E-posta ile giris veya kayit olabilir, Google ile de tek tikla devam edebilirsiniz.
+                      {mode === "forgot"
+                        ? "E-posta adresinizi yazin, sifre yenileme baglantisini gonderelim."
+                        : mode === "reset"
+                          ? "E-postadaki baglanti dogrulandi. Yeni sifrenizi belirleyebilirsiniz."
+                          : "E-posta ile giris veya kayit olabilir, Google ile de tek tikla devam edebilirsiniz."}
                     </p>
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    disabled={submitting || googleStatusLoading || !googleEnabled}
-                    onClick={continueWithGoogle}
-                    className="w-full justify-center gap-2 border-border/60 bg-background/70"
-                  >
-                    {GOOGLE_ICON}
-                    {mode === "signIn" ? "Google ile giris yap" : "Google ile kayit ol"}
-                  </Button>
-                  {!googleStatusLoading && !googleEnabled && (
-                    <p className="text-xs text-amber-300/90">{googleDisabledReason}</p>
+                  {(mode === "signIn" || mode === "signUp") && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        disabled={submitting || googleStatusLoading || !googleEnabled}
+                        onClick={continueWithGoogle}
+                        className="w-full justify-center gap-2 border-border/60 bg-background/70"
+                      >
+                        {GOOGLE_ICON}
+                        {mode === "signIn" ? "Google ile giris yap" : "Google ile kayit ol"}
+                      </Button>
+                      {!googleStatusLoading && !googleEnabled && (
+                        <p className="text-xs text-amber-300/90">{googleDisabledReason}</p>
+                      )}
+
+                      <div className="relative py-1">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-border/50" />
+                        </div>
+                        <div className="relative flex justify-center">
+                          <span className="bg-card px-3 text-xs text-muted-foreground">veya e-posta ile devam edin</span>
+                        </div>
+                      </div>
+                    </>
                   )}
 
-                  <div className="relative py-1">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border/50" />
-                    </div>
-                    <div className="relative flex justify-center">
-                      <span className="bg-card px-3 text-xs text-muted-foreground">veya e-posta ile devam edin</span>
-                    </div>
-                  </div>
-
-                  <form className="space-y-4" onSubmit={submitLocalAuth}>
-                    {mode === "signUp" && (
+                  {mode === "forgot" && (
+                    <form className="space-y-4" onSubmit={submitPasswordResetRequest}>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Kullanici adi</label>
+                        <label className="text-sm font-medium">E-posta</label>
                         <div className="relative">
-                          <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
+                            type="email"
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
                             className="pl-10"
-                            placeholder="Kullanici adiniz"
+                            placeholder="ornek@mail.com"
                           />
                         </div>
                       </div>
-                    )}
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">E-posta</label>
-                      <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          type="email"
-                          value={email}
-                          onChange={(event) => setEmail(event.target.value)}
-                          className="pl-10"
-                          placeholder="ornek@mail.com"
-                        />
+                      <Button
+                        type="submit"
+                        size="lg"
+                        disabled={submitting || !email}
+                        className="w-full bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+                      >
+                        {submitting ? "Gonderiliyor..." : "Sifre yenileme baglantisi gonder"}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => setMode("signIn")}
+                        className="w-full text-center text-sm font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        Giris ekranina don
+                      </button>
+                    </form>
+                  )}
+
+                  {mode === "reset" && (
+                    <form className="space-y-4" onSubmit={submitNewPassword}>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Yeni sifre</label>
+                        <div className="relative">
+                          <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            type="password"
+                            value={newPassword}
+                            onChange={(event) => setNewPassword(event.target.value)}
+                            className="pl-10"
+                            placeholder="Yeni sifreniz"
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Sifre</label>
-                      <div className="relative">
-                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          type="password"
-                          value={password}
-                          onChange={(event) => setPassword(event.target.value)}
-                          className="pl-10"
-                          placeholder="Sifreniz"
-                        />
-                      </div>
-                    </div>
+                      <Button
+                        type="submit"
+                        size="lg"
+                        disabled={submitting || newPassword.trim().length < 6}
+                        className="w-full bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+                      >
+                        {submitting ? "Guncelleniyor..." : "Sifreyi guncelle"}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </form>
+                  )}
 
-                    <Button
-                      type="submit"
-                      size="lg"
-                      disabled={
-                        submitting ||
-                        !email ||
-                        !password ||
-                        (mode === "signUp" && !name.trim())
-                      }
-                      className="w-full bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-                    >
-                      {submitting
-                        ? "Islem yapiliyor..."
-                        : mode === "signIn"
-                            ? "Giris Yap"
-                            : "Hesap Olustur"}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </form>
+                  {(mode === "signIn" || mode === "signUp") && (
+                    <div>
+                      <form className="space-y-4" onSubmit={submitLocalAuth}>
+                        {mode === "signUp" && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Kullanici adi</label>
+                            <div className="relative">
+                              <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
+                                className="pl-10"
+                                placeholder="Kullanici adiniz"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">E-posta</label>
+                          <div className="relative">
+                            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              type="email"
+                              value={email}
+                              onChange={(event) => setEmail(event.target.value)}
+                              className="pl-10"
+                              placeholder="ornek@mail.com"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <label className="text-sm font-medium">Sifre</label>
+                            {mode === "signIn" && (
+                              <button
+                                type="button"
+                                onClick={() => setMode("forgot")}
+                                className="text-xs font-semibold text-primary hover:text-primary/80"
+                              >
+                                Sifremi unuttum
+                              </button>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              type="password"
+                              value={password}
+                              onChange={(event) => setPassword(event.target.value)}
+                              className="pl-10"
+                              placeholder="Sifreniz"
+                            />
+                          </div>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          size="lg"
+                          disabled={
+                            submitting ||
+                            !email ||
+                            !password ||
+                            (mode === "signUp" && !name.trim())
+                          }
+                          className="w-full bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+                        >
+                          {submitting
+                            ? "Islem yapiliyor..."
+                            : mode === "signIn"
+                                ? "Giris Yap"
+                                : "Hesap Olustur"}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </form>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
