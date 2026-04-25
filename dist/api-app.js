@@ -117,6 +117,13 @@ function now() {
   return /* @__PURE__ */ new Date();
 }
 function applyMemorySnapshot(parsed) {
+  if (typeof parsed === "string") {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return;
+    }
+  }
   if (!parsed || typeof parsed !== "object") return;
   memory.nextUserId = Number.isFinite(parsed.nextUserId) ? parsed.nextUserId : memory.nextUserId;
   memory.nextPageId = Number.isFinite(parsed.nextPageId) ? parsed.nextPageId : memory.nextPageId;
@@ -166,7 +173,7 @@ async function ensureRemoteSnapshotHydrated() {
     if (payload && typeof payload === "object") {
       applyMemorySnapshot(payload);
     } else {
-      await remoteSnapshotClient`insert into llinktr_state (id, data) values ('global', ${JSON.stringify(memory)}::jsonb) on conflict (id) do nothing`;
+      await remoteSnapshotClient`insert into llinktr_state (id, data) values ('global', ${remoteSnapshotClient.json(memory)}) on conflict (id) do nothing`;
     }
     remoteSnapshotHydrated = true;
   } catch (error) {
@@ -188,7 +195,7 @@ function persistMemorySnapshot() {
     try {
       await ensureRemoteSnapshotHydrated();
       if (!remoteSnapshotClient) return;
-      await remoteSnapshotClient`insert into llinktr_state (id, data, updated_at) values ('global', ${JSON.stringify(memory)}::jsonb, now()) on conflict (id) do update set data = excluded.data, updated_at = excluded.updated_at`;
+      await remoteSnapshotClient`insert into llinktr_state (id, data, updated_at) values ('global', ${remoteSnapshotClient.json(memory)}, now()) on conflict (id) do update set data = excluded.data, updated_at = excluded.updated_at`;
     } catch (error) {
       lastRemoteSnapshotError = error instanceof Error ? error.message : String(error);
       console.warn("[Database] Remote snapshot save failed:", error);
@@ -206,7 +213,7 @@ async function persistMemorySnapshotNow() {
   try {
     await ensureRemoteSnapshotHydrated();
     if (!remoteSnapshotClient) return;
-    await remoteSnapshotClient`insert into llinktr_state (id, data, updated_at) values ('global', ${JSON.stringify(memory)}::jsonb, now()) on conflict (id) do update set data = excluded.data, updated_at = excluded.updated_at`;
+    await remoteSnapshotClient`insert into llinktr_state (id, data, updated_at) values ('global', ${remoteSnapshotClient.json(memory)}, now()) on conflict (id) do update set data = excluded.data, updated_at = excluded.updated_at`;
   } catch (error) {
     lastRemoteSnapshotError = error instanceof Error ? error.message : String(error);
     console.warn("[Database] Remote snapshot save failed:", error);
