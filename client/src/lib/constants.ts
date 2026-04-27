@@ -5,7 +5,8 @@ export const MAX_PROFILE_IMAGE_DATA_URL_LENGTH = 10_000_000;
 
 export const SOCIAL_PLATFORMS = [
   { id: "instagram", label: "Instagram", color: "#E1306C", placeholder: "https://instagram.com/kullanici" },
-  { id: "tiktok", label: "TikTok", color: "#111827", placeholder: "https://tiktok.com/@kullanici" },
+  // TikTok icons need a bright foreground; the button background already provides contrast.
+  { id: "tiktok", label: "TikTok", color: "#FFFFFF", placeholder: "https://tiktok.com/@kullanici" },
   { id: "youtube", label: "YouTube", color: "#FF0000", placeholder: "https://youtube.com/@kanal" },
   { id: "x", label: "X", color: "#111827", placeholder: "https://x.com/kullanici" },
   { id: "facebook", label: "Facebook", color: "#1877F2", placeholder: "https://facebook.com/kullanici" },
@@ -75,7 +76,7 @@ export const LOCATION_LINK_PRESETS = [
     platform: "google_maps",
     label: "Google Maps Konumu",
     color: "#4285F4",
-    logoUrl: "https://www.google.com/s2/favicons?domain_url=https://maps.google.com&sz=128",
+    logoUrl: "https://www.google.com/s2/favicons?domain_url=https://www.google.com/maps&sz=128",
     placeholder: "https://maps.google.com/?q=Istanbul+Kadikoy",
   },
   {
@@ -91,7 +92,7 @@ export const LOCATION_LINK_PRESETS = [
     platform: "apple_maps",
     label: "Apple Maps Konumu",
     color: "#111827",
-    logoUrl: "https://www.google.com/s2/favicons?domain_url=https://maps.apple.com&sz=128",
+    logoUrl: "https://www.google.com/s2/favicons?domain_url=https://www.apple.com&sz=128",
     placeholder: "https://maps.apple.com/?q=Istanbul+Kadikoy",
   },
 ] as const;

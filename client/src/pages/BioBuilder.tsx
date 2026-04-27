@@ -1355,7 +1355,8 @@ export default function BioBuilder() {
       </div>
 
       <div className="flex-1 container py-6">
-        <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_28rem]">
+          <div className="space-y-6">
             <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
               <h2 className="font-semibold mb-4">Profil Detayları</h2>
               <div className="grid gap-4 md:grid-cols-[1fr_180px]">
@@ -1817,6 +1818,9 @@ export default function BioBuilder() {
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="h-fit lg:sticky lg:top-24">
             <div className="rounded-2xl border border-border/50 bg-card/80 p-4 backdrop-blur">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -1864,6 +1868,7 @@ export default function BioBuilder() {
               </div>
             </div>
           </div>
+        </div>
 
           {isThemeDialogOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">

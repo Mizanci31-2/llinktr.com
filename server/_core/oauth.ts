@@ -56,7 +56,15 @@ function getAuthRequestOrigin(req: Request) {
     host.startsWith("127.0.0.1") ||
     host.startsWith("[::1]");
 
+  // Supabase redirect URL allowlist is strict. Force the canonical public URL for
+  // production domains so password recovery links don't fail on llinktr.com vs www.
   if (!host || isLocalHost) return PUBLIC_SITE_URL;
+
+  const normalizedHost = host.toLowerCase();
+  if (normalizedHost === "llinktr.com" || normalizedHost === "www.llinktr.com") {
+    return PUBLIC_SITE_URL;
+  }
+
   return `${proto}://${host}`;
 }
 
