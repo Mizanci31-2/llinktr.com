@@ -16,12 +16,16 @@ import { SocialIcon } from "@/components/SocialIcon";
 
 type BlockType = "heading" | "description" | "text" | "link" | "social" | "divider" | "profile_image";
 
-function getLinkAlignment(data: Record<string, string> | null) {
+function getLinkAlignment(data: Record<string, string | boolean | number> | null) {
   return data?.align === "left" ? "left" : "center";
 }
 
 function getCommercePreset(presetId?: string | null) {
   return COMMERCE_LINK_PRESETS.find(item => item.id === presetId);
+}
+
+function getDividerVariant(data: Record<string, string | boolean | number> | null) {
+  return data?.variant === "thick" ? "thick" : "thin";
 }
 
 export default function PublicBioPage() {
@@ -41,12 +45,57 @@ export default function PublicBioPage() {
 
     const defaultIcon = "/favicon.svg";
     const nextIcon = data.page.faviconUrl || defaultIcon;
+    const resolvedPageUrl = slug ? `${window.location.origin}/${slug}` : window.location.origin;
+    const nextTitle = `${data.page.title} | llinktr`;
+    const nextDescription = (data.page.description || "").trim() || "llinktr ile linklerinizi tek sayfada toplayin.";
+    const nextImage = data.page.profileImageUrl || nextIcon;
 
     const iconEl = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
     const shortcutEl = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement | null;
     const prevIcon = iconEl?.href;
     const prevShortcut = shortcutEl?.href;
     const prevTitle = document.title;
+    const prevCanonical = (document.querySelector("link[rel='canonical']") as HTMLLinkElement | null)?.href;
+
+    const getMetaContent = (selector: string) =>
+      (document.querySelector(selector) as HTMLMetaElement | null)?.content ?? null;
+
+    const prevMeta = {
+      description: getMetaContent("meta[name='description']"),
+      ogTitle: getMetaContent("meta[property='og:title']"),
+      ogDescription: getMetaContent("meta[property='og:description']"),
+      ogUrl: getMetaContent("meta[property='og:url']"),
+      ogImage: getMetaContent("meta[property='og:image']"),
+      twitterCard: getMetaContent("meta[name='twitter:card']"),
+      twitterTitle: getMetaContent("meta[name='twitter:title']"),
+      twitterDescription: getMetaContent("meta[name='twitter:description']"),
+      twitterImage: getMetaContent("meta[name='twitter:image']"),
+      robots: getMetaContent("meta[name='robots']"),
+    };
+
+    const ensureMeta = (
+      selector: string,
+      create: () => HTMLMetaElement,
+    ): { el: HTMLMetaElement; existed: boolean } => {
+      let el = document.querySelector(selector) as HTMLMetaElement | null;
+      const existed = Boolean(el);
+      if (!el) {
+        el = create();
+        document.head.appendChild(el);
+      }
+      return { el, existed };
+    };
+
+    const ensureCanonicalLink = (): { el: HTMLLinkElement; existed: boolean } => {
+      let el = document.querySelector("link[rel='canonical']") as HTMLLinkElement | null;
+      const existed = Boolean(el);
+      if (!el) {
+        el = document.createElement("link");
+        el.rel = "canonical";
+        document.head.appendChild(el);
+      }
+      return { el, existed };
+    };
 
     const ensureLink = (rel: "icon" | "shortcut icon") => {
       let link = document.querySelector(`link[rel='${rel}']`) as HTMLLinkElement | null;
@@ -61,7 +110,80 @@ export default function PublicBioPage() {
 
     ensureLink("icon");
     ensureLink("shortcut icon");
-    document.title = `${data.page.title} | llinktr`;
+    document.title = nextTitle;
+
+    const { el: canonicalEl, existed: canonicalExisted } = ensureCanonicalLink();
+    canonicalEl.href = resolvedPageUrl;
+
+    const { el: descEl, existed: descExisted } = ensureMeta("meta[name='description']", () => {
+      const meta = document.createElement("meta");
+      meta.name = "description";
+      return meta;
+    });
+    descEl.content = nextDescription;
+
+    const { el: robotsEl, existed: robotsExisted } = ensureMeta("meta[name='robots']", () => {
+      const meta = document.createElement("meta");
+      meta.name = "robots";
+      return meta;
+    });
+    robotsEl.content = "index,follow";
+
+    const { el: ogTitleEl, existed: ogTitleExisted } = ensureMeta("meta[property='og:title']", () => {
+      const meta = document.createElement("meta");
+      meta.setAttribute("property", "og:title");
+      return meta;
+    });
+    ogTitleEl.content = nextTitle;
+
+    const { el: ogDescEl, existed: ogDescExisted } = ensureMeta("meta[property='og:description']", () => {
+      const meta = document.createElement("meta");
+      meta.setAttribute("property", "og:description");
+      return meta;
+    });
+    ogDescEl.content = nextDescription;
+
+    const { el: ogUrlEl, existed: ogUrlExisted } = ensureMeta("meta[property='og:url']", () => {
+      const meta = document.createElement("meta");
+      meta.setAttribute("property", "og:url");
+      return meta;
+    });
+    ogUrlEl.content = resolvedPageUrl;
+
+    const { el: ogImageEl, existed: ogImageExisted } = ensureMeta("meta[property='og:image']", () => {
+      const meta = document.createElement("meta");
+      meta.setAttribute("property", "og:image");
+      return meta;
+    });
+    ogImageEl.content = nextImage;
+
+    const { el: twCardEl, existed: twCardExisted } = ensureMeta("meta[name='twitter:card']", () => {
+      const meta = document.createElement("meta");
+      meta.name = "twitter:card";
+      return meta;
+    });
+    twCardEl.content = "summary";
+
+    const { el: twTitleEl, existed: twTitleExisted } = ensureMeta("meta[name='twitter:title']", () => {
+      const meta = document.createElement("meta");
+      meta.name = "twitter:title";
+      return meta;
+    });
+    twTitleEl.content = nextTitle;
+
+    const { el: twDescEl, existed: twDescExisted } = ensureMeta("meta[name='twitter:description']", () => {
+      const meta = document.createElement("meta");
+      meta.name = "twitter:description";
+      return meta;
+    });
+    twDescEl.content = nextDescription;
+
+    const { el: twImageEl, existed: twImageExisted } = ensureMeta("meta[name='twitter:image']", () => {
+      const meta = document.createElement("meta");
+      meta.name = "twitter:image";
+      return meta;
+    });
+    twImageEl.content = nextImage;
 
     return () => {
       const icon = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
@@ -69,8 +191,43 @@ export default function PublicBioPage() {
       if (icon) icon.href = prevIcon || defaultIcon;
       if (shortcut) shortcut.href = prevShortcut || defaultIcon;
       document.title = prevTitle || "llinktr";
+
+      const canonical = document.querySelector("link[rel='canonical']") as HTMLLinkElement | null;
+      if (canonical) {
+        if (!canonicalExisted) canonical.remove();
+        else canonical.href = prevCanonical || resolvedPageUrl;
+      }
+
+      const maybeRestoreMeta = (
+        selector: string,
+        existed: boolean,
+        prevValue: string | null,
+      ) => {
+        const el = document.querySelector(selector) as HTMLMetaElement | null;
+        if (!el) return;
+        if (!existed) {
+          el.remove();
+          return;
+        }
+        if (prevValue === null) {
+          el.removeAttribute("content");
+          return;
+        }
+        el.content = prevValue;
+      };
+
+      maybeRestoreMeta("meta[name='description']", descExisted, prevMeta.description);
+      maybeRestoreMeta("meta[name='robots']", robotsExisted, prevMeta.robots);
+      maybeRestoreMeta("meta[property='og:title']", ogTitleExisted, prevMeta.ogTitle);
+      maybeRestoreMeta("meta[property='og:description']", ogDescExisted, prevMeta.ogDescription);
+      maybeRestoreMeta("meta[property='og:url']", ogUrlExisted, prevMeta.ogUrl);
+      maybeRestoreMeta("meta[property='og:image']", ogImageExisted, prevMeta.ogImage);
+      maybeRestoreMeta("meta[name='twitter:card']", twCardExisted, prevMeta.twitterCard);
+      maybeRestoreMeta("meta[name='twitter:title']", twTitleExisted, prevMeta.twitterTitle);
+      maybeRestoreMeta("meta[name='twitter:description']", twDescExisted, prevMeta.twitterDescription);
+      maybeRestoreMeta("meta[name='twitter:image']", twImageExisted, prevMeta.twitterImage);
     };
-  }, [data?.page]);
+  }, [data?.page, slug]);
 
   useEffect(() => {
     if (!shareOpen || !pageUrl) return;
@@ -169,36 +326,41 @@ export default function PublicBioPage() {
   const accent = safeAccentColor(page.accentColor, themeConfig.accent);
   const enabledBlocks = blocks.filter(block => block.isEnabled);
   const contentBlocks = enabledBlocks.filter(block => block.type !== "social" && block.type !== "profile_image");
-  const socialBlocks = enabledBlocks.filter(block => block.type === "social" && (block.data as Record<string, string> | null)?.url);
+  const socialBlocks = enabledBlocks.filter(block => block.type === "social" && (block.data as Record<string, string | boolean | number> | null)?.url);
   const buttonStyle = getBioButtonStyle(themeConfig, accent);
 
   const getSocialLabel = (block: typeof blocks[number]) => {
-    const blockData = block.data as Record<string, string> | null;
+    const blockData = block.data as Record<string, string | boolean | number> | null;
     const platform = SOCIAL_PLATFORMS.find(item => item.id === blockData?.platform);
     return platform?.label || "Sosyal hesap";
   };
 
   const getSocialColor = (block: typeof blocks[number]) => {
-    const blockData = block.data as Record<string, string> | null;
+    const blockData = block.data as Record<string, string | boolean | number> | null;
     const platform = SOCIAL_PLATFORMS.find(item => item.id === blockData?.platform);
     return platform?.color || accent;
   };
 
-  const renderLinkLogo = (blockData: Record<string, string> | null, size: number) => {
+  const renderLinkLogo = (blockData: Record<string, string | boolean | number> | null, size: number) => {
     if (blockData?.logoPreset) {
-      const preset = getCommercePreset(blockData.logoPreset);
+      const preset = getCommercePreset(String(blockData.logoPreset));
       if (preset?.logoUrl) {
         return <img src={preset.logoUrl} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
       }
 
-      return <SocialIcon platform={blockData.logoPreset} size={size} color={accent} />;
+      return <SocialIcon platform={String(blockData.logoPreset)} size={size} color={accent} />;
     }
 
     if (blockData?.logoUrl) {
-      return <img src={blockData.logoUrl} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
+      return <img src={String(blockData.logoUrl)} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
     }
 
     return null;
+  };
+
+  const renderSecondaryLinkLogo = (blockData: Record<string, string | boolean | number> | null, size: number) => {
+    if (!blockData?.logoUrlSecondary) return null;
+    return <img src={String(blockData.logoUrlSecondary)} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
   };
 
   return (
@@ -230,14 +392,38 @@ export default function PublicBioPage() {
 
         <div className="space-y-3.5 md:space-y-4">
           {contentBlocks.map((block) => {
-            const blockData = block.data as Record<string, string> | null;
+            const blockData = block.data as Record<string, string | boolean | number> | null;
             const blockType = block.type as BlockType;
 
             if (blockType === "divider") {
-              return <hr key={block.id} className="border-t my-4" style={{ borderColor: themeConfig.cardBorder }} />;
+              const dividerVariant = getDividerVariant(blockData);
+              return (
+                <hr
+                  key={block.id}
+                  className="border-t my-4"
+                  style={{
+                    borderColor: themeConfig.cardBorder,
+                    borderTopWidth: dividerVariant === "thick" ? "4px" : "1px",
+                    opacity: dividerVariant === "thick" ? 0.95 : 0.7,
+                  }}
+                />
+              );
             }
 
             if (blockType === "heading") {
+              const headingText = String(blockData?.text || "Baslik");
+              return (
+                <h2
+                  key={block.id}
+                  className="py-1 text-center text-lg font-bold md:text-[1.3rem]"
+                  style={{ color: themeConfig.text, textTransform: blockData?.uppercase ? "uppercase" : "none" }}
+                >
+                  {blockData?.uppercase ? headingText.toUpperCase() : headingText}
+                </h2>
+              );
+            }
+
+            if ((blockType as string) === "__legacy_heading__") {
               return (
                 <h2 key={block.id} className="py-1 text-center text-lg font-bold md:text-[1.3rem]" style={{ color: themeConfig.text }}>
                   {blockData?.text || "Başlık"}
@@ -256,6 +442,7 @@ export default function PublicBioPage() {
             if (blockType === "link") {
               const align = getLinkAlignment(blockData);
               const logo = renderLinkLogo(blockData, 30);
+              const secondaryLogo = renderSecondaryLinkLogo(blockData, 16);
 
               return (
                 <a
@@ -268,7 +455,18 @@ export default function PublicBioPage() {
                 >
                   <div className="grid min-h-[2rem] grid-cols-[2rem_minmax(0,1fr)_1rem] items-center gap-3 md:grid-cols-[2.25rem_minmax(0,1fr)_1.125rem]">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full md:h-9 md:w-9">
-                      {logo || <span className="h-8 w-8 rounded-full md:h-9 md:w-9" />}
+                      {logo || secondaryLogo ? (
+                        <div className="relative h-8 w-8 md:h-9 md:w-9">
+                          <div className="absolute left-0 top-0">{logo}</div>
+                          {secondaryLogo && (
+                            <div className="absolute -bottom-1 -right-1 rounded-full border bg-white/95 p-[1px]" style={{ borderColor: themeConfig.cardBorder }}>
+                              {secondaryLogo}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="h-8 w-8 rounded-full md:h-9 md:w-9" />
+                      )}
                     </div>
                     <span className={`block min-w-0 truncate text-sm font-medium md:text-base ${align === "left" ? "text-left" : "text-center"}`}>
                       {blockData?.title || "Link"}
@@ -282,7 +480,7 @@ export default function PublicBioPage() {
             if (blockType === "profile_image" && blockData?.url) {
               return (
                 <div key={block.id} className="flex justify-center py-2">
-                  <img src={blockData.url} alt="Profil resmi" className="w-28 h-28 rounded-full object-cover border" style={{ borderColor: themeConfig.cardBorder }} />
+                  <img src={String(blockData.url)} alt="Profil resmi" className="w-28 h-28 rounded-full object-cover border" style={{ borderColor: themeConfig.cardBorder }} />
                 </div>
               );
             }
@@ -294,7 +492,7 @@ export default function PublicBioPage() {
         {socialBlocks.length > 0 && (
           <div className="mt-8 flex flex-wrap justify-center gap-3 md:mt-9 md:gap-3.5">
             {socialBlocks.map(block => {
-              const blockData = block.data as Record<string, string> | null;
+              const blockData = block.data as Record<string, string | boolean | number> | null;
               return (
                 <a
                   key={block.id}
@@ -305,7 +503,7 @@ export default function PublicBioPage() {
                   className="flex h-11 w-11 items-center justify-center rounded-full border transition-all hover:-translate-y-0.5 hover:opacity-90 md:h-12 md:w-12"
                   style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder, boxShadow: themeConfig.shadow }}
                 >
-                  <SocialIcon platform={blockData?.platform || ""} size={22} color={getSocialColor(block)} />
+                  <SocialIcon platform={String(blockData?.platform || "")} size={22} color={getSocialColor(block)} />
                 </a>
               );
             })}

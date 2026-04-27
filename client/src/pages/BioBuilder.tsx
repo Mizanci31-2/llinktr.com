@@ -18,6 +18,7 @@ import {
   BIO_THEMES,
   BLOCK_TYPES,
   COMMERCE_LINK_PRESETS,
+  LOCATION_LINK_PRESETS,
   MAX_PROFILE_IMAGE_BYTES,
   SOCIAL_PLATFORMS,
   getBioBackgroundStyle,
@@ -50,6 +51,7 @@ import {
   Minus,
   Monitor,
   MousePointerClick,
+  MapPin,
   Plus,
   Save,
   Share2,
@@ -90,7 +92,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   text: "Metin",
   link: "Link",
   social: "Sosyal Hesap",
-  divider: "Ayırıcı",
+  divider: "İnce Çizgi",
   profile_image: "Profil Resmi",
 };
 
@@ -158,6 +160,35 @@ function getCommercePreset(presetId?: string) {
   return COMMERCE_LINK_PRESETS.find(item => item.id === presetId);
 }
 
+function getLocationPreset(presetId?: string) {
+  return LOCATION_LINK_PRESETS.find(item => item.id === presetId);
+}
+
+function normalizeSocialUrl(platformId: string | undefined, rawValue: string) {
+  const value = rawValue.trim();
+  if (!value) return "";
+
+  if (platformId === "gmail") {
+    if (value.startsWith("mailto:")) return value;
+    if (value.includes("@")) return `mailto:${value}`;
+  }
+
+  if (platformId === "phone") {
+    if (value.startsWith("tel:")) return value;
+    const compact = value.replace(/\s+/g, "");
+    if (/^\+?[0-9()\-]+$/.test(compact)) {
+      const digits = compact.replace(/[()\-]/g, "");
+      return `tel:${digits}`;
+    }
+  }
+
+  return value;
+}
+
+function getDividerVariant(data: Record<string, string | boolean | number>) {
+  return data.variant === "thick" ? "thick" : "thin";
+}
+
 function isCommerceLinkData(data: Record<string, string | boolean | number>) {
   return Boolean(getCommercePreset(String(data.logoPreset || "")));
 }
@@ -165,6 +196,10 @@ function isCommerceLinkData(data: Record<string, string | boolean | number>) {
 function getBlockLabel(block: LocalBlock) {
   if (block.type === "link" && isCommerceLinkData(block.data)) {
     return "E-ticaret sitesi";
+  }
+
+  if (block.type === "divider") {
+    return getDividerVariant(block.data) === "thick" ? "Kalın Çizgi" : "İnce Çizgi";
   }
 
   return BLOCK_LABELS[block.type];
@@ -249,6 +284,11 @@ function LinkLogo({
   }
 
   return null;
+}
+
+function LinkSecondaryLogo({ data, size }: { data: Record<string, string | boolean | number>; size: number }) {
+  if (!data.logoUrlSecondary) return null;
+  return <img src={String(data.logoUrlSecondary)} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
 }
 
 function ImageUploadHint({ text }: { text: string }) {
@@ -370,15 +410,25 @@ function BlockEditor({
         </div>
       </div>
 
-      {expanded && block.type !== "divider" && (
+      {expanded && (
         <div className="space-y-3 border-t border-border/40 px-3.5 pb-3.5 pt-3.5">
           {block.type === "heading" && (
-            <Input
-              value={String(block.data.text || "")}
-              onChange={(event) => onChange({ ...block.data, text: event.target.value })}
-              placeholder="Başlık metni..."
-              className="bg-input border-border/50 text-sm"
-            />
+            <div className="space-y-2">
+              <Input
+                value={String(block.data.text || "")}
+                onChange={(event) => onChange({ ...block.data, text: event.target.value })}
+                placeholder="Başlık metni..."
+                className="bg-input border-border/50 text-sm"
+              />
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2.5">
+                <p className="text-xs text-muted-foreground">Başlığı büyük harf göster</p>
+                <Switch
+                  checked={Boolean(block.data.uppercase)}
+                  onCheckedChange={(checked) => onChange({ ...block.data, uppercase: checked })}
+                  className="scale-75"
+                />
+              </div>
+            </div>
           )}
 
           {block.type === "description" && (
@@ -481,9 +531,18 @@ function BlockEditor({
 
               <div className={`space-y-2 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
                 <div className="flex items-center gap-3">
-                  {block.data.logoUrl || block.data.logoPreset ? (
+                  {block.data.logoUrl || block.data.logoPreset || block.data.logoUrlSecondary ? (
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border/50 bg-background/80">
-                      <LinkLogo data={block.data} size={28} fallbackColor={selectedCommercePreset?.color || "#FFFFFF"} />
+                      <div className="relative h-7 w-7">
+                        <div className="absolute left-0 top-0">
+                          <LinkLogo data={block.data} size={28} fallbackColor={selectedCommercePreset?.color || "#FFFFFF"} />
+                        </div>
+                        {block.data.logoUrlSecondary && (
+                          <div className="absolute -bottom-1 -right-1 rounded-full border border-border/70 bg-background/90 p-[1px]">
+                            <LinkSecondaryLogo data={block.data} size={14} />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="h-10 w-10 rounded-full border border-dashed border-border/60 flex items-center justify-center">
@@ -506,7 +565,13 @@ function BlockEditor({
                     <Input
                       value={String(block.data.logoUrl || "")}
                       onChange={(event) => onChange({ ...block.data, logoUrl: event.target.value })}
-                      placeholder="Logo URL'si (opsiyonel)"
+                      placeholder="Ana logo URL'si (opsiyonel)"
+                      className="bg-input border-border/60 text-sm"
+                    />
+                    <Input
+                      value={String(block.data.logoUrlSecondary || "")}
+                      onChange={(event) => onChange({ ...block.data, logoUrlSecondary: event.target.value })}
+                      placeholder="Ek logo URL'si (opsiyonel)"
                       className="bg-input border-border/60 text-sm"
                     />
                     <Input
@@ -516,6 +581,18 @@ function BlockEditor({
                         const file = event.currentTarget.files?.[0];
                         if (file) {
                           readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrl: dataUrl }), "Logo");
+                        }
+                        event.currentTarget.value = "";
+                      }}
+                      className="bg-input border-border/60 text-sm"
+                    />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        if (file) {
+                          readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrlSecondary: dataUrl }), "Ek logo");
                         }
                         event.currentTarget.value = "";
                       }}
@@ -537,6 +614,22 @@ function BlockEditor({
                         Logoyu kaldır
                       </Button>
                     )}
+                    {block.data.logoUrlSecondary && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const nextData = { ...block.data };
+                          delete nextData.logoUrlSecondary;
+                          onChange(nextData);
+                        }}
+                        className="h-8 px-2 text-xs text-muted-foreground"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Ek logoyu kaldır
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -550,7 +643,10 @@ function BlockEditor({
                   <p className="text-xs font-medium">Platform seçimi</p>
                   <p className="text-[11px] text-muted-foreground">Butona basıp sosyal platformu seçin. Logolar listede görünür.</p>
                 </div>
-                <Select value={String(block.data.platform || "")} onValueChange={(value) => onChange({ ...block.data, platform: value })}>
+                <Select
+                  value={String(block.data.platform || "")}
+                  onValueChange={(value) => onChange({ ...block.data, platform: value, url: normalizeSocialUrl(value, String(block.data.url || "")) })}
+                >
                   <SelectTrigger className="h-11 bg-input border-border/70 text-sm">
                     {selectedSocialPlatform ? (
                       <div className="flex min-w-0 items-center gap-2">
@@ -578,12 +674,35 @@ function BlockEditor({
                 <p className="text-xs font-medium">Bağlantı</p>
                 <Input
                   value={String(block.data.url || "")}
-                  onChange={(event) => onChange({ ...block.data, url: event.target.value })}
+                  onChange={(event) => onChange({ ...block.data, url: normalizeSocialUrl(String(block.data.platform || ""), event.target.value) })}
                   placeholder={SOCIAL_PLATFORMS.find(platform => platform.id === block.data.platform)?.placeholder || "https://..."}
                   className="bg-input border-border/60 text-sm"
                 />
                 <p className="text-xs text-muted-foreground">Sosyal hesaplar bio sayfasının alt kısmında yuvarlak ikon olarak gösterilir. Ayrı başlık girmeniz gerekmez.</p>
               </div>
+            </div>
+          )}
+
+          {block.type === "divider" && (
+            <div className="space-y-2 rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
+              <p className="text-xs font-medium">Çizgi Kalınlığı</p>
+              <ToggleGroup
+                type="single"
+                value={getDividerVariant(block.data)}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  onChange({ ...block.data, variant: value });
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                <ToggleGroupItem value="thin" className="gap-1.5 text-[11px]">
+                  İnce Çizgi
+                </ToggleGroupItem>
+                <ToggleGroupItem value="thick" className="gap-1.5 text-[11px]">
+                  Kalın Çizgi
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
           )}
 
@@ -647,13 +766,29 @@ function PreviewCardContents({
 
   const renderBlock = (block: LocalBlock) => {
     if (block.type === "divider") {
-      return <hr key={block.tempId} className={isDesktop ? "my-3 border-t" : "my-2 border-t"} style={{ borderColor: themeConfig.cardBorder }} />;
+      const dividerVariant = getDividerVariant(block.data);
+      return (
+        <hr
+          key={block.tempId}
+          className={isDesktop ? "my-3 border-t" : "my-2 border-t"}
+          style={{
+            borderColor: themeConfig.cardBorder,
+            borderTopWidth: dividerVariant === "thick" ? "4px" : "1px",
+            opacity: dividerVariant === "thick" ? 0.95 : 0.7,
+          }}
+        />
+      );
     }
 
     if (block.type === "heading") {
+      const text = String(block.data.text || "Başlık");
       return (
-        <p key={block.tempId} className={`py-1 text-center font-bold ${isDesktop ? "text-lg" : "text-sm"}`} style={{ color: themeConfig.text }}>
-          {String(block.data.text || "Başlık")}
+        <p
+          key={block.tempId}
+          className={`py-1 text-center font-bold ${isDesktop ? "text-lg" : "text-sm"}`}
+          style={{ color: themeConfig.text, textTransform: block.data.uppercase ? "uppercase" : "none" }}
+        >
+          {block.data.uppercase ? text.toUpperCase() : text}
         </p>
       );
     }
@@ -669,6 +804,7 @@ function PreviewCardContents({
     if (block.type === "link") {
       const align = getLinkAlignment(block.data);
       const logo = <LinkLogo data={block.data} size={iconSize} fallbackColor={accent} />;
+      const secondaryLogo = <LinkSecondaryLogo data={block.data} size={Math.max(12, Math.floor(iconSize * 0.52))} />;
 
       return (
         <div
@@ -678,7 +814,18 @@ function PreviewCardContents({
         >
           <div className={`grid min-h-[2rem] items-center gap-3 ${isDesktop ? "grid-cols-[2rem_minmax(0,1fr)_1rem]" : "grid-cols-[1.75rem_minmax(0,1fr)_0.75rem]"}`}>
             <div className={`flex items-center justify-center rounded-full ${isDesktop ? "h-8 w-8" : "h-7 w-7"}`}>
-              {logo || <span className={`${isDesktop ? "h-8 w-8" : "h-7 w-7"} rounded-full`} />}
+              {logo || secondaryLogo ? (
+                <div className={`relative ${isDesktop ? "h-8 w-8" : "h-7 w-7"}`}>
+                  <div className="absolute left-0 top-0">{logo}</div>
+                  {block.data.logoUrlSecondary && (
+                    <div className="absolute -bottom-1 -right-1 rounded-full border border-border/70 bg-background/90 p-[1px]">
+                      {secondaryLogo}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className={`${isDesktop ? "h-8 w-8" : "h-7 w-7"} rounded-full`} />
+              )}
             </div>
             <span className={`block min-w-0 truncate font-medium ${isDesktop ? "text-[15px]" : "text-xs"} ${align === "left" ? "text-left" : "text-center"}`}>
               {String(block.data.title || "Link")}
@@ -758,11 +905,11 @@ function PhonePreview({
   const accent = safeAccentColor(accentColor, themeConfig.accent);
 
   return (
-    <div className="sticky top-20">
-      <div className="flex flex-col items-center">
-        <div className="relative w-[308px] overflow-hidden rounded-[2.65rem] border-2 border-black/70 bg-black shadow-2xl">
+    <div className="flex h-full flex-col">
+      <div className="flex flex-1 flex-col items-center">
+        <div className="relative w-[308px] max-w-full overflow-hidden rounded-[2.65rem] border-2 border-black/70 bg-black shadow-2xl">
           <div className="absolute top-0 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
-          <div className="min-h-[596px] overflow-y-auto px-3.5 pt-7 pb-4.5" style={getBioBackgroundStyle(themeConfig, accent)}>
+          <div className="min-h-[596px] px-3.5 pt-7 pb-4.5" style={getBioBackgroundStyle(themeConfig, accent)}>
             <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="phone" />
           </div>
         </div>
@@ -793,8 +940,8 @@ function DesktopPreview({
   const accent = safeAccentColor(accentColor, themeConfig.accent);
 
   return (
-    <div className="sticky top-20">
-      <div className="overflow-hidden rounded-[1.8rem] border border-border/60 bg-card shadow-2xl">
+    <div className="flex h-full flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.8rem] border border-border/60 bg-card shadow-2xl">
         <div className="flex items-center gap-3 border-b border-border/50 bg-background/75 px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
@@ -810,7 +957,7 @@ function DesktopPreview({
             Masaüstü görünümü
           </div>
         </div>
-        <div className="min-h-[760px] p-5 md:p-7" style={getBioBackgroundStyle(themeConfig, accent)}>
+        <div className="min-h-[620px] p-5 md:p-7" style={getBioBackgroundStyle(themeConfig, accent)}>
           <div className="mx-auto max-w-[40rem]">
             <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="desktop" />
           </div>
@@ -849,6 +996,7 @@ export default function BioBuilder() {
   const [isAddBlockDialogOpen, setIsAddBlockDialogOpen] = useState(false);
   const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
   const [showCommercePresets, setShowCommercePresets] = useState(false);
+  const [showLocationPresets, setShowLocationPresets] = useState(false);
   const [previewMode, setPreviewMode] = useState<"phone" | "desktop">("phone");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [touchDragActive, setTouchDragActive] = useState(false);
@@ -972,12 +1120,15 @@ export default function BioBuilder() {
           ? { url: profileImageUrl }
           : type === "link"
             ? { align: "center" }
+            : type === "divider"
+              ? { variant: "thin" }
             : {},
     };
     setBlocks(prev => normalizeBlocks([...prev, newBlock]));
     setIsDirty(true);
     setIsAddBlockDialogOpen(false);
     setShowCommercePresets(false);
+    setShowLocationPresets(false);
   };
 
   const addCommerceBlock = (presetId: string) => {
@@ -1007,6 +1158,36 @@ export default function BioBuilder() {
     setIsDirty(true);
     setIsAddBlockDialogOpen(false);
     setShowCommercePresets(false);
+    setShowLocationPresets(false);
+  };
+
+  const addLocationBlock = (presetId: string) => {
+    if (blocks.length >= 50) {
+      toast.error("Maksimum 50 öğe sınırına ulaştınız");
+      return;
+    }
+
+    const preset = getLocationPreset(presetId);
+    if (!preset) return;
+
+    const newBlock: LocalBlock = {
+      tempId: generateTempId(),
+      type: "link",
+      sortOrder: blocks.length,
+      isEnabled: true,
+      clicks: 0,
+      data: {
+        title: preset.label,
+        url: "",
+        logoPreset: preset.platform,
+        align: "center",
+      },
+    };
+
+    setBlocks(prev => normalizeBlocks([...prev, newBlock]));
+    setIsDirty(true);
+    setIsAddBlockDialogOpen(false);
+    setShowLocationPresets(false);
   };
 
   const updateBlock = (tempId: string, data: Record<string, string | boolean | number>) => {
@@ -1131,6 +1312,12 @@ export default function BioBuilder() {
   }
 
   const isSaving = updatePageMutation.isPending || bulkSaveMutation.isPending;
+  const previewPage = {
+    title: pageTitle || pageData.page.title,
+    description: pageDesc || pageData.page.description,
+    profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
+    slug: pageData.page.slug,
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -1168,15 +1355,28 @@ export default function BioBuilder() {
       </div>
 
       <div className="flex-1 container py-6">
-        <div className="grid grid-cols-1 gap-8 lg:items-start lg:grid-cols-[minmax(0,1fr)_minmax(460px,580px)] xl:grid-cols-[minmax(0,1fr)_minmax(520px,640px)]">
-          <div className="space-y-6">
+        <div className="space-y-6">
             <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
               <h2 className="font-semibold mb-4">Profil Detayları</h2>
               <div className="grid gap-4 md:grid-cols-[1fr_180px]">
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sayfa Başlığı</Label>
-                    <Input value={pageTitle} onChange={(event) => { setPageTitle(event.target.value); setIsDirty(true); }} placeholder="Sayfa başlığı..." className="bg-input border-border/50" />
+                    <div className="flex items-center gap-2">
+                      <Input value={pageTitle} onChange={(event) => { setPageTitle(event.target.value); setIsDirty(true); }} placeholder="Sayfa başlığı..." className="bg-input border-border/50" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setPageTitle(prev => prev.toUpperCase());
+                          setIsDirty(true);
+                        }}
+                        className="h-10 whitespace-nowrap text-[11px]"
+                      >
+                        BÜYÜK HARF
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Kısa Açıklama</Label>
@@ -1314,6 +1514,7 @@ export default function BioBuilder() {
                     size="sm"
                     onClick={() => {
                       setShowCommercePresets(false);
+                      setShowLocationPresets(false);
                       setIsAddBlockDialogOpen(true);
                     }}
                     disabled={blocks.length >= 50}
@@ -1461,6 +1662,38 @@ export default function BioBuilder() {
                     </div>
                   )}
                 </div>
+                <div className="mt-4 border-t border-border/30 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationPresets(prev => !prev)}
+                    disabled={blocks.length >= 50}
+                    className="flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/60 px-3 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <span className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Hazır konum linkleri</span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showLocationPresets ? "rotate-180" : ""}`} />
+                  </button>
+                  {showLocationPresets && (
+                    <div className="mt-3 grid grid-cols-1 gap-2 xl:grid-cols-3">
+                      {LOCATION_LINK_PRESETS.map((preset) => (
+                        <button
+                          key={`quick-location-${preset.id}`}
+                          type="button"
+                          onClick={() => addLocationBlock(preset.id)}
+                          disabled={blocks.length >= 50}
+                          className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 p-2 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background/90">
+                            <img src={preset.logoUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                          </div>
+                          <span className="truncate text-xs font-medium">{preset.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <Button variant="outline" className="mt-3 w-full border-dashed border-border/50 px-3 text-[11px] leading-snug text-muted-foreground whitespace-normal text-center" disabled>
                   <Plus className="h-4 w-4 mr-2" />
                   Profil resmi üstteki Profil Detayları alanından eklenir.
@@ -1481,6 +1714,7 @@ export default function BioBuilder() {
                         type="button"
                         onClick={() => {
                           setShowCommercePresets(false);
+                          setShowLocationPresets(false);
                           setIsAddBlockDialogOpen(false);
                         }}
                         className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -1545,75 +1779,49 @@ export default function BioBuilder() {
                         </div>
                       )}
                     </div>
+                    <div className="mt-5 border-t border-border/30 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowLocationPresets(prev => !prev)}
+                        className="flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <span className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">Hazır konum linkleri</span>
+                        </span>
+                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showLocationPresets ? "rotate-180" : ""}`} />
+                      </button>
+                      {showLocationPresets && (
+                        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {LOCATION_LINK_PRESETS.map((preset) => (
+                            <button
+                              key={`location-dialog-${preset.id}`}
+                              type="button"
+                              onClick={() => addLocationBlock(preset.id)}
+                              disabled={blocks.length >= 50}
+                              className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background/90">
+                                <img src={preset.logoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{preset.label}</p>
+                                <p className="truncate text-[11px] text-muted-foreground">{preset.placeholder.replace("https://", "")}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="lg:hidden mt-5 space-y-3">
-            <div className="rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur">
-              <div className="mb-2">
-                <p className="text-sm font-medium">Önizleme modu</p>
-                <p className="text-xs text-muted-foreground">Telefon veya masaüstü görünümü arasında geçiş yapın.</p>
-              </div>
-              <ToggleGroup
-                type="single"
-                value={previewMode}
-                onValueChange={(value) => {
-                  if (value === "phone" || value === "desktop") {
-                    setPreviewMode(value);
-                  }
-                }}
-                variant="outline"
-                className="w-full"
-              >
-                <ToggleGroupItem value="phone" className="gap-2">
-                  <Smartphone className="h-4 w-4" />
-                  Telefon
-                </ToggleGroupItem>
-                <ToggleGroupItem value="desktop" className="gap-2">
-                  <Monitor className="h-4 w-4" />
-                  Masaüstü
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            {previewMode === "desktop" ? (
-              <DesktopPreview
-                blocks={blocks}
-                page={{
-                  title: pageTitle || pageData.page.title,
-                  description: pageDesc || pageData.page.description,
-                  profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
-                  slug: pageData.page.slug,
-                }}
-                accentColor={activeAccentColor}
-                theme={themeConfig.id}
-              />
-            ) : (
-              <PhonePreview
-                blocks={blocks}
-                page={{
-                  title: pageTitle || pageData.page.title,
-                  description: pageDesc || pageData.page.description,
-                  profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
-                  slug: pageData.page.slug,
-                }}
-                accentColor={activeAccentColor}
-                theme={themeConfig.id}
-              />
-            )}
-          </div>
-
-          <div className="hidden lg:block lg:self-start">
-            <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1 space-y-4">
-              <div className="rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">Önizleme modu</p>
-                    <p className="text-xs text-muted-foreground">Sayfayı telefonda veya masaüstünde kontrol edin.</p>
-                  </div>
+            <div className="rounded-2xl border border-border/50 bg-card/80 p-4 backdrop-blur">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold">Canlı Önizleme</h2>
+                  <p className="text-xs text-muted-foreground">Düzenlediğiniz sayfanın telefon ve masaüstü görünümünü aynı akışta kontrol edin.</p>
                 </div>
                 <ToggleGroup
                   type="single"
@@ -1624,7 +1832,7 @@ export default function BioBuilder() {
                     }
                   }}
                   variant="outline"
-                  className="w-full"
+                  className="w-full sm:w-auto"
                 >
                   <ToggleGroupItem value="phone" className="gap-2">
                     <Smartphone className="h-4 w-4" />
@@ -1637,31 +1845,23 @@ export default function BioBuilder() {
                 </ToggleGroup>
               </div>
 
-              {previewMode === "desktop" ? (
-                <DesktopPreview
-                  blocks={blocks}
-                  page={{
-                    title: pageTitle || pageData.page.title,
-                    description: pageDesc || pageData.page.description,
-                    profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
-                    slug: pageData.page.slug,
-                  }}
-                  accentColor={activeAccentColor}
-                  theme={themeConfig.id}
-                />
-              ) : (
-                <PhonePreview
-                  blocks={blocks}
-                  page={{
-                    title: pageTitle || pageData.page.title,
-                    description: pageDesc || pageData.page.description,
-                    profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
-                    slug: pageData.page.slug,
-                  }}
-                  accentColor={activeAccentColor}
-                  theme={themeConfig.id}
-                />
-              )}
+              <div className="overflow-hidden rounded-2xl border border-border/40 bg-background/35 p-3 sm:p-4">
+                {previewMode === "desktop" ? (
+                  <DesktopPreview
+                    blocks={blocks}
+                    page={previewPage}
+                    accentColor={activeAccentColor}
+                    theme={themeConfig.id}
+                  />
+                ) : (
+                  <PhonePreview
+                    blocks={blocks}
+                    page={previewPage}
+                    accentColor={activeAccentColor}
+                    theme={themeConfig.id}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
@@ -1716,7 +1916,6 @@ export default function BioBuilder() {
               </div>
             </div>
           )}
-        </div>
       </div>
     </div>
   );

@@ -170,6 +170,10 @@ async function isSupabaseGoogleEnabled() {
 }
 
 async function getSupabaseAuthStatus() {
+  if (ENV.oAuthServerUrl && ENV.appId) {
+    return { configured: true, googleEnabled: true };
+  }
+
   if (!isSupabaseConfigured()) {
     return { configured: false, googleEnabled: false };
   }

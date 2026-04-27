@@ -8,6 +8,31 @@ import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
 
+if (typeof window !== "undefined" && window.location.pathname !== "/giris") {
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const hasHashAuthPayload =
+    hashParams.has("access_token") ||
+    hashParams.has("refresh_token") ||
+    hashParams.has("error") ||
+    hashParams.has("error_description");
+  const hasSearchAuthPayload =
+    searchParams.has("error") ||
+    searchParams.has("error_code") ||
+    searchParams.has("error_description") ||
+    searchParams.has("reset");
+
+  if (hasHashAuthPayload || hasSearchAuthPayload) {
+    if (hashParams.get("type") === "recovery" && !searchParams.has("reset")) {
+      searchParams.set("reset", "1");
+    }
+
+    const query = searchParams.toString();
+    const nextUrl = `/giris${query ? `?${query}` : ""}${window.location.hash}`;
+    window.location.replace(nextUrl);
+  }
+}
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {

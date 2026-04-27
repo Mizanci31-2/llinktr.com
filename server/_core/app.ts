@@ -57,14 +57,27 @@ export function createApp() {
       }
 
       const blockData = block.data as Record<string, string> | null;
-      const url = blockData?.url;
-      if (!url) {
+      const rawUrl = blockData?.url?.trim();
+      if (!rawUrl) {
         res.status(404).send("Link bulunamadi");
         return;
       }
+      const platform = blockData?.platform?.toLowerCase?.() || "";
+      let redirectUrl = rawUrl;
+
+      if (platform === "gmail" && !redirectUrl.startsWith("mailto:") && redirectUrl.includes("@")) {
+        redirectUrl = `mailto:${redirectUrl}`;
+      } else if (platform === "phone" && !redirectUrl.startsWith("tel:")) {
+        const compact = redirectUrl.replace(/\s+/g, "");
+        if (/^\+?[0-9()\-]+$/.test(compact)) {
+          redirectUrl = `tel:${compact.replace(/[()\-]/g, "")}`;
+        }
+      } else if (!/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(redirectUrl) && !redirectUrl.startsWith("/")) {
+        redirectUrl = `https://${redirectUrl}`;
+      }
 
       await incrementBioBlockClicks(block.id);
-      res.redirect(302, url);
+      res.redirect(302, redirectUrl);
     } catch (err) {
       console.error("[BioLink] Error:", err);
       res.status(500).send("Bir hata olustu");

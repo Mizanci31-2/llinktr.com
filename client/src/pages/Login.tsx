@@ -45,6 +45,12 @@ export default function Login() {
   const [googleStatusLoading, setGoogleStatusLoading] = useState(true);
   const [googleDisabledReason, setGoogleDisabledReason] = useState<string>("");
 
+  const getUrlState = () => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    return { searchParams, hashParams };
+  };
+
   useEffect(() => {
     if (!loading && isAuthenticated) {
       navigate("/dashboard");
@@ -80,15 +86,12 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash.includes("access_token=")) return;
-
-    const params = new URLSearchParams(hash.replace(/^#/, ""));
-    const accessToken = params.get("access_token");
+    const { searchParams, hashParams } = getUrlState();
+    const accessToken = hashParams.get("access_token");
     if (!accessToken) return;
 
-    const type = params.get("type");
-    if (type === "recovery" || new URLSearchParams(window.location.search).get("reset") === "1") {
+    const type = hashParams.get("type");
+    if (type === "recovery" || searchParams.get("reset") === "1") {
       setResetAccessToken(accessToken);
       setMode("reset");
       window.history.replaceState(null, "", "/giris?reset=1");
@@ -140,16 +143,39 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get("error") || params.get("error_description");
-    if (error) {
-      toast.error(`Google girisi basarisiz: ${error}`);
-      params.delete("error");
-      params.delete("error_description");
-      const nextQuery = params.toString();
-      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
-      window.history.replaceState(null, "", nextUrl);
+    const { searchParams, hashParams } = getUrlState();
+    const errorCode = hashParams.get("error_code") || searchParams.get("error_code") || "";
+    const error = hashParams.get("error") || searchParams.get("error") || "";
+    const errorDescription =
+      hashParams.get("error_description") ||
+      searchParams.get("error_description") ||
+      "";
+
+    if (!error && !errorDescription && !errorCode) return;
+
+    const normalizedDescription = decodeURIComponent(errorDescription.replace(/\+/g, " "));
+    const authErrorText = [errorCode, error, normalizedDescription].filter(Boolean).join(" ").toLowerCase();
+    const isRecoveryError =
+      searchParams.get("reset") === "1" ||
+      authErrorText.includes("otp_expired") ||
+      authErrorText.includes("has expired") ||
+      authErrorText.includes("invalid") ||
+      authErrorText.includes("recovery");
+
+    if (isRecoveryError) {
+      setMode("forgot");
+      setResetAccessToken("");
+      toast.error("Sifre sifirlama baglantisinin suresi dolmus veya daha once kullanilmis. Yeni bir baglanti isteyin.");
+    } else {
+      toast.error(`Google girisi basarisiz: ${normalizedDescription || errorCode || error}`);
     }
+
+    searchParams.delete("error");
+    searchParams.delete("error_code");
+    searchParams.delete("error_description");
+    const nextQuery = searchParams.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+    window.history.replaceState(null, "", nextUrl);
   }, []);
 
   const submitLocalAuth = async (event: FormEvent) => {
