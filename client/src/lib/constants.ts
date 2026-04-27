@@ -8,7 +8,7 @@ export const SOCIAL_PLATFORMS = [
   // TikTok icons need a bright foreground; the button background already provides contrast.
   { id: "tiktok", label: "TikTok", color: "#FFFFFF", placeholder: "https://tiktok.com/@kullanici" },
   { id: "youtube", label: "YouTube", color: "#FF0000", placeholder: "https://youtube.com/@kanal" },
-  { id: "x", label: "X", color: "#111827", placeholder: "https://x.com/kullanici" },
+  { id: "x", label: "X", color: "#FFFFFF", placeholder: "https://x.com/kullanici" },
   { id: "facebook", label: "Facebook", color: "#1877F2", placeholder: "https://facebook.com/kullanici" },
   { id: "linkedin", label: "LinkedIn", color: "#0A66C2", placeholder: "https://linkedin.com/in/kullanici" },
   { id: "telegram", label: "Telegram", color: "#26A5E4", placeholder: "https://t.me/kullanici" },
