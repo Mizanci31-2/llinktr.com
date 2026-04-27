@@ -560,78 +560,81 @@ function BlockEditor({
                     )}
                   </div>
                 </div>
-                {!isCommerceLink && (
-                  <>
-                    <Input
-                      value={String(block.data.logoUrl || "")}
-                      onChange={(event) => onChange({ ...block.data, logoUrl: event.target.value })}
-                      placeholder="Ana logo URL'si (opsiyonel)"
-                      className="bg-input border-border/60 text-sm"
-                    />
-                    <Input
-                      value={String(block.data.logoUrlSecondary || "")}
-                      onChange={(event) => onChange({ ...block.data, logoUrlSecondary: event.target.value })}
-                      placeholder="Ek logo URL'si (opsiyonel)"
-                      className="bg-input border-border/60 text-sm"
-                    />
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => {
-                        const file = event.currentTarget.files?.[0];
-                        if (file) {
-                          readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrl: dataUrl }), "Logo");
-                        }
-                        event.currentTarget.value = "";
-                      }}
-                      className="bg-input border-border/60 text-sm"
-                    />
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => {
-                        const file = event.currentTarget.files?.[0];
-                        if (file) {
-                          readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrlSecondary: dataUrl }), "Ek logo");
-                        }
-                        event.currentTarget.value = "";
-                      }}
-                      className="bg-input border-border/60 text-sm"
-                    />
-                    {block.data.logoUrl && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const nextData = { ...block.data };
-                          delete nextData.logoUrl;
-                          onChange(nextData);
+                <>
+                  {!isCommerceLink && (
+                    <>
+                      <Input
+                        value={String(block.data.logoUrl || "")}
+                        onChange={(event) => onChange({ ...block.data, logoUrl: event.target.value })}
+                        placeholder="Ana logo URL'si (opsiyonel)"
+                        className="bg-input border-border/60 text-sm"
+                      />
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          const file = event.currentTarget.files?.[0];
+                          if (file) {
+                            readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrl: dataUrl }), "Logo");
+                          }
+                          event.currentTarget.value = "";
                         }}
-                        className="h-8 px-2 text-xs text-muted-foreground"
-                      >
-                        <X className="h-3.5 w-3.5 mr-1" />
-                        Logoyu kaldır
-                      </Button>
-                    )}
-                    {block.data.logoUrlSecondary && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const nextData = { ...block.data };
-                          delete nextData.logoUrlSecondary;
-                          onChange(nextData);
-                        }}
-                        className="h-8 px-2 text-xs text-muted-foreground"
-                      >
-                        <X className="h-3.5 w-3.5 mr-1" />
-                        Ek logoyu kaldır
-                      </Button>
-                    )}
-                  </>
-                )}
+                        className="bg-input border-border/60 text-sm"
+                      />
+                      {block.data.logoUrl && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const nextData = { ...block.data };
+                            delete nextData.logoUrl;
+                            onChange(nextData);
+                          }}
+                          className="h-8 px-2 text-xs text-muted-foreground"
+                        >
+                          <X className="h-3.5 w-3.5 mr-1" />
+                          Logoyu kaldır
+                        </Button>
+                      )}
+                    </>
+                  )}
+
+                  <Input
+                    value={String(block.data.logoUrlSecondary || "")}
+                    onChange={(event) => onChange({ ...block.data, logoUrlSecondary: event.target.value })}
+                    placeholder={isCommerceLink ? "Ek logo URL'si (marka logonuz) (opsiyonel)" : "Ek logo URL'si (opsiyonel)"}
+                    className="bg-input border-border/60 text-sm"
+                  />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      if (file) {
+                        readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrlSecondary: dataUrl }), "Ek logo");
+                      }
+                      event.currentTarget.value = "";
+                    }}
+                    className="bg-input border-border/60 text-sm"
+                  />
+                  {block.data.logoUrlSecondary && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const nextData = { ...block.data };
+                        delete nextData.logoUrlSecondary;
+                        onChange(nextData);
+                      }}
+                      className="h-8 px-2 text-xs text-muted-foreground"
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Ek logoyu kaldır
+                    </Button>
+                  )}
+                </>
               </div>
             </div>
           )}
