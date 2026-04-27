@@ -756,7 +756,7 @@ function PreviewCardContents({
   const themeConfig = getBioTheme(theme);
   const accent = safeAccentColor(accentColor, themeConfig.accent);
   const enabledBlocks = blocks.filter(block => block.isEnabled);
-  const contentBlocks = enabledBlocks.filter(block => block.type !== "social" && block.type !== "profile_image");
+  const contentBlocks = enabledBlocks.filter(block => block.type !== "social");
   const socialBlocks = enabledBlocks.filter(block => block.type === "social" && block.data.url);
   const buttonStyle = getBioButtonStyle(themeConfig, accent);
   const isDesktop = mode === "desktop";
@@ -834,6 +834,26 @@ function PreviewCardContents({
               {String(block.data.title || "Link")}
             </span>
             <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3 w-3"} opacity-55`} />
+          </div>
+        </div>
+      );
+    }
+
+    if (block.type === "profile_image" && block.data.url) {
+      return (
+        <div key={block.tempId} className={isDesktop ? "py-3" : "py-2"}>
+          <div className="flex justify-center">
+            <img
+              src={String(block.data.url)}
+              alt="Logo"
+              className={isDesktop ? "h-28 w-28" : "h-24 w-24"}
+              style={{
+                objectFit: "cover",
+                borderRadius: "9999px",
+                border: `2px solid ${themeConfig.cardBorder}`,
+                background: themeConfig.cardBg,
+              }}
+            />
           </div>
         </div>
       );

@@ -325,7 +325,7 @@ export default function PublicBioPage() {
   const themeConfig = getBioTheme(page.theme);
   const accent = safeAccentColor(page.accentColor, themeConfig.accent);
   const enabledBlocks = blocks.filter(block => block.isEnabled);
-  const contentBlocks = enabledBlocks.filter(block => block.type !== "social" && block.type !== "profile_image");
+  const contentBlocks = enabledBlocks.filter(block => block.type !== "social");
   const socialBlocks = enabledBlocks.filter(block => block.type === "social" && (block.data as Record<string, string | boolean | number> | null)?.url);
   const buttonStyle = getBioButtonStyle(themeConfig, accent);
 
