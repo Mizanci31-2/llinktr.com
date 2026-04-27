@@ -364,8 +364,14 @@ export default function PublicBioPage() {
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 flex items-center justify-center" style={{ ...getBioBackgroundStyle(themeConfig, accent), color: themeConfig.text }}>
-      <main className="w-full max-w-[25.5rem] rounded-[2rem] border p-6 sm:p-7 md:max-w-[35rem] md:rounded-[2.35rem] md:p-8 lg:max-w-[37rem]" style={getBioCardStyle(themeConfig)}>
+    <div
+      className="min-h-screen px-0 py-0 md:px-4 md:py-8 md:flex md:items-center md:justify-center"
+      style={{ ...getBioBackgroundStyle(themeConfig, accent), color: themeConfig.text }}
+    >
+      <main
+        className="w-full max-w-none border-0 px-4 py-6 sm:px-6 sm:py-8 md:max-w-[35rem] md:rounded-[2.35rem] md:border md:p-8 lg:max-w-[37rem]"
+        style={getBioCardStyle(themeConfig)}
+      >
         <div className="mb-8 flex flex-col items-center gap-4 md:mb-9 md:gap-5">
           {page.profileImageUrl ? (
             <img
