@@ -1356,6 +1356,7 @@ export const BLOCK_TYPES = [
   { type: "link", label: "Link", icon: "Link", desc: "Tıklanabilir link alanı" },
   { type: "social", label: "Sosyal Hesap", icon: "Share2", desc: "Altta yuvarlak ikon olarak görünür" },
   { type: "divider", label: "İnce Çizgi", icon: "Minus", desc: "İnce veya kalın ayırıcı çizgi" },
+  { type: "profile_image", label: "Logo / Görsel", icon: "Image", desc: "Bio sayfanıza logo veya görsel ekleyin" },
 ] as const;
 
 

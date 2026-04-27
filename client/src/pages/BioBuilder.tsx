@@ -93,7 +93,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   link: "Link",
   social: "Sosyal Hesap",
   divider: "İnce Çizgi",
-  profile_image: "Profil Resmi",
+  profile_image: "Logo / Görsel",
 };
 
 function generateTempId() {
@@ -146,7 +146,7 @@ function getBlockSummary(block: LocalBlock) {
   }
 
   if (block.type === "profile_image") {
-    return "Profil resmi blok görünümü";
+    return "Logo veya görsel bloğu";
   }
 
   return "Bölümler arasına ayırıcı çizgi ekler";
@@ -1008,7 +1008,6 @@ export default function BioBuilder() {
 
   const themeConfig = getBioTheme(theme);
   const activeAccentColor = safeAccentColor(accentColor, themeConfig.accent);
-  const hasProfileImageBlock = blocks.some(block => block.type === "profile_image");
   const totalClicks = blocks.reduce((sum, block) => sum + (block.clicks ?? 0), 0);
   const activeBlockCount = blocks.filter(block => block.isEnabled).length;
   const hiddenBlockCount = blocks.length - activeBlockCount;
@@ -1029,7 +1028,7 @@ export default function BioBuilder() {
     setTheme(selectedTheme.id);
     setAccentColor(pageData.page.accentColor || selectedTheme.accent);
     setIsPublished(pageData.page.isPublished);
-    setBlocks(normalizeBlocks(pageData.blocks.filter(block => block.type !== "profile_image").map(block => ({
+    setBlocks(normalizeBlocks(pageData.blocks.map(block => ({
       id: block.id,
       tempId: generateTempId(),
       type: block.type as BlockType,
@@ -1104,11 +1103,6 @@ export default function BioBuilder() {
   const addBlock = (type: BlockType) => {
     if (blocks.length >= 50) {
       toast.error("Maksimum 50 öğe sınırına ulaştınız");
-      return;
-    }
-
-    if (type === "profile_image" && hasProfileImageBlock) {
-      toast.error("Profil resmi bloğu yalnızca bir kez eklenebilir");
       return;
     }
 
