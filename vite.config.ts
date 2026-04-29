@@ -150,10 +150,51 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
+/**
+ * Ensure `public/sw.js` is available at `/<root>/sw.js` after build.
+ *
+ * This repo's Vite `publicDir` is `client/public`, so root-level `public/sw.js`
+ * would otherwise be skipped and `/sw.js` would fall through to SPA rewrites.
+ */
+function vitePluginExposeRootServiceWorker(): Plugin {
+  let outDirAbs = "";
+  const srcAbs = path.resolve(PROJECT_ROOT, "public", "sw.js");
+
+  return {
+    name: "expose-root-sw",
+
+    // Serve /sw.js in dev so local testing matches production.
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use("/sw.js", (req, res, next) => {
+        if (req.method !== "GET" && req.method !== "HEAD") return next();
+        if (!fs.existsSync(srcAbs)) return next();
+
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+        // Avoid aggressive caching while iterating locally.
+        res.setHeader("Cache-Control", "no-store");
+        res.end(fs.readFileSync(srcAbs));
+      });
+    },
+
+    apply: "build",
+    configResolved(config) {
+      outDirAbs = config.build.outDir;
+    },
+    closeBundle() {
+      if (!outDirAbs) return;
+      if (!fs.existsSync(srcAbs)) return;
+
+      const destAbs = path.resolve(outDirAbs, "sw.js");
+      fs.copyFileSync(srcAbs, destAbs);
+    },
+  };
+}
+
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
 
 export default defineConfig({
-  plugins,
+  plugins: [...plugins, vitePluginExposeRootServiceWorker()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
