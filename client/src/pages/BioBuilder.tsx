@@ -1344,7 +1344,7 @@ export default function BioBuilder() {
       <Navbar />
 
       <div className="border-b border-border/50 bg-card/50 sticky top-16 z-40 backdrop-blur-xl">
-        <div className="container py-3 flex items-center justify-between gap-4">
+        <div className="container py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-muted-foreground flex-shrink-0">
               <ArrowLeft className="h-4 w-4 mr-1.5" />
@@ -1356,7 +1356,7 @@ export default function BioBuilder() {
               <p className="text-xs text-muted-foreground truncate">llinktr.com/{pageData.page.slug}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="hidden sm:flex items-center gap-2 rounded-lg border border-border/50 px-3 py-1.5">
               <span className="text-xs text-muted-foreground">{isPublished ? "Yayında" : "Durduruldu"}</span>
               <Switch checked={isPublished} onCheckedChange={(checked) => { setIsPublished(checked); setIsDirty(true); }} className="scale-75" />
