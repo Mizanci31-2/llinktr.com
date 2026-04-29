@@ -933,7 +933,7 @@ function PhonePreview({
         <div className="relative w-full max-w-[360px] overflow-hidden rounded-[2.65rem] border-2 border-black/70 bg-black shadow-2xl">
           <div className="absolute top-0 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
           <div
-            className="h-[78vh] min-h-[596px] max-h-[760px] overflow-y-auto px-3.5 pt-7 pb-4.5"
+            className="min-h-0 h-[72vh] max-h-[760px] overflow-y-auto px-3.5 pt-7 pb-4.5 sm:h-[78vh] sm:min-h-[596px]"
             style={getBioBackgroundStyle(themeConfig, accent)}
           >
             <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="phone" />
