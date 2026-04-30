@@ -194,22 +194,22 @@ function HeroPhone({
   const resolveLogo = (platform: string) => COMMERCE_LINK_PRESETS.find(item => item.id === platform);
 
   return (
-    <div className={`relative w-full max-w-[286px] md:w-[304px] md:max-w-none ${className}`}>
+    <div className={`relative w-full ${compact ? "max-w-[286px]" : "max-w-[360px] md:w-[360px] md:max-w-none"} ${className}`}>
       <div className="relative overflow-hidden rounded-[2.6rem] border-2 border-white/15 bg-[#09090b] shadow-2xl">
         <div className={`absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-b-2xl bg-black ${compact ? "h-5 w-20" : "h-6 w-24"}`} />
         <div
           className={compact
-            ? "min-h-[416px] px-2.5 pt-6 pb-3 sm:min-h-[442px]"
-            : "min-h-[520px] px-3 pt-8 pb-4 md:min-h-[560px] md:px-3.5 md:pb-4.5"}
+            ? "aspect-[9/17.2] min-h-0 px-2.5 pt-6 pb-3"
+            : "aspect-[9/17.2] min-h-0 px-3.5 pt-8 pb-4.5"}
           style={getBioThemePreviewStyle(theme, accent)}
         >
           <div
             className={compact
-              ? "min-h-[360px] rounded-[1.85rem] border p-3 sm:min-h-[382px] sm:p-3.5"
-              : "min-h-[460px] rounded-[2rem] border p-4 md:min-h-[500px] md:p-5"}
+              ? "min-h-full rounded-[1.85rem] border p-3 sm:p-3.5"
+              : "min-h-full rounded-[1.95rem] border p-4.5"}
             style={getBioCardStyle(theme)}
           >
-            <div className={compact ? "mb-4 flex flex-col items-center gap-2.5" : "mb-5 flex flex-col items-center gap-3 md:mb-6 md:gap-3.5"}>
+            <div className={compact ? "mb-3 flex flex-col items-center gap-2.5" : "mb-4 flex flex-col items-center gap-3 md:mb-5 md:gap-3.5"}>
               <div className={compact
                 ? "flex h-[3.7rem] w-[3.7rem] items-center justify-center rounded-full border-2 border-white/20 bg-white/10"
                 : "flex h-[4.4rem] w-[4.4rem] items-center justify-center rounded-full border-2 border-white/20 bg-white/10 md:h-[4.9rem] md:w-[4.9rem]"}>
@@ -223,8 +223,8 @@ function HeroPhone({
 
             <div className={compact ? "space-y-2" : "space-y-3"}>
               {links.map((item) => (
-                <div key={item.label} className={compact ? "rounded-[0.95rem] border px-3 py-2.5" : "rounded-[1.05rem] border px-3.5 py-3 md:px-4 md:py-3.5"} style={buttonStyle}>
-                  <div className="relative flex min-h-[2rem] items-center justify-center">
+                <div key={item.label} className={compact ? "grid min-h-[3.6rem] content-center place-items-center rounded-[0.95rem] border px-3 py-0" : "grid min-h-[4.1rem] content-center place-items-center rounded-[1.05rem] border px-3.5 py-0 md:px-4"} style={buttonStyle}>
+                    <div className="relative grid h-full w-full place-items-center self-stretch">
                     <div className={compact
                       ? "absolute left-0 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/80"
                       : "absolute left-0 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80"}>
@@ -235,8 +235,8 @@ function HeroPhone({
                       )}
                     </div>
                     <span className={compact
-                      ? "block w-full truncate px-8 text-center text-[12px] font-medium"
-                      : "block w-full truncate px-10 text-center text-[13px] font-medium"}>{item.label}</span>
+                      ? "flex h-full w-full items-center justify-center truncate px-8 text-center text-[12px] font-medium leading-none"
+                      : "flex h-full w-full items-center justify-center truncate px-10 text-center text-[13px] font-medium leading-none"}>{item.label}</span>
                     <ArrowRight className={compact
                       ? "absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 opacity-55"
                       : "absolute right-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-55"} />

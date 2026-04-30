@@ -372,7 +372,7 @@ export default function PublicBioPage() {
         className="w-full max-w-none border-0 px-4 py-6 sm:px-6 sm:py-8 md:max-w-[35rem] md:rounded-[2.35rem] md:border md:p-8 lg:max-w-[37rem]"
         style={getBioCardStyle(themeConfig)}
       >
-        <div className="mb-8 flex flex-col items-center gap-4 md:mb-9 md:gap-5">
+        <div className="mb-3 flex flex-col items-center gap-4 md:mb-4 md:gap-5">
           {page.profileImageUrl ? (
             <img
               src={page.profileImageUrl}
@@ -456,11 +456,11 @@ export default function PublicBioPage() {
                   href={blockData?.url ? `/go/${block.id}` : "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full overflow-hidden rounded-xl border px-5 py-4 transition-all hover:opacity-90 active:scale-[0.98] md:rounded-[1.2rem] md:px-7 md:py-[1.35rem]"
+                  className="grid min-h-[4.35rem] w-full content-center place-items-center overflow-hidden rounded-xl border px-5 py-0 transition-all hover:opacity-90 active:scale-[0.98] md:min-h-[5.1rem] md:rounded-[1.2rem] md:px-7"
                   style={buttonStyle}
                 >
-                  <div className="grid min-h-[2rem] grid-cols-[2rem_minmax(0,1fr)_1rem] items-center gap-3 md:grid-cols-[2.25rem_minmax(0,1fr)_1.125rem]">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full md:h-9 md:w-9">
+                  <div className="relative grid h-full w-full place-items-center self-stretch">
+                    <div className="absolute left-0 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full md:h-9 md:w-9">
                       {logo || secondaryLogo ? (
                         <div className="relative h-8 w-8 md:h-9 md:w-9">
                           <div className="absolute left-0 top-0">{logo}</div>
@@ -474,10 +474,10 @@ export default function PublicBioPage() {
                         <span className="h-8 w-8 rounded-full md:h-9 md:w-9" />
                       )}
                     </div>
-                    <span className={`block min-w-0 truncate text-sm font-medium md:text-base ${align === "left" ? "text-left" : "text-center"}`}>
+                    <span className={`flex h-full w-full min-w-0 items-center truncate px-10 text-sm font-medium leading-none md:px-12 md:text-base ${align === "left" ? "justify-start text-left" : "justify-center text-center"}`}>
                       {blockData?.title || "Link"}
                     </span>
-                    <ExternalLink className="h-4 w-4 opacity-60 md:h-[18px] md:w-[18px]" />
+                    <ExternalLink className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60 md:h-[18px] md:w-[18px]" />
                   </div>
                 </a>
               );

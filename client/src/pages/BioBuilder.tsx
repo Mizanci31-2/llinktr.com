@@ -104,7 +104,88 @@ function normalizeBlocks(blocks: LocalBlock[]) {
   return blocks.map((block, index) => ({ ...block, sortOrder: index }));
 }
 
-function readImageFile(file: File, onLoaded: (dataUrl: string) => void, label = "Görsel") {
+async function uploadImageFile(file: File) {
+  const presignResponse = await fetch("/api/storage/presign-put", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ contentType: file.type, size: file.size }),
+  });
+  const presignData = await presignResponse.json().catch(() => null) as { uploadUrl?: string; url?: string; message?: string } | null;
+
+  if (!presignResponse.ok || !presignData?.uploadUrl || !presignData?.url) {
+    throw new Error(presignData?.message || "Görsel yükleme bağlantısı oluşturulamadı");
+  }
+
+  const uploadResponse = await fetch(presignData.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("Görsel depolama alanına yüklenemedi");
+  }
+
+  return presignData.url;
+}
+
+function loadImageElement(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Görsel okunamadı"));
+    image.src = src;
+  });
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Görsel okunamadı"));
+    };
+    reader.onerror = () => reject(new Error("Görsel okunamadı"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressImageFile(file: File, label: string) {
+  if (file.type === "image/svg+xml") {
+    if (file.size <= 600 * 1024) return readFileAsDataUrl(file);
+    throw new Error(`${label} SVG olarak çok büyük. Lütfen PNG/JPG/WebP yükleyin.`);
+  }
+
+  const originalDataUrl = await readFileAsDataUrl(file);
+  const image = await loadImageElement(originalDataUrl);
+  const maxSide = label.toLocaleLowerCase("tr").includes("profil") ? 800 : 512;
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Görsel işlenemedi");
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+  const compressed = canvas.toDataURL("image/webp", 0.82);
+
+  if (compressed.length > 1_200_000) {
+    return canvas.toDataURL("image/jpeg", 0.72);
+  }
+
+  return compressed;
+}
+
+function readImageFile(file: File, onLoaded: (url: string) => void, label = "Görsel") {
   if (!file.type.startsWith("image/")) {
     toast.error("Lütfen geçerli bir görsel dosyası seçin");
     return;
@@ -115,14 +196,15 @@ function readImageFile(file: File, onLoaded: (dataUrl: string) => void, label = 
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    if (typeof reader.result === "string") {
-      onLoaded(reader.result);
-    }
-  };
-  reader.onerror = () => toast.error("Görsel okunamadı");
-  reader.readAsDataURL(file);
+  const loadingToast = toast.loading(`${label} hazırlanıyor...`);
+  void compressImageFile(file, label)
+    .then((dataUrl) => {
+      onLoaded(dataUrl);
+      toast.success(`${label} yüklendi`, { id: loadingToast });
+    })
+    .catch((error) => {
+      toast.error(error instanceof Error ? error.message : "Görsel yüklenemedi", { id: loadingToast });
+    });
 }
 
 function getBlockSummary(block: LocalBlock) {
@@ -812,11 +894,11 @@ function PreviewCardContents({
       return (
         <div
           key={block.tempId}
-          className={`overflow-hidden rounded-xl border transition-all ${isDesktop ? "px-5 py-4.5" : "px-4 py-3.5"}`}
+          className={`grid content-center place-items-center overflow-hidden rounded-xl border transition-all ${isDesktop ? "min-h-[5.1rem] px-5 py-0" : "min-h-[4.1rem] px-4 py-0"}`}
           style={buttonStyle}
         >
-          <div className={`grid min-h-[2rem] items-center gap-3 ${isDesktop ? "grid-cols-[2rem_minmax(0,1fr)_1rem]" : "grid-cols-[1.75rem_minmax(0,1fr)_0.75rem]"}`}>
-            <div className={`flex items-center justify-center rounded-full ${isDesktop ? "h-8 w-8" : "h-7 w-7"}`}>
+          <div className="relative grid h-full w-full place-items-center self-stretch">
+            <div className={`absolute left-0 top-1/2 grid -translate-y-1/2 place-items-center rounded-full ${isDesktop ? "h-8 w-8" : "h-7 w-7"}`}>
               {logo || secondaryLogo ? (
                 <div className={`relative ${isDesktop ? "h-8 w-8" : "h-7 w-7"}`}>
                   <div className="absolute left-0 top-0">{logo}</div>
@@ -830,10 +912,10 @@ function PreviewCardContents({
                 <span className={`${isDesktop ? "h-8 w-8" : "h-7 w-7"} rounded-full`} />
               )}
             </div>
-            <span className={`block min-w-0 truncate font-medium ${isDesktop ? "text-[15px]" : "text-xs"} ${align === "left" ? "text-left" : "text-center"}`}>
+            <span className={`flex h-full w-full min-w-0 items-center truncate font-medium leading-none ${isDesktop ? "px-10 text-[15px]" : "px-8 text-xs"} ${align === "left" ? "justify-start text-left" : "justify-center text-center"}`}>
               {String(block.data.title || "Link")}
             </span>
-            <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3 w-3"} opacity-55`} />
+            <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3 w-3"} absolute right-0 top-1/2 -translate-y-1/2 opacity-55`} />
           </div>
         </div>
       );
@@ -863,8 +945,8 @@ function PreviewCardContents({
   };
 
   return (
-    <div className={`rounded-[1.95rem] border flex flex-col ${isDesktop ? "min-h-[620px] p-7" : "min-h-[520px] p-4.5"}`} style={getBioCardStyle(themeConfig)}>
-      <div className={`flex flex-col items-center ${isDesktop ? "mb-6 mt-1 gap-3" : "mb-4 mt-1 gap-2"}`}>
+    <div className={`rounded-[1.95rem] border flex flex-col ${isDesktop ? "min-h-[620px] p-7" : "min-h-full p-4.5"}`} style={getBioCardStyle(themeConfig)}>
+      <div className={`flex flex-col items-center ${isDesktop ? "mb-4 mt-1 gap-3" : "mb-3 mt-1 gap-2"}`}>
         {page.profileImageUrl ? (
           <img
             src={page.profileImageUrl}
@@ -892,7 +974,7 @@ function PreviewCardContents({
         </div>
       </div>
 
-      <div className={`flex-1 ${isDesktop ? "space-y-3.5" : "space-y-2"}`}>
+      <div className={`flex-1 ${isDesktop ? "space-y-3.5" : "space-y-2.5"}`}>
         {contentBlocks.map(renderBlock)}
       </div>
 
@@ -928,12 +1010,12 @@ function PhonePreview({
   const accent = safeAccentColor(accentColor, themeConfig.accent);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex flex-1 flex-col items-center">
-        <div className="relative w-full max-w-[360px] overflow-hidden rounded-[2.65rem] border-2 border-black/70 bg-black shadow-2xl">
+    <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
+      <div className="flex min-w-0 flex-1 flex-col items-center overflow-x-hidden">
+        <div className="relative mx-auto aspect-[9/17.2] w-full max-w-full overflow-hidden rounded-[2.65rem] border-2 border-black/70 bg-black shadow-2xl sm:max-w-[360px]">
           <div className="absolute top-0 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
           <div
-            className="min-h-0 h-[72vh] max-h-[760px] overflow-y-auto px-3.5 pt-7 pb-4.5 sm:h-[78vh] sm:min-h-[596px]"
+            className="h-full min-h-0 overflow-y-auto px-3.5 pt-7 pb-4.5"
             style={getBioBackgroundStyle(themeConfig, accent)}
           >
             <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="phone" />
@@ -1374,8 +1456,8 @@ export default function BioBuilder() {
         </div>
       </div>
 
-      <div className="flex-1 container py-6">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_28rem]">
+      <div className="flex-1 container overflow-x-hidden py-6">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_28rem]">
           <div className="space-y-6">
             <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
               <h2 className="font-semibold mb-4">Profil Detayları</h2>
@@ -1840,8 +1922,8 @@ export default function BioBuilder() {
             </div>
           </div>
 
-          <div className="h-fit lg:sticky lg:top-24">
-            <div className="rounded-2xl border border-border/50 bg-card/80 p-4 backdrop-blur">
+          <div className="h-fit min-w-0 lg:sticky lg:top-24">
+            <div className="min-w-0 rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur sm:p-4">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-base font-semibold">Canlı Önizleme</h2>
@@ -1869,7 +1951,7 @@ export default function BioBuilder() {
                 </ToggleGroup>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-border/40 bg-background/35 p-3 sm:p-4">
+              <div className="min-w-0 overflow-hidden rounded-2xl border border-border/40 bg-background/35 p-2 sm:p-4">
                 {previewMode === "desktop" ? (
                   <DesktopPreview
                     blocks={blocks}
