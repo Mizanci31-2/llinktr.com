@@ -133,6 +133,20 @@
   p, li, label {
     color: color-mix(in oklab, var(--foreground) 86%, white 14%);
   }
+  a,
+  button,
+  span,
+  p,
+  li,
+  label,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: 1.45;
+  }
   input,
   textarea,
   select,
@@ -186,6 +200,30 @@
       0 12px 34px rgba(2, 6, 23, 0.33);
   }
 
+  .link-card,
+  .link-card *,
+  .link-button,
+  .link-button *,
+  .link-title,
+  .link-title *,
+  a,
+  button {
+    line-height: 1.5 !important;
+  }
+
+  .link-card,
+  .link-button {
+    align-items: center;
+    overflow: visible !important;
+  }
+
+  .link-title {
+    display: inline-flex;
+    align-items: center;
+    overflow: visible !important;
+    padding-bottom: 4px !important;
+  }
+
   .flex {
     min-height: 0;
     min-width: 0;
@@ -205,6 +243,40 @@
       max-width: 1280px; /* Standard content width */
     }
   }
+
+  .hero-preview-glow {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 28px 110px rgba(0, 0, 0, 0.45),
+      0 0 62px rgba(217, 249, 0, 0.12);
+  }
+
+  .hero-link-highlight {
+    position: absolute;
+    left: 11%;
+    right: 11%;
+    height: 8.8%;
+    border-radius: 18px;
+    border: 1px solid rgba(217, 249, 0, 0.35);
+    box-shadow:
+      0 0 0 1px rgba(217, 249, 0, 0.08),
+      0 0 40px rgba(217, 249, 0, 0.12);
+    opacity: 0;
+    pointer-events: none;
+    animation: llinktr-hero-link-highlight 10.5s ease-in-out infinite;
+  }
+
+  .hero-link-highlight--1 { top: 46.5%; animation-delay: 0s; }
+  .hero-link-highlight--2 { top: 58.2%; animation-delay: 2.6s; }
+  .hero-link-highlight--3 { top: 69.9%; animation-delay: 5.2s; }
+  .hero-link-highlight--4 { top: 81.6%; animation-delay: 7.8s; }
+}
+
+@keyframes llinktr-hero-link-highlight {
+  0% { opacity: 0; transform: translateY(0px); }
+  6% { opacity: 0.55; }
+  14% { opacity: 0.12; }
+  100% { opacity: 0; transform: translateY(0px); }
 }
 
 @keyframes llinktr-pan {

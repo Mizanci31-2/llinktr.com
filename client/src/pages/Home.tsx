@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
+import { getLoginUrl, getSignupUrl } from "@/const";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SocialIcon } from "@/components/SocialIcon";
@@ -117,7 +117,7 @@ const FEATURES: readonly FeatureDefinition[] = [
 
 const FAQS = [
   { q: "llinktr tamamen ucretsiz mi?", a: "Evet, llinktr tamamen ucretsiz hizmet sunar. Bio link olusturma, link kisaltma ve QR kod uretme ozelliklerini ucretsiz kullanabilirsiniz." },
-  { q: "Kac tane bio sayfasi olusturabilirim?", a: "Istediginiz kadar bio sayfasi olusturabilirsiniz. Her sayfa icin benzersiz bir slug belirleyebilirsiniz." },
+  { q: "Kac tane bio sayfasi olusturabilirim?", a: "En fazla 5 adet bio sayfasi olusturabilirsiniz. Her sayfa icin benzersiz bir slug belirleyebilirsiniz." },
   { q: "Bio sayfama kac oge ekleyebilirim?", a: "Her bio sayfasina maksimum 50 oge ekleyebilirsiniz. Baslik, aciklama, link, sosyal medya baglantisi ve daha fazlasini ekleyebilirsiniz." },
   { q: "QR kodlarini sonradan duzenleyebilir miyim?", a: "QR kodlari anlik olarak olusturulur ve PNG formatinda indirilebilir. Her zaman yeni bir QR kod olusturabilirsiniz." },
 ] as const;
@@ -221,13 +221,15 @@ function HeroPhone({
               </div>
             </div>
 
-            <div className={compact ? "space-y-2" : "space-y-3"}>
+            <div className={compact ? "w-full space-y-2" : "w-full space-y-3"}>
               {links.map((item) => (
-                <div key={item.label} className={compact ? "grid min-h-[3.6rem] content-center place-items-center rounded-[0.95rem] border px-3 py-0" : "grid min-h-[4.1rem] content-center place-items-center rounded-[1.05rem] border px-3.5 py-0 md:px-4"} style={buttonStyle}>
-                    <div className="relative grid h-full w-full place-items-center self-stretch">
+                <div key={item.label} className={compact ? "link-card link-button mx-auto grid min-h-[3.6rem] w-full max-w-[15rem] content-center place-items-center overflow-visible rounded-[0.95rem] border px-3 py-2" : "link-card link-button mx-auto grid min-h-[4.1rem] w-full content-center place-items-center overflow-visible rounded-[1.05rem] border px-3.5 py-2 md:px-4"} style={buttonStyle}>
+                  <div className={compact
+                    ? "grid min-h-full w-full grid-cols-[1.75rem_minmax(0,1fr)_0.75rem] items-center gap-1 self-stretch"
+                    : "grid min-h-full w-full grid-cols-[2rem_minmax(0,1fr)_0.875rem] items-center gap-1.5 self-stretch"}>
                     <div className={compact
-                      ? "absolute left-0 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/80"
-                      : "absolute left-0 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80"}>
+                      ? "flex h-7 w-7 items-center justify-center rounded-full bg-background/80"
+                      : "flex h-8 w-8 items-center justify-center rounded-full bg-background/80"}>
                       {resolveLogo(item.logo)?.logoUrl ? (
                         <img src={resolveLogo(item.logo)?.logoUrl} alt="" className="h-[18px] w-[18px] rounded-full object-cover" />
                       ) : (
@@ -235,11 +237,11 @@ function HeroPhone({
                       )}
                     </div>
                     <span className={compact
-                      ? "flex h-full w-full items-center justify-center truncate px-8 text-center text-[12px] font-medium leading-none"
-                      : "flex h-full w-full items-center justify-center truncate px-10 text-center text-[13px] font-medium leading-none"}>{item.label}</span>
+                      ? "link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible text-center text-[10px] font-medium sm:text-[11px]"
+                      : "link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible text-center text-[13px] font-medium"}>{item.label}</span>
                     <ArrowRight className={compact
-                      ? "absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 opacity-55"
-                      : "absolute right-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-55"} />
+                      ? "h-3 w-3 justify-self-end opacity-55"
+                      : "h-3.5 w-3.5 justify-self-end opacity-55"} />
                   </div>
                 </div>
               ))}
@@ -261,81 +263,32 @@ function HeroPhone({
   );
 }
 
-function HeroPhoneStage() {
-  const stagePhoneClass = "w-[164px] max-w-[164px] sm:w-[198px] sm:max-w-[198px] lg:w-[258px] lg:max-w-[258px]";
-
-  const leftPhone = (
-    <HeroPhone
-      themeId="minimal_light"
-      title="Kurumsal profil"
-      description="Teklif, toplanti ve dosya akisi"
-      links={[
-        { label: "Toplanti rezervasyonu", logo: "amazon_store" },
-        { label: "Sunum dosyalari", logo: "ebay_store" },
-        { label: "Kurumsal baglanti", logo: "linkedin" },
-        { label: "Pazar yeri listesi", logo: "hepsiburada" },
-      ]}
-      socials={["linkedin", "github", "telegram"]}
-      compact
-      className={stagePhoneClass}
-    />
-  );
-
-  const rightPhone = (
-    <HeroPhone
-      themeId="dark_grid"
-      title="Moda vitrini"
-      description="Yeni sezon kampanya akisi"
-      links={[
-        { label: "Trendyol magazam", logo: "trendyol" },
-        { label: "Shopier koleksiyonu", logo: "shopier_store" },
-        { label: "Hepsiburada urunleri", logo: "hepsiburada" },
-        { label: "N11 kampanyasi", logo: "n11" },
-      ]}
-      socials={["instagram", "tiktok", "youtube"]}
-      compact
-      className={stagePhoneClass}
-    />
-  );
-
+function HeroVisualStack() {
   return (
-    <div className="relative mx-auto h-[522px] w-full max-w-[292px] overflow-hidden px-1 sm:h-[540px] sm:max-w-[332px] lg:mx-0 lg:h-[700px] lg:max-w-[540px]">
-      <div className="absolute inset-0 rounded-[2.2rem] border border-white/8 bg-white/[0.03] backdrop-blur-[2px]" />
-
+    <div className="flex justify-center lg:justify-end">
       <motion.div
-        className="absolute left-1/2 top-[1.7rem] z-10 -translate-x-1/2 sm:top-[2.2rem] lg:top-[8.2rem]"
-        animate={{
-          x: [-12, 14, -12],
-          y: [8, -10, 8],
-          scale: [0.82, 1, 0.82],
-          rotate: [-8, 5, -8],
-          opacity: [0.74, 1, 0.74],
-        }}
-        transition={{
-          duration: 8.5,
-          ease: "easeInOut",
-          repeat: Infinity,
-        }}
+        className="relative w-full max-w-[560px] pt-4 lg:pt-0"
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.55, ease: "easeOut" }}
       >
-        {leftPhone}
-      </motion.div>
+        <div className="hero-preview-glow relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[28px] border border-white/10 bg-black shadow-[0_28px_110px_rgba(0,0,0,0.45)] lg:mx-0">
+          {/* "Ana sayfa foto" (bio link sayfa goruntusu) */}
+          <img
+            src="/images/hero-preview-1.png"
+            alt="Bio link sayfa ornek gorunumu"
+            className="block h-auto w-full object-cover"
+            loading="eager"
+            decoding="async"
+          />
 
-      <motion.div
-        className="absolute left-1/2 top-[1.7rem] z-20 -translate-x-1/2 sm:top-[2.2rem] lg:top-[8.2rem]"
-        animate={{
-          x: [12, -14, 12],
-          y: [-10, 12, -10],
-          scale: [1, 0.82, 1],
-          rotate: [6, -7, 6],
-          opacity: [1, 0.76, 1],
-        }}
-        transition={{
-          duration: 8.5,
-          ease: "easeInOut",
-          repeat: Infinity,
-        }}
-      >
-        {rightPhone}
+          {/* Subtle looping highlight on link buttons (very low contrast, no blur on base image). */}
+          <div className="hero-link-highlight hero-link-highlight--1" aria-hidden />
+          <div className="hero-link-highlight hero-link-highlight--2" aria-hidden />
+          <div className="hero-link-highlight hero-link-highlight--3" aria-hidden />
+          <div className="hero-link-highlight hero-link-highlight--4" aria-hidden />
+        </div>
       </motion.div>
     </div>
   );
@@ -412,11 +365,11 @@ function FeatureVisual({
           </div>
           <div className="space-y-2.5 sm:space-y-3">
             {feature.preview.links.map((item) => (
-              <div key={item.label} className="grid grid-cols-[2rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2.5 text-white/90 sm:grid-cols-[2.25rem_minmax(0,1fr)_1rem] sm:gap-3 sm:px-4 sm:py-3">
+              <div key={item.label} className="link-card grid grid-cols-[2rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2.5 text-white/90 sm:grid-cols-[2.25rem_minmax(0,1fr)_1rem] sm:gap-3 sm:px-4 sm:py-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[11px] font-semibold text-cyan-200 sm:h-9 sm:w-9 sm:text-xs">
                   /r
                 </div>
-                <span className="truncate text-[11px] font-medium sm:text-sm">{item.label}</span>
+                <span className="link-title truncate text-[11px] font-medium sm:text-sm">{item.label}</span>
                 <ArrowRight className="h-4 w-4 opacity-60" />
               </div>
             ))}
@@ -558,89 +511,55 @@ export default function Home() {
             <div>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/70 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
-                Tema, bio link, kisa link ve QR ayni panelde
+                Ornek gorunum sagda
               </div>
-              <div className="mb-3 inline-flex items-center rounded-full border border-primary/70 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                %100 ücretsiz
-              </div>
-              <h1 className="max-w-3xl text-[2.35rem] font-bold leading-[1.02] tracking-tight sm:text-5xl md:text-6xl">
-                <span className="text-white">Bio link sayfasi,</span>
-                <br />
-                <span className="text-primary">kisa link ve QR</span>
-                <br />
-                <span className="bg-gradient-to-r from-cyan-300 via-emerald-300 to-primary bg-clip-text text-transparent">tek yerde.</span>
+              <h1 className="max-w-2xl text-[2.35rem] font-bold leading-[1.02] tracking-tight sm:text-5xl md:text-6xl">
+                <span className="text-white">Tum linklerin</span>{" "}
+                <span className="text-primary">tek yerde</span>
               </h1>
-              <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground md:mt-6 md:text-lg">
-                <span className="text-slate-200">llinktr ile link sayfanizi kurun, blok blok duzenleyin, temalari aninda degistirin.</span>{" "}
-                <span className="text-cyan-200">Uzun URL'leri kisaltin</span> ve{" "}
-                <span className="text-emerald-200">QR ile hizli paylasin.</span>
-                <br />
-                Bio link, sosyal hesaplar, magaza baglantilari ve kampanya linkleri ayni panelde toplansin; siz de yayinlamadan once canli onizleme ile son halini rahatca kontrol edin.
+              <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground md:mt-5 md:text-lg">
+                Bio sayfani <span className="text-slate-200">10 saniyede</span> olustur
               </p>
-              <div className="mt-5 grid max-w-2xl gap-3 sm:grid-cols-2">
-                <div className="panel-strong rounded-2xl border border-border/70 bg-card/75 p-4">
-                  <p className="text-sm font-semibold">Tek panelden duzenleyin</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    Baslik, metin, link, sosyal hesap ve hazir e-ticaret butonlarini ayri ayri yonetip hizlamayi secin.
-                  </p>
-                </div>
-                <div className="panel-strong rounded-2xl border border-border/70 bg-card/75 p-4">
-                  <p className="text-sm font-semibold">Temayi aninda degistirin</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    Fotografli, hareketli ve sade temalar arasinda gecis yapin; bio sayfaniz yayinlanmadan once son halini rahatca kontrol edin.
-                  </p>
-                </div>
-              </div>
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a href={isAuthenticated ? "/dashboard" : getLoginUrl()}>
-                  <Button size="lg" className="bg-primary px-6 font-semibold text-primary-foreground shadow-[0_0_24px_oklch(0.93_0.23_110/0.24)] hover:bg-primary/90">
-                    Basla
-                  </Button>
-                </a>
-                {isAuthenticated ? (
-                  <Link href="/shortener">
-                    <Button size="lg" variant="outline" className="border-primary/80 px-6 font-semibold text-primary hover:bg-primary/10">
-                      Link Kisalt
+
+              <div className="mt-6 max-w-xl">
+                <p className="mb-2 px-1 text-xs font-semibold text-muted-foreground">Ornek gorunum sagda</p>
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <input
+                    aria-label="Kullanici adi"
+                    className="min-h-14 w-full rounded-xl border border-border/80 bg-background/95 px-4 text-base font-medium text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/60"
+                    placeholder="kullaniciadi"
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                  <Link href={isAuthenticated ? "/dashboard" : "/register"} className="block">
+                    <Button
+                      size="lg"
+                      className="min-h-14 w-full rounded-xl bg-primary px-6 py-3 text-center text-sm font-extrabold tracking-tight text-primary-foreground shadow-[0_0_28px_oklch(0.93_0.23_110/0.28)] hover:bg-primary/90 sm:w-auto"
+                    >
+                      Ucretsiz Basla
+                      <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                ) : (
-                  <a href={getLoginUrl()}>
-                    <Button size="lg" variant="outline" className="border-primary/80 px-6 font-semibold text-primary hover:bg-primary/10">
-                      Link Kisalt
-                    </Button>
-                  </a>
-                )}
-                {isAuthenticated ? (
-                  <Link href="/qr">
-                    <Button size="lg" variant="outline" className="border-primary/80 px-6 font-semibold text-primary hover:bg-primary/10">
-                      QR Olustur
-                    </Button>
-                  </Link>
-                ) : (
-                  <a href={getLoginUrl()}>
-                    <Button size="lg" variant="outline" className="border-primary/80 px-6 font-semibold text-primary hover:bg-primary/10">
-                      QR Olustur
-                    </Button>
-                  </a>
-                )}
+                </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {visibleFeatures.map((feature) => (
-                  <FeatureTile key={feature.title} feature={feature} isAuthenticated={isAuthenticated} />
-                ))}
-              </div>
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="panel-strong rounded-full border border-primary/70 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">%100 ücretsiz</span>
-                <span className="panel-strong rounded-full border border-border/70 bg-card/75 px-3 py-1.5 text-xs text-muted-foreground">Hazir magaza logolari</span>
-                <span className="panel-strong rounded-full border border-border/70 bg-card/75 px-3 py-1.5 text-xs text-muted-foreground">Telefon onizleme</span>
-                <span className="panel-strong rounded-full border border-border/70 bg-card/75 px-3 py-1.5 text-xs text-muted-foreground">Canli tema degisimi</span>
+              <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="panel-strong rounded-2xl border border-border/70 bg-card/75 p-4">
+                  <p className="text-sm font-semibold">Bio link olustur</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Tek sayfada tum linklerin.</p>
+                </div>
+                <div className="panel-strong rounded-2xl border border-border/70 bg-card/75 p-4">
+                  <p className="text-sm font-semibold">Link kisalt</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Kisa link olustur, takip et.</p>
+                </div>
+                <div className="panel-strong rounded-2xl border border-border/70 bg-card/75 p-4">
+                  <p className="text-sm font-semibold">QR kod uret</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Tek taramada paylas.</p>
+                </div>
               </div>
             </div>
 
-            <HeroPhoneStage />
+            <HeroVisualStack />
           </div>
         </div>
       </section>

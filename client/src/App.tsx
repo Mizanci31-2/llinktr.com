@@ -1,29 +1,44 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import Shortener from "./pages/Shortener";
-import QRGenerator from "./pages/QRGenerator";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import CookiePolicy from "./pages/CookiePolicy";
-import Kvkk from "./pages/Kvkk";
-import BioBuilder from "./pages/BioBuilder";
-import PublicBioPage from "./pages/PublicBioPage";
-import PublicProfile from "./pages/PublicProfile";
-import Login from "./pages/Login";
+
+const Home = lazy(() => import("./pages/Home"));
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const BioBuilder = lazy(() => import("./pages/BioBuilder"));
+const Shortener = lazy(() => import("./pages/Shortener"));
+const QRGenerator = lazy(() => import("./pages/QRGenerator"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const CookiePolicy = lazy(() => import("./pages/CookiePolicy"));
+const Kvkk = lazy(() => import("./pages/Kvkk"));
+const PublicBioPage = lazy(() => import("./pages/PublicBioPage"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+function AdminRedirect() {
+  if (typeof window !== "undefined") {
+    window.location.replace("/admin31");
+  }
+
+  return null;
+}
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/giris" component={Login} />
+      <Route path="/kayitol" component={Login} />
+      <Route path="/kayıtol" component={Login} />
+      <Route path="/register" component={Login} />
+      <Route path="/admin" component={AdminRedirect} />
+      <Route path="/admin31" component={Dashboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/:id" component={BioBuilder} />
       <Route path="/builder/:id" component={BioBuilder} />
@@ -51,7 +66,9 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <Suspense fallback={null}>
+            <Router />
+          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
