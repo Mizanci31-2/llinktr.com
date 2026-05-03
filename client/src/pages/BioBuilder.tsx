@@ -22,6 +22,7 @@ import {
   MAX_PROFILE_IMAGE_BYTES,
   SOCIAL_PLATFORMS,
   getBioBackgroundStyle,
+  getBioBackgroundStyleStatic,
   getBioButtonStyle,
   getBioCardStyle,
   getBioTheme,
@@ -102,6 +103,15 @@ function generateTempId() {
 
 function normalizeBlocks(blocks: LocalBlock[]) {
   return blocks.map((block, index) => ({ ...block, sortOrder: index }));
+}
+
+function sanitizeBlockData(data: Record<string, string | boolean | number>) {
+  return Object.fromEntries(
+    Object.entries(data).filter((entry): entry is [string, string | boolean | number] => {
+      const value = entry[1];
+      return typeof value === "string" || typeof value === "boolean" || typeof value === "number";
+    }),
+  );
 }
 
 async function uploadImageFile(file: File) {
@@ -826,17 +836,20 @@ function PreviewCardContents({
   blocks,
   page,
   accentColor,
+  textColor,
   theme,
   mode,
 }: {
   blocks: LocalBlock[];
   page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
   accentColor: string;
+  textColor: string;
   theme: string;
   mode: "phone" | "desktop";
 }) {
   const themeConfig = getBioTheme(theme);
   const accent = safeAccentColor(accentColor, themeConfig.accent);
+  const resolvedTextColor = /^#[0-9a-fA-F]{6}$/.test(textColor) ? textColor : themeConfig.text;
   const enabledBlocks = blocks.filter(block => block.isEnabled);
   const contentBlocks = enabledBlocks.filter(block => block.type !== "social");
   const socialBlocks = enabledBlocks.filter(block => block.type === "social" && block.data.url);
@@ -868,11 +881,11 @@ function PreviewCardContents({
     if (block.type === "heading") {
       const text = String(block.data.text || "Başlık");
       return (
-        <p
-          key={block.tempId}
-          className={`py-1 text-center font-bold ${isDesktop ? "text-lg" : "text-sm"}`}
-          style={{ color: themeConfig.text, textTransform: block.data.uppercase ? "uppercase" : "none" }}
-        >
+          <p
+            key={block.tempId}
+            className={`py-1 text-center font-bold ${isDesktop ? "text-lg" : "text-sm"}`}
+            style={{ color: resolvedTextColor, textTransform: block.data.uppercase ? "uppercase" : "none" }}
+          >
           {block.data.uppercase ? text.toUpperCase() : text}
         </p>
       );
@@ -894,7 +907,7 @@ function PreviewCardContents({
       return (
         <div
           key={block.tempId}
-          className={`grid content-center place-items-center overflow-hidden rounded-xl border transition-all ${isDesktop ? "min-h-[5.1rem] px-5 py-0" : "min-h-[4.1rem] px-4 py-0"}`}
+          className={`link-card link-button mx-auto grid w-full content-center place-items-center overflow-visible rounded-xl border transition-all ${isDesktop ? "min-h-[5.1rem] px-5 py-2" : "min-h-[4.1rem] max-w-[28rem] px-4 py-2"}`}
           style={buttonStyle}
         >
           <div className="relative grid h-full w-full place-items-center self-stretch">
@@ -912,7 +925,7 @@ function PreviewCardContents({
                 <span className={`${isDesktop ? "h-8 w-8" : "h-7 w-7"} rounded-full`} />
               )}
             </div>
-            <span className={`flex h-full w-full min-w-0 items-center truncate font-medium leading-none ${isDesktop ? "px-10 text-[15px]" : "px-8 text-xs"} ${align === "left" ? "justify-start text-left" : "justify-center text-center"}`}>
+            <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible truncate text-center font-medium ${isDesktop ? "px-10 text-[15px]" : "px-8 text-xs"} ${align === "left" ? "sm:justify-start sm:text-left" : ""}`}>
               {String(block.data.title || "Link")}
             </span>
             <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3 w-3"} absolute right-0 top-1/2 -translate-y-1/2 opacity-55`} />
@@ -963,7 +976,7 @@ function PreviewCardContents({
           </div>
         )}
         <div className="text-center">
-          <p className={`font-semibold ${isDesktop ? "text-xl" : "text-sm"}`} style={{ color: themeConfig.text }}>
+          <p className={`font-semibold ${isDesktop ? "text-xl" : "text-sm"}`} style={{ color: resolvedTextColor }}>
             {page.title || "@kullanici"}
           </p>
           {page.description && (
@@ -974,7 +987,7 @@ function PreviewCardContents({
         </div>
       </div>
 
-      <div className={`flex-1 ${isDesktop ? "space-y-3.5" : "space-y-2.5"}`}>
+      <div className={`w-full flex-1 ${isDesktop ? "space-y-3.5" : "space-y-2.5"}`}>
         {contentBlocks.map(renderBlock)}
       </div>
 
@@ -999,11 +1012,13 @@ function PhonePreview({
   blocks,
   page,
   accentColor,
+  textColor,
   theme,
 }: {
   blocks: LocalBlock[];
   page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
   accentColor: string;
+  textColor: string;
   theme: string;
 }) {
   const themeConfig = getBioTheme(theme);
@@ -1016,9 +1031,9 @@ function PhonePreview({
           <div className="absolute top-0 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
           <div
             className="h-full min-h-0 overflow-y-auto px-3.5 pt-7 pb-4.5"
-            style={getBioBackgroundStyle(themeConfig, accent)}
+            style={getBioBackgroundStyleStatic(themeConfig, accent)}
           >
-            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="phone" />
+            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} textColor={textColor} theme={theme} mode="phone" />
           </div>
         </div>
         <div className="mt-3 text-center">
@@ -1037,11 +1052,13 @@ function DesktopPreview({
   blocks,
   page,
   accentColor,
+  textColor,
   theme,
 }: {
   blocks: LocalBlock[];
   page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
   accentColor: string;
+  textColor: string;
   theme: string;
 }) {
   const themeConfig = getBioTheme(theme);
@@ -1067,7 +1084,7 @@ function DesktopPreview({
         </div>
         <div className="min-h-[620px] p-5 md:p-7" style={getBioBackgroundStyle(themeConfig, accent)}>
           <div className="mx-auto max-w-[40rem]">
-            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="desktop" />
+            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} textColor={textColor} theme={theme} mode="desktop" />
           </div>
         </div>
       </div>
@@ -1086,6 +1103,7 @@ export default function BioBuilder() {
   const [, navigate] = useLocation();
   const { isAuthenticated, loading } = useAuth();
   const pageId = parseInt(id || "0");
+  const utils = trpc.useUtils();
 
   const { data: pageData, isLoading } = trpc.bioPages.getById.useQuery(
     { id: pageId },
@@ -1099,6 +1117,7 @@ export default function BioBuilder() {
   const [faviconUrl, setFaviconUrl] = useState("");
   const [theme, setTheme] = useState("dark_grid");
   const [accentColor, setAccentColor] = useState("#22D3EE");
+  const [textColor, setTextColor] = useState("#F8FAFC");
   const [isPublished, setIsPublished] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [isAddBlockDialogOpen, setIsAddBlockDialogOpen] = useState(false);
@@ -1132,6 +1151,7 @@ export default function BioBuilder() {
     setFaviconUrl(pageData.page.faviconUrl || "");
     setTheme(selectedTheme.id);
     setAccentColor(pageData.page.accentColor || selectedTheme.accent);
+    setTextColor(selectedTheme.text);
     setIsPublished(pageData.page.isPublished);
     setBlocks(normalizeBlocks(pageData.blocks.map(block => ({
       id: block.id,
@@ -1172,6 +1192,7 @@ export default function BioBuilder() {
   const handleSave = async () => {
     try {
       const existingBlockCount = pageData?.blocks?.length ?? 0;
+      const allowEmptyBlocks = blocks.length === 0 && existingBlockCount > 0;
       if (blocks.length === 0 && existingBlockCount > 0) {
         const confirmed = window.confirm(
           "Tüm içerik blokları silinecek. Boş olarak kaydetmek istediğinize emin misiniz?",
@@ -1192,16 +1213,25 @@ export default function BioBuilder() {
 
       await bulkSaveMutation.mutateAsync({
         pageId,
+        allowEmpty: allowEmptyBlocks,
         blocks: blocks.map((block, index) => ({
           id: block.id,
           type: block.type,
           sortOrder: index,
           isEnabled: block.isEnabled,
-          data: block.data,
+          data: sanitizeBlockData(block.data),
         })),
       });
-    } catch {
-      toast.error("Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.");
+
+      await Promise.allSettled([
+        utils.bioPages.getById.invalidate({ id: pageId }),
+        utils.bioPages.list.invalidate(),
+        pageData?.page?.slug
+          ? utils.bioPages.getBySlug.invalidate({ slug: pageData.page.slug })
+          : Promise.resolve(),
+      ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.");
     }
   };
 
@@ -1370,6 +1400,7 @@ export default function BioBuilder() {
     const selectedTheme = getBioTheme(themeId);
     setTheme(selectedTheme.id);
     setAccentColor(selectedTheme.accent);
+    setTextColor(selectedTheme.text);
     setIsDirty(true);
   };
 
@@ -1595,6 +1626,15 @@ export default function BioBuilder() {
                     <Input value={accentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} placeholder="#22D3EE" className="bg-input border-border/50 font-mono text-sm" />
                   </div>
                   <p className="text-xs text-muted-foreground">Seçtiğiniz renk arka plana ton verir ve buton vurgularını anında günceller.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Yazı Rengi</Label>
+                  <div className="flex items-center gap-3">
+                    <input type="color" value={textColor} onChange={(event) => { setTextColor(event.target.value); setIsDirty(true); }} className="h-10 w-16 rounded-lg cursor-pointer border border-border/50 bg-transparent" />
+                    <Input value={textColor} onChange={(event) => { setTextColor(event.target.value); setIsDirty(true); }} placeholder="#F8FAFC" className="bg-input border-border/50 font-mono text-sm" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Yazı rengi önizlemedeki başlıkları ve temel metin tonunu ayrı kontrol eder.</p>
                 </div>
               </div>
             </div>
@@ -1953,20 +1993,22 @@ export default function BioBuilder() {
 
               <div className="min-w-0 overflow-hidden rounded-2xl border border-border/40 bg-background/35 p-2 sm:p-4">
                 {previewMode === "desktop" ? (
-                  <DesktopPreview
-                    blocks={blocks}
-                    page={previewPage}
-                    accentColor={activeAccentColor}
-                    theme={themeConfig.id}
-                  />
-                ) : (
-                  <PhonePreview
-                    blocks={blocks}
-                    page={previewPage}
-                    accentColor={activeAccentColor}
-                    theme={themeConfig.id}
-                  />
-                )}
+                    <DesktopPreview
+                      blocks={blocks}
+                      page={previewPage}
+                      accentColor={activeAccentColor}
+                      textColor={textColor}
+                      theme={themeConfig.id}
+                    />
+                  ) : (
+                    <PhonePreview
+                      blocks={blocks}
+                      page={previewPage}
+                      accentColor={activeAccentColor}
+                      textColor={textColor}
+                      theme={themeConfig.id}
+                    />
+                  )}
               </div>
             </div>
           </div>
