@@ -11,11 +11,9 @@ import {
   Check,
   Clock3,
   Palette,
-  QrCode,
   Rocket,
   Share2,
   ShieldCheck,
-  ShoppingBag,
   Smartphone,
   Sparkles,
   Star,
@@ -35,7 +33,7 @@ const howItWorks = [
 const whyItems = [
   { title: "Hızlı kurulum", desc: "Dakikalar değil, saniyeler içinde yayına çık.", icon: Zap },
   { title: "Ücretsiz kullanım", desc: "Başlamak için kredi kartı veya ödeme gerekmez.", icon: ShieldCheck },
-  { title: "Mobil uyum", desc: "Tek elle kullanılabilen, hızlı açılan sayfalar.", icon: Smartphone },
+  { title: "Mobil uyum", desc: "Tek elle kullanıma uygun, hızlı açılan sayfalar.", icon: Smartphone },
   { title: "Modern tasarım", desc: "Koyu tema, net CTA ve premium görünüm.", icon: Palette },
 ];
 
@@ -46,9 +44,30 @@ const useCases = [
 ];
 
 const examples = [
-  { title: "Creator Kit", desc: "Instagram, YouTube, kampanya ve sponsor linkleri.", color: "from-pink-500/24" },
-  { title: "Shop Launch", desc: "Yeni ürün, indirim ve WhatsApp sipariş akışı.", color: "from-lime-400/24" },
-  { title: "Portfolio Pro", desc: "Projeler, teklif formu ve toplantı linki.", color: "from-sky-400/24" },
+  {
+    title: "Creator Kit",
+    handle: "@ececreator",
+    bio: "Yeni video, iş birliği ve sosyal hesaplar",
+    accent: "from-pink-500/22",
+    links: ["Instagram içeriklerim", "YouTube videolarım", "Sponsor teklif al"],
+    socials: ["instagram", "youtube", "tiktok"],
+  },
+  {
+    title: "Shop Launch",
+    handle: "@shoplaunch",
+    bio: "Yeni ürünler, kampanya ve hızlı sipariş",
+    accent: "from-lime-400/22",
+    links: ["Yeni koleksiyon", "WhatsApp sipariş", "İndirim linki"],
+    socials: ["instagram", "whatsapp", "website"],
+  },
+  {
+    title: "Portfolio Pro",
+    handle: "@dilanworks",
+    bio: "Projeler, teklif formu ve toplantı linki",
+    accent: "from-sky-400/22",
+    links: ["Portfolyo", "Teklif al", "Toplantı planla"],
+    socials: ["website", "linkedin", "mail"],
+  },
 ];
 
 const testimonials = [
@@ -66,58 +85,6 @@ function Reveal({ children, direction = "up", className = "" }: { children: Reac
   );
 }
 
-function PhoneMockup() {
-  return (
-    <div className="relative mx-auto w-full max-w-[360px]">
-      <div className="absolute -inset-10 rounded-full bg-primary/20 blur-3xl" aria-hidden />
-      <motion.div
-        className="relative rounded-[34px] border border-white/12 bg-white/[0.055] p-3 shadow-[0_30px_110px_rgba(0,0,0,0.5)] backdrop-blur-2xl"
-        initial={{ opacity: 0, x: 44, y: 16 }}
-        animate={{ opacity: 1, x: 0, y: 0 }}
-        transition={{ duration: 0.75, ease: "easeOut" }}
-        whileHover={{ y: -8, scale: 1.015 }}
-      >
-        <div className="overflow-hidden rounded-[27px] border border-white/10 bg-[#090909]">
-          <div className="absolute left-1/2 top-3 z-10 h-6 w-24 -translate-x-1/2 rounded-b-2xl bg-black" />
-          <div className="min-h-[590px] bg-[radial-gradient(circle_at_top,#dfff0033,transparent_35%),linear-gradient(180deg,#161616,#080808)] px-5 pb-6 pt-12">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-primary/45 bg-primary/12 shadow-[0_0_40px_rgba(223,255,0,0.16)]">
-              <span className="text-xl font-black text-primary">ll</span>
-            </div>
-            <div className="mt-4 text-center">
-              <p className="text-lg font-bold text-white">@kullaniciadi</p>
-              <p className="mt-1 text-sm leading-relaxed text-white/58">Satış, içerik ve tüm önemli linkler</p>
-            </div>
-
-            <div className="mt-7 space-y-3">
-              {["Yeni koleksiyon", "WhatsApp ile teklif al", "YouTube videolarım"].map((item) => (
-                <div key={item} className="grid min-h-14 grid-cols-[2rem_minmax(0,1fr)_1rem] items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.075] px-4 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-black">
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
-                  <span className="truncate text-center">{item}</span>
-                  <ArrowRight className="h-4 w-4 text-primary" />
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-7 flex justify-center gap-3">
-              {['instagram', 'youtube', 'tiktok', 'whatsapp'].map((platform) => (
-                <span key={platform} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                  <SocialIcon platform={platform} size={20} />
-                </span>
-              ))}
-            </div>
-
-            <a href="/register" className="mt-7 flex min-h-12 items-center justify-center rounded-2xl border border-primary/30 bg-primary/12 px-4 text-sm font-bold text-primary transition-all hover:bg-primary hover:text-black">
-              llinktr.com/kullaniciadi
-            </a>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 function SectionTitle({ eyebrow, title, desc }: { eyebrow: string; title: string; desc: string }) {
   return (
     <Reveal direction="right" className="mb-10 max-w-2xl">
@@ -125,6 +92,51 @@ function SectionTitle({ eyebrow, title, desc }: { eyebrow: string; title: string
       <h2 className="text-3xl font-bold text-white md:text-4xl">{title}</h2>
       <p className="mt-3 text-sm leading-relaxed text-white/58 md:text-base">{desc}</p>
     </Reveal>
+  );
+}
+
+function BioExamplePhone({ item }: { item: (typeof examples)[number] }) {
+  return (
+    <div className={`premium-card rounded-[18px] border border-white/10 bg-gradient-to-br ${item.accent} to-[#111] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_0_50px_rgba(213,255,32,0.12)]`}>
+      <div className="mx-auto max-w-[245px] rounded-[30px] border border-white/12 bg-black p-2 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+        <div className="relative overflow-hidden rounded-[24px] border border-white/8 bg-[#080808] px-4 pb-5 pt-9">
+          <div className="absolute left-1/2 top-0 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
+          <div className="absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,#dfff0033,transparent_65%)]" />
+          <div className="relative">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-primary/45 bg-primary/12 text-lg font-black text-primary shadow-[0_0_34px_rgba(223,255,0,0.14)]">
+              ll
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-base font-bold text-white">{item.handle}</p>
+              <p className="mx-auto mt-1 max-w-[180px] text-xs leading-relaxed text-white/58">{item.bio}</p>
+            </div>
+            <div className="mt-5 space-y-2.5">
+              {item.links.map((link) => (
+                <div key={link} className="grid min-h-11 grid-cols-[1.75rem_minmax(0,1fr)_0.75rem] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.075] px-3 text-xs font-semibold text-white">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-black">
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="truncate text-center">{link}</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex justify-center gap-2">
+              {item.socials.map((platform) => (
+                <span key={platform} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/45">
+                  <SocialIcon platform={platform} size={18} />
+                </span>
+              ))}
+            </div>
+            <div className="mt-5 flex min-h-10 items-center justify-center rounded-2xl border border-primary/30 bg-primary/12 px-3 text-xs font-bold text-primary">
+              llinktr.com/{item.handle.replace("@", "")}
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 className="mt-5 text-xl font-bold text-white">{item.title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-white/58">{item.bio}</p>
+    </div>
   );
 }
 
@@ -139,11 +151,11 @@ export default function Home() {
       <main className="flex-1">
         <section className="relative overflow-hidden border-b border-white/8 pb-14 pt-10 md:pb-20 md:pt-20">
           <div className="absolute inset-0 landing-surface" aria-hidden />
-          <div className="absolute right-[4%] top-[8%] h-80 w-80 rounded-full bg-primary/15 blur-3xl" aria-hidden />
+          <div className="absolute right-[8%] top-[10%] h-96 w-96 rounded-full bg-primary/16 blur-3xl" aria-hidden />
           <div className="absolute left-[8%] bottom-[10%] h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" aria-hidden />
 
           <div className="container relative">
-            <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]">
+            <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,1.1fr)]">
               <Reveal direction="right">
                 <div className="max-w-3xl">
                   <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-medium text-white/70 backdrop-blur">
@@ -190,21 +202,18 @@ export default function Home() {
                 </div>
               </Reveal>
 
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(260px,0.72fr)] lg:items-center">
-                <Reveal className="relative order-2 lg:order-1">
-                  <div className="absolute -inset-6 rounded-[2rem] bg-primary/12 blur-3xl" aria-hidden />
-                  <img
-                    src="/images/hero-preview-1.png"
-                    alt="llinktr bio sayfası önizlemesi"
-                    loading="eager"
-                    decoding="async"
-                    className="relative w-full rounded-[26px] border border-white/10 shadow-[0_32px_100px_rgba(0,0,0,0.48)]"
-                  />
-                </Reveal>
-                <div className="order-1 lg:order-2">
-                  <PhoneMockup />
-                </div>
-              </div>
+              <Reveal className="relative">
+                <div className="absolute -inset-8 rounded-[2rem] bg-primary/14 blur-3xl" aria-hidden />
+                <motion.img
+                  src="/images/hero-preview-1.png"
+                  alt="llinktr ana sayfa bio önizlemesi"
+                  loading="eager"
+                  decoding="async"
+                  className="relative w-full rounded-[28px] border border-white/10 shadow-[0_36px_120px_rgba(0,0,0,0.56)]"
+                  whileHover={{ y: -8, scale: 1.01 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                />
+              </Reveal>
             </div>
           </div>
         </section>
@@ -265,22 +274,11 @@ export default function Home() {
 
         <section className="border-y border-white/8 bg-[#0d0d0d] py-16 md:py-24">
           <div className="container">
-            <SectionTitle eyebrow="Örnek bio sayfalar" title="Boş değil, hazır ve canlı hissettiren sayfalar" desc="Her kart farklı bir kullanım senaryosunu gösterir; kullanıcı kendi sayfasını hayal eder." />
+            <SectionTitle eyebrow="Örnek bio sayfalar" title="Gerçek telefon görünümünde hazır sayfalar" desc="Her kart farklı bir kullanım senaryosunu gerçek bir mobil bio sayfası gibi gösterir." />
             <div className="grid gap-4 md:grid-cols-3">
               {examples.map((item) => (
                 <Reveal key={item.title}>
-                  <div className={`premium-card rounded-[18px] border border-white/10 bg-gradient-to-br ${item.color} to-[#111] p-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35`}>
-                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                      <div className="mx-auto h-14 w-14 rounded-full border border-primary/35 bg-primary/15" />
-                      <div className="mt-5 space-y-2">
-                        <div className="h-10 rounded-xl bg-white/10" />
-                        <div className="h-10 rounded-xl bg-white/10" />
-                        <div className="h-10 rounded-xl bg-primary/18" />
-                      </div>
-                    </div>
-                    <h3 className="mt-5 text-xl font-bold text-white">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-white/58">{item.desc}</p>
-                  </div>
+                  <BioExamplePhone item={item} />
                 </Reveal>
               ))}
             </div>
@@ -297,7 +295,7 @@ export default function Home() {
                     <div className="mb-4 flex gap-1 text-primary">
                       {[0, 1, 2, 3, 4].map((star) => <Star key={star} className="h-4 w-4 fill-current" />)}
                     </div>
-                    <p className="text-sm leading-relaxed text-white/68">“{item.text}”</p>
+                    <p className="text-sm leading-relaxed text-white/68">"{item.text}"</p>
                     <div className="mt-6 border-t border-white/10 pt-4">
                       <p className="font-semibold text-white">{item.name}</p>
                       <p className="text-xs text-white/45">{item.role}</p>

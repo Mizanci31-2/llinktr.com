@@ -157,6 +157,17 @@ export default function Login() {
 
   const submitLocalAuth = async (event: FormEvent) => {
     event.preventDefault();
+
+    if (!email.trim() || !password.trim() || (mode === "signUp" && !name.trim())) {
+      toast.error("Lütfen tüm alanları doldurun");
+      return;
+    }
+
+    if (password.trim().length < 6) {
+      toast.error("Şifre en az 6 karakter olmalı");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -167,8 +178,17 @@ export default function Login() {
         credentials: "include",
         body: JSON.stringify({ name, email, password, redirect: "/dashboard" }),
       });
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "İşlem tamamlanamadı");
+      const rawText = await response.text();
+      let data: { success?: boolean; message?: string; redirect?: string } | null = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || rawText || "İşlem tamamlanamadı");
+      }
 
       toast.success(mode === "signIn" ? "Giriş yapıldı" : "Hesap oluşturuldu");
       window.location.href = data.redirect || "/dashboard";

@@ -9,20 +9,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
+import { getLoginUrl, getSignupUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Home, LayoutDashboard, Link2, QrCode, Zap } from "lucide-react";
+import { Home, LayoutDashboard, Link2, QrCode } from "lucide-react";
 
 const navLinks = [
   { href: "/dashboard", label: "Panel", icon: LayoutDashboard, authRequired: true },
-  { href: "/shortener", label: "Link Kisaltici", icon: Link2, authRequired: true },
+  { href: "/shortener", label: "Link Kısaltıcı", icon: Link2, authRequired: true },
   { href: "/qr", label: "QR Kod", icon: QrCode, authRequired: true },
 ];
 
 const authMenuLinks = [
   { href: "/", label: "Ana Sayfa", icon: Home },
   { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
-  { href: "/shortener", label: "Link Kisaltici", icon: Link2 },
+  { href: "/shortener", label: "Link Kısaltıcı", icon: Link2 },
   { href: "/qr", label: "QR Kod", icon: QrCode },
 ];
 
@@ -38,25 +38,11 @@ export default function Navbar() {
   const isActiveLink = (href: string) => location === href || location.startsWith(`${href}/`);
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-xl">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-70"
-        style={{
-          background:
-            "linear-gradient(90deg, rgba(250,204,21,0.07) 0%, rgba(34,211,238,0.05) 40%, rgba(168,85,247,0.08) 100%)",
-        }}
-      />
-
+    <nav className="sticky top-0 z-50 border-b border-white/10 bg-black">
       <div className="container relative">
         <div className="flex h-16 items-center justify-between gap-3">
           <Link href="/" className="group flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_0_18px_oklch(0.93_0.23_110/0.35)]">
-              <Zap className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold tracking-tight" style={{ fontFamily: "Space Grotesk, sans-serif" }}>
-              llinktr
-            </span>
+            <img src="/site-logo.png" alt="llinktr" className="h-12 w-auto max-w-[150px] object-contain sm:h-[52px] sm:max-w-[180px]" />
           </Link>
 
           <div className="hidden items-center gap-1 md:flex">
@@ -86,7 +72,7 @@ export default function Navbar() {
                   onClick={() => logoutMutation.mutate()}
                   className="hidden h-10 bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-[0_0_15px_oklch(0.93_0.23_110/0.3)] hover:bg-primary/90 md:inline-flex md:px-4 md:text-sm"
                 >
-                  Cikis Yap
+                  Çıkış Yap
                 </Button>
                 <div className="sm:hidden">
                   <DropdownMenu>
@@ -95,7 +81,7 @@ export default function Navbar() {
                         variant="outline"
                         size="icon"
                         className="h-11 w-11 border-2 border-primary/95 !bg-primary !text-white shadow-[0_0_0_1px_rgba(250,204,21,0.45)] hover:!bg-primary/90"
-                        aria-label="Hizli menu"
+                        aria-label="Hızlı menü"
                       >
                         <span aria-hidden className="flex h-4 w-4 flex-col items-center justify-center gap-[3px]">
                           <span className="block h-[2px] w-4 rounded-full bg-black" />
@@ -106,7 +92,7 @@ export default function Navbar() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-60 border-border/80 bg-card/95 p-2 backdrop-blur-xl">
                       <DropdownMenuLabel className="px-2 pb-2 pt-1">
-                        <p className="truncate text-sm font-semibold">{user?.name || "Kullanici"}</p>
+                        <p className="truncate text-sm font-semibold">{user?.name || "Kullanıcı"}</p>
                         <p className="truncate text-xs text-muted-foreground">{user?.email || "-"}</p>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
@@ -125,7 +111,7 @@ export default function Navbar() {
                         onSelect={() => logoutMutation.mutate()}
                         className="rounded-md border border-primary/70 bg-primary px-2.5 py-2.5 text-center font-semibold text-primary-foreground focus:bg-primary/90 focus:text-primary-foreground"
                       >
-                        Cikis Yap
+                        Çıkış Yap
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -135,12 +121,12 @@ export default function Navbar() {
               <>
                 <a href={getLoginUrl()}>
                   <Button variant="outline" size="sm" className="h-10 border-primary/60 bg-card/85 px-3 text-xs font-semibold sm:px-4 sm:text-sm">
-                    Giris Yap
+                    Giriş Yap
                   </Button>
                 </a>
-                <a href={getLoginUrl()}>
+                <a href={getSignupUrl()}>
                   <Button size="sm" className="h-10 bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-[0_0_15px_oklch(0.93_0.23_110/0.3)] hover:bg-primary/90 sm:px-4 sm:text-sm">
-                    Basla
+                    Başla
                   </Button>
                 </a>
               </>
