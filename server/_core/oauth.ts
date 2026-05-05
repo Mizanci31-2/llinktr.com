@@ -1,4 +1,4 @@
-﻿import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
@@ -384,7 +384,7 @@ export function registerOAuthRoutes(app: Express) {
     const redirect = normalizeRedirectPath(typeof req.body?.redirect === "string" ? req.body.redirect : undefined);
 
     if (!email || !password) {
-      res.status(400).json({ success: false, message: "E-posta ve sifre gerekli" });
+      res.status(400).json({ success: false, message: "E-posta ve şifre gerekli" });
       return;
     }
 
@@ -393,7 +393,7 @@ export function registerOAuthRoutes(app: Express) {
       if (ok && data?.user?.id && data?.user?.email) {
         await signInLocalAccount(req, res, {
           openId: `supabase-${data.user.id}`,
-          name: data.user.user_metadata?.name || data.user.email.split("@")[0] || "Kullanici",
+          name: data.user.user_metadata?.name || data.user.email.split("@")[0] || "Kullanıcı",
           email: data.user.email,
           password,
         });
@@ -408,20 +408,29 @@ export function registerOAuthRoutes(app: Express) {
         return;
       }
 
-      res.status(401).json({ success: false, message: "E-posta veya sifre hatali" });
+      if (account && account.password !== password) {
+        res.status(401).json({ success: false, message: "Şifre hatalı" });
+        return;
+      }
+
+      res.status(404).json({ success: false, message: "Bu e-posta ile kayıtlı kullanıcı bulunamadı veya şifre hatalı" });
       return;
     }
 
     const account = await getStoredAccountByEmail(email);
-    if (!account || account.password !== password) {
-      res.status(401).json({ success: false, message: "E-posta veya sifre hatali" });
+    if (!account) {
+      res.status(404).json({ success: false, message: "Bu e-posta ile kayıtlı kullanıcı bulunamadı" });
+      return;
+    }
+
+    if (account.password !== password) {
+      res.status(401).json({ success: false, message: "Şifre hatalı" });
       return;
     }
 
     await signInLocalAccount(req, res, account);
     res.json({ success: true, redirect });
   });
-
   app.post("/api/dev-register", async (req: Request, res: Response) => {
     const name = normalizeName(req.body?.name);
     const email = normalizeEmail(req.body?.email);
@@ -547,7 +556,7 @@ export function registerOAuthRoutes(app: Express) {
       if (isRateLimitMessage(rawMessage)) {
         res.status(429).json({
           success: false,
-          message: "Cok sık deneme yaptınız. Lutfen 1 dakika bekleyip tekrar deneyin.",
+          message: "Cok sÄ±k deneme yaptÄ±nÄ±z. Lutfen 1 dakika bekleyip tekrar deneyin.",
         });
         return;
       }
@@ -601,7 +610,7 @@ export function registerOAuthRoutes(app: Express) {
     if (!googleEnabled) {
       res.status(400).json({
         success: false,
-        message: "Google girisi aktif degil. Supabase panelinde Authentication > Providers > Google acilmali.",
+        message: "Google girisi yakinda aktif olacak.",
       });
       return;
     }

@@ -26,6 +26,5 @@ export const getAuthUrl = (mode: AuthFlowMode = "signIn", provider?: AuthProvide
   return url.toString();
 };
 
-// Generate login URL at runtime so redirect URI reflects the current origin.
-export const getLoginUrl = () => getAuthUrl("signIn");
-export const getSignupUrl = () => getAuthUrl("signUp");
+export const getLoginUrl = () => "/giris";
+export const getSignupUrl = () => "/kayitol";

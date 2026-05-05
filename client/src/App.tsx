@@ -35,7 +35,6 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/giris" component={Login} />
       <Route path="/kayitol" component={Login} />
-      <Route path="/kayıtol" component={Login} />
       <Route path="/register" component={Login} />
       <Route path="/admin" component={AdminRedirect} />
       <Route path="/admin31" component={Dashboard} />
@@ -63,7 +62,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Suspense fallback={null}>

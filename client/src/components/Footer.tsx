@@ -11,16 +11,16 @@ export default function Footer() {
         <div className="grid gap-8 md:grid-cols-[1.25fr_0.8fr_0.8fr_0.8fr]">
           <div>
             <Link href="/" className="mb-4 flex items-center gap-2">
-              <img src="/site-logo.png" alt="llinktr" className="h-12 w-auto max-w-[170px] object-contain" />
+              <img src="/site-logo.png" alt="llinktr" className="h-12 w-auto max-w-[170px] object-contain" loading="lazy" />
             </Link>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
               Linklerini, satış akışlarını ve sosyal hesaplarını tek hızlı bio sayfasında topla.
             </p>
             <div className="mt-5 flex gap-2">
-              <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
+              <a href="https://www.instagram.com/llinktr.destek/" target="_blank" rel="noreferrer" aria-label="Instagram" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
                 <Instagram className="h-4 w-4" />
               </a>
-              <a href="mailto:iletisim@llinktr.com" aria-label="E-posta" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
+              <a href="mailto:destekmerkezi31@gmail.com" aria-label="E-posta" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
                 <Mail className="h-4 w-4" />
               </a>
               <Link href="/dashboard" aria-label="Panel" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
