@@ -21,6 +21,8 @@ import {
   LOCATION_LINK_PRESETS,
   MAX_PROFILE_IMAGE_BYTES,
   SOCIAL_PLATFORMS,
+  THEME_CATEGORY_TABS,
+  getThemeCategory,
   getBioBackgroundStyle,
   getBioBackgroundStyleStatic,
   getBioButtonStyle,
@@ -29,6 +31,7 @@ import {
   getBioThemePreviewStyle,
   safeAccentColor,
   themeHasImageBackground,
+  withCustomBackgroundImage,
 } from "@/lib/constants";
 import { SocialIcon } from "@/components/SocialIcon";
 import {
@@ -856,19 +859,19 @@ function PreviewCardContents({
   mode,
 }: {
   blocks: LocalBlock[];
-  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string; customBackgroundImageUrl?: string | null };
   accentColor: string;
   textColor: string;
   theme: string;
   mode: "phone" | "desktop";
 }) {
-  const themeConfig = getBioTheme(theme);
+  const themeConfig = withCustomBackgroundImage(getBioTheme(theme), page.customBackgroundImageUrl);
   const accent = safeAccentColor(accentColor, themeConfig.accent);
   const resolvedTextColor = /^#[0-9a-fA-F]{6}$/.test(textColor) ? textColor : themeConfig.text;
   const enabledBlocks = blocks.filter(block => block.isEnabled);
   const contentBlocks = enabledBlocks.filter(block => block.type !== "social");
   const socialBlocks = enabledBlocks.filter(block => block.type === "social" && block.data.url);
-  const buttonStyle = getBioButtonStyle(themeConfig, accent);
+  const buttonStyle = getBioButtonStyle(themeConfig, accent, resolvedTextColor);
   const isDesktop = mode === "desktop";
   const iconSize = isDesktop ? 30 : 24;
 
@@ -908,7 +911,7 @@ function PreviewCardContents({
 
     if (block.type === "description" || block.type === "text") {
       return (
-        <p key={block.tempId} className={`px-2 text-center leading-relaxed ${isDesktop ? "text-sm" : "text-xs"}`} style={{ color: themeConfig.mutedText }}>
+        <p key={block.tempId} className={`px-2 text-center leading-relaxed ${isDesktop ? "text-sm" : "text-xs"}`} style={{ color: resolvedTextColor }}>
           {String(block.data.text || "Metin...")}
         </p>
       );
@@ -973,7 +976,7 @@ function PreviewCardContents({
   };
 
   return (
-    <div className={`rounded-[1.95rem] border flex flex-col ${isDesktop ? "min-h-[620px] p-7" : "min-h-full p-4.5"}`} style={getBioCardStyle(themeConfig)}>
+    <div className={`rounded-[1.95rem] border flex flex-col ${isDesktop ? "min-h-[620px] p-7" : "min-h-full p-4.5"}`} style={getBioCardStyle(themeConfig, resolvedTextColor)}>
       <div className={`flex flex-col items-center ${isDesktop ? "mb-4 mt-1 gap-3" : "mb-3 mt-1 gap-2"}`}>
         {page.profileImageUrl ? (
           <img
@@ -995,7 +998,7 @@ function PreviewCardContents({
             {page.title || "@kullanici"}
           </p>
           {page.description && (
-            <p className={`${isDesktop ? "mt-1 text-sm" : "mt-0.5 text-xs"}`} style={{ color: themeConfig.mutedText }}>
+            <p className={`${isDesktop ? "mt-1 text-sm" : "mt-0.5 text-xs"}`} style={{ color: resolvedTextColor }}>
               {page.description}
             </p>
           )}
@@ -1031,12 +1034,12 @@ function PhonePreview({
   theme,
 }: {
   blocks: LocalBlock[];
-  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string; customBackgroundImageUrl?: string | null };
   accentColor: string;
   textColor: string;
   theme: string;
 }) {
-  const themeConfig = getBioTheme(theme);
+  const themeConfig = withCustomBackgroundImage(getBioTheme(theme), page.customBackgroundImageUrl);
   const accent = safeAccentColor(accentColor, themeConfig.accent);
 
   return (
@@ -1071,12 +1074,12 @@ function DesktopPreview({
   theme,
 }: {
   blocks: LocalBlock[];
-  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string; customBackgroundImageUrl?: string | null };
   accentColor: string;
   textColor: string;
   theme: string;
 }) {
-  const themeConfig = getBioTheme(theme);
+  const themeConfig = withCustomBackgroundImage(getBioTheme(theme), page.customBackgroundImageUrl);
   const accent = safeAccentColor(accentColor, themeConfig.accent);
 
   return (
@@ -1133,6 +1136,8 @@ export default function BioBuilder() {
   const [theme, setTheme] = useState("dark_grid");
   const [accentColor, setAccentColor] = useState("#22D3EE");
   const [textColor, setTextColor] = useState("#F8FAFC");
+  const [customBackgroundImageUrl, setCustomBackgroundImageUrl] = useState("");
+  const [activeThemeCategory, setActiveThemeCategory] = useState<(typeof THEME_CATEGORY_TABS)[number]["id"]>("all");
   const [isPublished, setIsPublished] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [isAddBlockDialogOpen, setIsAddBlockDialogOpen] = useState(false);
@@ -1145,8 +1150,9 @@ export default function BioBuilder() {
   const lastHydratedAtRef = useRef<Date | null>(null);
   const hydratedPageIdRef = useRef<number | null>(null);
 
-  const themeConfig = getBioTheme(theme);
+  const themeConfig = withCustomBackgroundImage(getBioTheme(theme), customBackgroundImageUrl);
   const activeAccentColor = safeAccentColor(accentColor, themeConfig.accent);
+  const visibleThemes = BIO_THEMES.filter((item) => activeThemeCategory === "all" || getThemeCategory(item) === activeThemeCategory);
   const totalClicks = blocks.reduce((sum, block) => sum + (block.clicks ?? 0), 0);
   const activeBlockCount = blocks.filter(block => block.isEnabled).length;
   const hiddenBlockCount = blocks.length - activeBlockCount;
@@ -1166,7 +1172,9 @@ export default function BioBuilder() {
     setFaviconUrl(pageData.page.faviconUrl || "");
     setTheme(selectedTheme.id);
     setAccentColor(pageData.page.accentColor || selectedTheme.accent);
-    setTextColor(selectedTheme.text);
+    setTextColor((pageData.page as { textColor?: string | null }).textColor || selectedTheme.defaultTextColor || selectedTheme.text);
+    setCustomBackgroundImageUrl((pageData.page as { customBackgroundImageUrl?: string | null }).customBackgroundImageUrl || "");
+    setActiveThemeCategory(((pageData.page as { themeCategory?: "all" | "solid" | "pattern" | "photo" | null }).themeCategory || "all"));
     setIsPublished(pageData.page.isPublished);
     setBlocks(normalizeBlocks(pageData.blocks.map(block => ({
       id: block.id,
@@ -1222,7 +1230,11 @@ export default function BioBuilder() {
         profileImageUrl: profileImageUrl || null,
         faviconUrl: faviconUrl || null,
         theme,
+        selectedThemeId: theme,
         accentColor: activeAccentColor,
+        textColor,
+        customBackgroundImageUrl: customBackgroundImageUrl || null,
+        themeCategory: activeThemeCategory === "all" ? null : activeThemeCategory,
         isPublished,
       });
 
@@ -1414,8 +1426,7 @@ export default function BioBuilder() {
   const handleThemeChange = (themeId: string) => {
     const selectedTheme = getBioTheme(themeId);
     setTheme(selectedTheme.id);
-    setAccentColor(selectedTheme.accent);
-    setTextColor(selectedTheme.text);
+    setActiveThemeCategory(getThemeCategory(selectedTheme));
     setIsDirty(true);
   };
 
@@ -1439,6 +1450,16 @@ export default function BioBuilder() {
     setAccentColor(accent);
     setTextColor(text);
     setIsDirty(true);
+  };
+
+  const handleBackgroundImageUpload = (file?: File) => {
+    if (!file) return;
+    readImageFile(file, (dataUrl) => {
+      setCustomBackgroundImageUrl(dataUrl);
+      setTheme("custom_photo");
+      setActiveThemeCategory("photo");
+      setIsDirty(true);
+    }, "Arka plan fotoğrafı");
   };
 
   const applySmartPreset = (kind: typeof SMART_PRESETS[number]["kind"]) => {
@@ -1498,6 +1519,7 @@ export default function BioBuilder() {
     title: pageTitle || pageData.page.title,
     description: pageDesc || pageData.page.description,
     profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
+    customBackgroundImageUrl,
     slug: pageData.page.slug,
   };
 
@@ -1507,29 +1529,29 @@ export default function BioBuilder() {
 
       <div className="border-b border-border/50 bg-card/50 sticky top-16 z-40 backdrop-blur-xl">
         <div className="container py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-muted-foreground flex-shrink-0">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="h-9 flex-shrink-0 px-2 text-xs text-muted-foreground sm:px-3 sm:text-sm">
               <ArrowLeft className="h-4 w-4 mr-1.5" />
               Panel
             </Button>
-            <div className="h-4 w-px bg-border" />
+            <div className="hidden h-4 w-px bg-border sm:block" />
             <div className="min-w-0">
               <h1 className="text-sm font-semibold truncate">{pageData.page.title}</h1>
               <p className="text-xs text-muted-foreground truncate">llinktr.com/{pageData.page.slug}</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex w-full flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end">
             <div className="hidden sm:flex items-center gap-2 rounded-lg border border-border/50 px-3 py-1.5">
               <span className="text-xs text-muted-foreground">{isPublished ? "Yayında" : "Durduruldu"}</span>
               <Switch checked={isPublished} onCheckedChange={(checked) => { setIsPublished(checked); setIsDirty(true); }} className="scale-75" />
             </div>
             <a href={`/${pageData.page.slug}`} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="border-border/50 text-xs">
+              <Button variant="outline" size="sm" className="h-9 border-border/50 px-3 text-xs">
                 <Eye className="h-3.5 w-3.5 mr-1.5" />
                 Görüntüle
               </Button>
             </a>
-            <Button size="sm" onClick={handleSave} disabled={isSaving || !isDirty} className="bg-primary text-primary-foreground text-xs shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]">
+            <Button size="sm" onClick={handleSave} disabled={isSaving || !isDirty} className="h-9 bg-primary px-3 text-xs text-primary-foreground shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]">
               {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Save className="h-3.5 w-3.5 mr-1.5" />Kaydet</>}
             </Button>
           </div>
@@ -1694,7 +1716,7 @@ export default function BioBuilder() {
                     <input type="color" value={activeAccentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} className="h-10 w-16 rounded-lg cursor-pointer border border-border/50 bg-transparent" />
                     <Input value={accentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} placeholder="#22D3EE" className="bg-input border-border/50 font-mono text-sm" />
                   </div>
-                  <p className="text-xs text-muted-foreground">Seçtiğiniz renk butonları, vurguları ve tema tonunu anında günceller.</p>
+                  <p className="text-xs text-muted-foreground">Vurgu rengi sadece buton, ikon, border ve aktif ogeleri degistirir; tema arka plani sabit kalir.</p>
                 </div>
 
                 <div className="space-y-3 rounded-xl border border-border/50 bg-background/40 p-3">
@@ -1720,7 +1742,33 @@ export default function BioBuilder() {
                     <input type="color" value={textColor} onChange={(event) => { setTextColor(event.target.value); setIsDirty(true); }} className="h-10 w-16 rounded-lg cursor-pointer border border-border/50 bg-transparent" />
                     <Input value={textColor} onChange={(event) => { setTextColor(event.target.value); setIsDirty(true); }} placeholder="#F8FAFC" className="bg-input border-border/50 font-mono text-sm" />
                   </div>
-                  <p className="text-xs text-muted-foreground">Yazı rengi önizlemedeki başlıkları ve temel metin tonunu ayrı kontrol eder.</p>
+                  <p className="text-xs text-muted-foreground">Yazi rengi bio sayfasindaki baslik, aciklama, link ve kucuk metinlerin tamamina uygulanir.</p>
+                </div>
+
+                <div className="space-y-2 rounded-xl border border-border/50 bg-background/40 p-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">Fotograf Temasi</Label>
+                      <p className="mt-1 text-xs text-muted-foreground">Onerilen: 1080x1920 veya 1920x1080, maksimum 7 MB</p>
+                    </div>
+                    {customBackgroundImageUrl && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setCustomBackgroundImageUrl(""); setIsDirty(true); }} className="h-8 text-xs text-muted-foreground">
+                        Kaldir
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      handleBackgroundImageUpload(event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                    className="bg-input border-border/50 text-xs"
+                  />
+                  {customBackgroundImageUrl && (
+                    <div className="h-24 rounded-xl border border-border/50 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.18), rgba(0,0,0,0.36)), url(${customBackgroundImageUrl})` }} />
+                  )}
                 </div>
               </div>
             </div>
@@ -2118,9 +2166,41 @@ export default function BioBuilder() {
                   </button>
                 </div>
 
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {THEME_CATEGORY_TABS.map((tab) => (
+                    <button
+                      key={`theme-tab-${tab.id}`}
+                      type="button"
+                      onClick={() => setActiveThemeCategory(tab.id)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${activeThemeCategory === tab.id ? "border-primary bg-primary text-primary-foreground" : "border-border/50 text-muted-foreground hover:border-primary/45 hover:text-foreground"}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {activeThemeCategory === "photo" && (
+                  <div className="mb-4 rounded-2xl border border-border/50 bg-background/45 p-3">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Kendi fotografini ekle</Label>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          handleBackgroundImageUpload(event.currentTarget.files?.[0]);
+                          event.currentTarget.value = "";
+                          setIsThemeDialogOpen(false);
+                        }}
+                        className="bg-input border-border/50 text-xs"
+                      />
+                      <span className="text-xs text-muted-foreground">Onerilen: 1080x1920 veya 1920x1080, maksimum 7 MB</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="max-h-[65vh] overflow-y-auto pr-1">
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
-                    {BIO_THEMES.map(item => (
+                    {visibleThemes.map(item => (
                       <button
                         key={`theme-modal-${item.id}`}
                         type="button"

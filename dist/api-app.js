@@ -50,6 +50,10 @@ var bioPages = mysqlTable("bio_pages", {
   faviconUrl: longtext("faviconUrl"),
   theme: varchar("theme", { length: 50 }).default("dark_grid").notNull(),
   accentColor: varchar("accentColor", { length: 20 }).default("#DFFF00").notNull(),
+  selectedThemeId: varchar("selected_theme_id", { length: 50 }),
+  textColor: varchar("text_color", { length: 20 }).default("#F8FAFC"),
+  customBackgroundImageUrl: longtext("custom_background_image_url"),
+  themeCategory: varchar("theme_category", { length: 24 }),
   isPublished: boolean("isPublished").default(true).notNull(),
   views: int("views").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -413,6 +417,10 @@ async function createBioPage(data) {
       faviconUrl: null,
       theme: data.theme,
       accentColor: data.accentColor,
+      selectedThemeId: data.selectedThemeId ?? data.theme ?? null,
+      textColor: data.textColor ?? "#F8FAFC",
+      customBackgroundImageUrl: data.customBackgroundImageUrl ?? null,
+      themeCategory: data.themeCategory ?? null,
       isPublished: data.isPublished,
       views: 0,
       createdAt: now(),
@@ -428,6 +436,10 @@ async function createBioPage(data) {
     faviconUrl: data.faviconUrl ?? null,
     theme: data.theme,
     accentColor: data.accentColor,
+    selectedThemeId: data.selectedThemeId ?? data.theme ?? null,
+    textColor: data.textColor ?? "#F8FAFC",
+    customBackgroundImageUrl: data.customBackgroundImageUrl ?? null,
+    themeCategory: data.themeCategory ?? null,
     isPublished: data.isPublished
   });
 }
@@ -1739,6 +1751,10 @@ var bioPagesRouter = router({
     faviconUrl: faviconUrlSchema.nullable().optional(),
     theme: z2.string().optional(),
     accentColor: z2.string().regex(/^#[0-9a-fA-F]{6}$/, "Ge\xE7erli bir renk se\xE7in").optional(),
+    selectedThemeId: z2.string().max(50).nullable().optional(),
+    textColor: z2.string().regex(/^#[0-9a-fA-F]{6}$/, "Ge\xE7erli bir yaz\u0131 rengi se\xE7in").optional(),
+    customBackgroundImageUrl: profileImageUrlSchema.nullable().optional(),
+    themeCategory: z2.enum(["solid", "pattern", "photo"]).nullable().optional(),
     isPublished: z2.boolean().optional()
   })).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;

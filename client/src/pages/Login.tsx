@@ -80,7 +80,7 @@ export default function Login() {
 
   useEffect(() => {
     const { searchParams, hashParams } = readUrlState();
-    const accessToken = hashParams.get("access_token");
+    const accessToken = hashParams.get("access_token") || searchParams.get("access_token");
     if (!accessToken) return;
 
     if (hashParams.get("type") === "recovery" || searchParams.get("reset") === "1") {
@@ -201,6 +201,10 @@ export default function Login() {
 
   const submitPasswordResetRequest = async (event: FormEvent) => {
     event.preventDefault();
+    if (!email.trim()) {
+      toast.error("E-posta adresini yazin");
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -224,8 +228,14 @@ export default function Login() {
 
   const submitNewPassword = async (event: FormEvent) => {
     event.preventDefault();
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     if (newPassword.trim().length < 6) {
       toast.error("Yeni şifre en az 6 karakter olmalı");
+      return;
+    }
+    if (!supabaseUrl || !supabaseAnonKey) {
+      toast.error("Sifre yenileme ayarlari eksik. Lutfen destek ile iletisime gecin.");
       return;
     }
     if (!resetAccessToken) {
@@ -235,11 +245,11 @@ export default function Login() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          apikey: supabaseAnonKey,
           Authorization: `Bearer ${resetAccessToken}`,
         },
         body: JSON.stringify({ password: newPassword.trim() }),

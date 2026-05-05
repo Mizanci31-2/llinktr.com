@@ -8,7 +8,9 @@ import {
   getBioButtonStyle,
   getBioCardStyle,
   getBioTheme,
+  isValidHexColor,
   safeAccentColor,
+  withCustomBackgroundImage,
 } from "@/lib/constants";
 import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle } from "lucide-react";
 import { Link } from "wouter";
@@ -328,12 +330,17 @@ export default function PublicBioPage() {
   }
 
   const { page, blocks } = data;
-  const themeConfig = getBioTheme(page.theme);
+  const savedThemeSettings = page as typeof page & {
+    textColor?: string | null;
+    customBackgroundImageUrl?: string | null;
+  };
+  const themeConfig = withCustomBackgroundImage(getBioTheme(page.theme), savedThemeSettings.customBackgroundImageUrl);
   const accent = safeAccentColor(page.accentColor, themeConfig.accent);
+  const resolvedTextColor = isValidHexColor(savedThemeSettings.textColor || "") ? savedThemeSettings.textColor! : themeConfig.text;
   const enabledBlocks = blocks.filter(block => block.isEnabled);
   const contentBlocks = enabledBlocks.filter(block => block.type !== "social");
   const socialBlocks = enabledBlocks.filter(block => block.type === "social" && (block.data as Record<string, string | boolean | number> | null)?.url);
-  const buttonStyle = getBioButtonStyle(themeConfig, accent);
+  const buttonStyle = getBioButtonStyle(themeConfig, accent, resolvedTextColor);
 
   const getSocialLabel = (block: typeof blocks[number]) => {
     const blockData = block.data as Record<string, string | boolean | number> | null;
@@ -370,7 +377,7 @@ export default function PublicBioPage() {
   };
 
   const pageBackgroundStyle = getBioBackgroundStyle(themeConfig, accent);
-  const cardStyle = getBioCardStyle(themeConfig);
+  const cardStyle = getBioCardStyle(themeConfig, resolvedTextColor);
 
   return (
     <div
@@ -378,7 +385,7 @@ export default function PublicBioPage() {
       style={{
         ...pageBackgroundStyle,
         background: `radial-gradient(circle at center, rgba(17, 17, 17, 0.94) 0%, rgba(0, 0, 0, 0.99) 100%), ${pageBackgroundStyle.background}`,
-        color: themeConfig.text,
+        color: resolvedTextColor,
       }}
     >
       <main
@@ -409,9 +416,9 @@ export default function PublicBioPage() {
             </div>
           )}
           <div className="text-center">
-            <h1 className="mb-2 text-xl font-bold md:text-[1.7rem]" style={{ color: themeConfig.text }}>{page.title}</h1>
+            <h1 className="mb-2 text-xl font-bold md:text-[1.7rem]" style={{ color: resolvedTextColor }}>{page.title}</h1>
             {page.description && (
-              <p className="mb-4 text-sm md:text-[15px]" style={{ color: themeConfig.mutedText }}>{page.description}</p>
+              <p className="mb-4 text-sm md:text-[15px]" style={{ color: resolvedTextColor }}>{page.description}</p>
             )}
           </div>
         </div>
@@ -442,7 +449,7 @@ export default function PublicBioPage() {
                 <h2
                   key={block.id}
                   className="py-1 text-center text-lg font-bold md:text-[1.3rem]"
-                  style={{ color: themeConfig.text, textTransform: blockData?.uppercase ? "uppercase" : "none" }}
+                  style={{ color: resolvedTextColor, textTransform: blockData?.uppercase ? "uppercase" : "none" }}
                 >
                   {blockData?.uppercase ? headingText.toUpperCase() : headingText}
                 </h2>
@@ -451,7 +458,7 @@ export default function PublicBioPage() {
 
             if ((blockType as string) === "__legacy_heading__") {
               return (
-                <h2 key={block.id} className="py-1 text-center text-lg font-bold md:text-[1.3rem]" style={{ color: themeConfig.text }}>
+                <h2 key={block.id} className="py-1 text-center text-lg font-bold md:text-[1.3rem]" style={{ color: resolvedTextColor }}>
                   {blockData?.text || "Başlık"}
                 </h2>
               );
@@ -459,7 +466,7 @@ export default function PublicBioPage() {
 
             if (blockType === "description" || blockType === "text") {
               return (
-                <p key={block.id} className="px-2 text-center text-sm leading-relaxed md:text-[15px]" style={{ color: themeConfig.mutedText }}>
+                <p key={block.id} className="px-2 text-center text-sm leading-relaxed md:text-[15px]" style={{ color: resolvedTextColor }}>
                   {blockData?.text || ""}
                 </p>
               );
@@ -536,7 +543,7 @@ export default function PublicBioPage() {
           </div>
         )}
 
-        <div className="mt-10 flex items-center justify-center gap-2 md:mt-12" style={{ color: themeConfig.mutedText }}>
+        <div className="mt-10 flex items-center justify-center gap-2 md:mt-12" style={{ color: resolvedTextColor }}>
           <Zap className="h-3.5 w-3.5" />
           <Link href="/" className="text-xs font-medium hover:opacity-70 transition-opacity">
             llinktr ile sen de paylaş

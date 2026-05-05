@@ -38,6 +38,13 @@ const whyItems = [
   { title: "Modern tasarım", desc: "Koyu tema, net CTA ve premium görünüm.", icon: Palette },
 ];
 
+const heroInfoCards = [
+  "Canli onizleme",
+  "Mobil uyumlu",
+  "Tek panelden yonet",
+  "10 saniyede hazir",
+];
+
 const useCases = [
   { title: "Influencer", desc: "İş birlikleri, son içerikler ve sosyal hesaplar tek akışta.", tag: "İçerik" },
   { title: "E-ticaret", desc: "Ürün, kampanya, WhatsApp ve mağaza linklerini öne çıkar.", tag: "Satış" },
@@ -216,6 +223,18 @@ export default function Home() {
 
               <Reveal className="relative">
                 <div className="absolute -inset-8 rounded-[2rem] bg-primary/14 blur-3xl" aria-hidden />
+                <div className="pointer-events-none absolute -left-4 top-8 z-10 hidden max-w-[160px] rounded-2xl border border-white/10 bg-white/[0.075] px-4 py-3 text-xs font-semibold text-white/82 shadow-2xl backdrop-blur md:block">
+                  {heroInfoCards[0]}
+                </div>
+                <div className="pointer-events-none absolute -right-3 top-24 z-10 hidden max-w-[160px] rounded-2xl border border-primary/20 bg-primary/[0.09] px-4 py-3 text-xs font-semibold text-white/82 shadow-2xl backdrop-blur lg:block">
+                  {heroInfoCards[1]}
+                </div>
+                <div className="pointer-events-none absolute -left-2 bottom-24 z-10 hidden max-w-[180px] rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-xs font-semibold text-white/82 shadow-2xl backdrop-blur md:block">
+                  {heroInfoCards[2]}
+                </div>
+                <div className="pointer-events-none absolute right-10 bottom-5 z-10 hidden max-w-[160px] rounded-2xl border border-white/10 bg-[#101010]/75 px-4 py-3 text-xs font-semibold text-white/82 shadow-2xl backdrop-blur sm:block">
+                  {heroInfoCards[3]}
+                </div>
                 <motion.img
                   src={adminSettings.heroImage}
                   alt="llinktr ana sayfa bio önizlemesi"

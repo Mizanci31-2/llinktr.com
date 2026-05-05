@@ -101,11 +101,20 @@ export type LocationLinkPresetId = typeof LOCATION_LINK_PRESETS[number]["id"];
 
 type BackgroundStyle = "gradient" | "grid" | "color" | "glass";
 type ButtonStyle = "solid" | "soft" | "outline" | "glass" | "neon";
+export type BioThemeCategory = "solid" | "pattern" | "photo";
 
 export type BioTheme = {
   id: string;
   label: string;
+  name?: string;
+  category?: BioThemeCategory;
   description: string;
+  preview?: string;
+  background?: string;
+  surface?: string;
+  pattern?: string;
+  defaultAccent?: string;
+  defaultTextColor?: string;
   backgroundStyle: BackgroundStyle;
   buttonStyle: ButtonStyle;
   bg: string;
@@ -125,7 +134,306 @@ export type BioTheme = {
   shadow: string;
 };
 
+export const THEME_CATEGORY_TABS = [
+  { id: "all", label: "Tüm Temalar" },
+  { id: "solid", label: "Düz Renkler" },
+  { id: "pattern", label: "Desenli" },
+  { id: "photo", label: "Fotoğraflar" },
+] as const;
+
+const CORE_BIO_THEMES = [
+  {
+    id: "coal_black",
+    label: "Kömür Siyah",
+    name: "Kömür Siyah",
+    category: "solid",
+    description: "Koyu, sade ve premium siyah zemin.",
+    preview: "#0A0A0A",
+    background: "#0A0A0A",
+    surface: "rgba(18, 18, 18, 0.86)",
+    pattern: "none",
+    defaultAccent: "#D6FF00",
+    defaultTextColor: "#F8FAFC",
+    backgroundStyle: "color",
+    buttonStyle: "outline",
+    bg: "linear-gradient(180deg, #0A0A0A 0%, #111111 100%)",
+    text: "#F8FAFC",
+    mutedText: "#CBD5E1",
+    cardBg: "rgba(18, 18, 18, 0.86)",
+    cardBorder: "rgba(255,255,255,0.12)",
+    buttonBg: "rgba(18,18,18,0.92)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 14px 34px rgba(0,0,0,0.34)",
+    accent: "#D6FF00",
+    shadow: "0 28px 78px rgba(0,0,0,0.46)",
+  },
+  {
+    id: "midnight_navy",
+    label: "Gece Lacivert",
+    name: "Gece Lacivert",
+    category: "solid",
+    description: "Derin lacivert, temiz SaaS görünümü.",
+    preview: "#07111F",
+    background: "#07111F",
+    surface: "rgba(13, 27, 48, 0.86)",
+    pattern: "none",
+    defaultAccent: "#7DD3FC",
+    defaultTextColor: "#EFF6FF",
+    backgroundStyle: "gradient",
+    buttonStyle: "glass",
+    bg: "linear-gradient(180deg, #07111F 0%, #0B1728 100%)",
+    text: "#EFF6FF",
+    mutedText: "#BFDBFE",
+    cardBg: "rgba(13, 27, 48, 0.82)",
+    cardBorder: "rgba(191,219,254,0.18)",
+    buttonBg: "rgba(255,255,255,0.10)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 14px 34px rgba(2,6,23,0.32)",
+    accent: "#7DD3FC",
+    shadow: "0 28px 78px rgba(2,6,23,0.44)",
+  },
+  {
+    id: "cream_minimal",
+    label: "Krem Minimal",
+    name: "Krem Minimal",
+    category: "solid",
+    description: "Açık, sade ve okunaklı krem ton.",
+    preview: "#F6F0E6",
+    background: "#F6F0E6",
+    surface: "rgba(255,255,255,0.82)",
+    pattern: "none",
+    defaultAccent: "#111827",
+    defaultTextColor: "#1F2937",
+    backgroundStyle: "color",
+    buttonStyle: "outline",
+    bg: "linear-gradient(180deg, #F6F0E6 0%, #ECE2D4 100%)",
+    text: "#1F2937",
+    mutedText: "#57534E",
+    cardBg: "rgba(255,255,255,0.84)",
+    cardBorder: "rgba(31,41,55,0.12)",
+    buttonBg: "rgba(255,255,255,0.88)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 12px 28px rgba(31,41,55,0.10)",
+    accent: "#111827",
+    shadow: "0 22px 60px rgba(31,41,55,0.12)",
+  },
+  {
+    id: "emerald_dark",
+    label: "Zümrüt Koyu",
+    name: "Zümrüt Koyu",
+    category: "solid",
+    description: "Koyu zümrüt zemin, satış odaklı sakin tema.",
+    preview: "#031B14",
+    background: "#031B14",
+    surface: "rgba(5, 46, 34, 0.82)",
+    pattern: "none",
+    defaultAccent: "#86EFAC",
+    defaultTextColor: "#ECFDF5",
+    backgroundStyle: "gradient",
+    buttonStyle: "glass",
+    bg: "linear-gradient(180deg, #031B14 0%, #052E22 100%)",
+    text: "#ECFDF5",
+    mutedText: "#BBF7D0",
+    cardBg: "rgba(5, 46, 34, 0.82)",
+    cardBorder: "rgba(187,247,208,0.18)",
+    buttonBg: "rgba(255,255,255,0.10)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 14px 34px rgba(3,27,20,0.34)",
+    accent: "#86EFAC",
+    shadow: "0 28px 78px rgba(3,27,20,0.44)",
+  },
+  {
+    id: "premium_coffee",
+    label: "Kahve Premium",
+    name: "Kahve Premium",
+    category: "solid",
+    description: "Sıcak kahve tonları, premium vitrin hissi.",
+    preview: "#21160F",
+    background: "#21160F",
+    surface: "rgba(48, 31, 22, 0.84)",
+    pattern: "none",
+    defaultAccent: "#F5C16C",
+    defaultTextColor: "#FFF7ED",
+    backgroundStyle: "gradient",
+    buttonStyle: "outline",
+    bg: "linear-gradient(180deg, #21160F 0%, #332116 100%)",
+    text: "#FFF7ED",
+    mutedText: "#FED7AA",
+    cardBg: "rgba(48,31,22,0.84)",
+    cardBorder: "rgba(254,215,170,0.18)",
+    buttonBg: "rgba(255,255,255,0.08)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 14px 34px rgba(33,22,15,0.34)",
+    accent: "#F5C16C",
+    shadow: "0 28px 78px rgba(33,22,15,0.44)",
+  },
+  {
+    id: "graphite_ribbons",
+    label: "Graphite Ribbons",
+    name: "Graphite Ribbons",
+    category: "pattern",
+    description: "Çizgili koyu grafit tema.",
+    preview: "repeating-linear-gradient(145deg, #0F0F10 0 16px, #1F1F21 16px 34px)",
+    background: "#0F0F10",
+    surface: "rgba(20,20,22,0.82)",
+    pattern: "ribbons",
+    defaultAccent: "#D6FF00",
+    defaultTextColor: "#FAFAFA",
+    backgroundStyle: "gradient",
+    buttonStyle: "outline",
+    bg: "repeating-linear-gradient(145deg, #0F0F10 0 16px, #1F1F21 16px 34px)",
+    text: "#FAFAFA",
+    mutedText: "#D4D4D8",
+    cardBg: "rgba(20,20,22,0.82)",
+    cardBorder: "rgba(255,255,255,0.14)",
+    buttonBg: "rgba(24,24,27,0.86)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 16px 34px rgba(0,0,0,0.26)",
+    accent: "#D6FF00",
+    shadow: "0 28px 78px rgba(0,0,0,0.38)",
+  },
+  {
+    id: "neon_rings",
+    label: "Neon Rings",
+    name: "Neon Rings",
+    category: "pattern",
+    description: "Yuvarlak halkalarla modern neon alan.",
+    preview: "radial-gradient(circle at 30% 20%, transparent 0 34px, rgba(214,255,0,.22) 35px 37px, transparent 38px), #070707",
+    background: "#070707",
+    surface: "rgba(16,16,16,0.84)",
+    pattern: "rings",
+    defaultAccent: "#D6FF00",
+    defaultTextColor: "#F8FAFC",
+    backgroundStyle: "gradient",
+    buttonStyle: "neon",
+    bg: "radial-gradient(circle at 30% 20%, transparent 0 34px, rgba(255,255,255,.12) 35px 37px, transparent 38px), radial-gradient(circle at 78% 72%, transparent 0 52px, rgba(255,255,255,.10) 53px 56px, transparent 57px), #070707",
+    text: "#F8FAFC",
+    mutedText: "#CBD5E1",
+    cardBg: "rgba(16,16,16,0.84)",
+    cardBorder: "rgba(255,255,255,0.14)",
+    buttonBg: "rgba(255,255,255,0.08)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 18px 42px rgba(0,0,0,0.32)",
+    accent: "#D6FF00",
+    shadow: "0 30px 84px rgba(0,0,0,0.44)",
+  },
+  {
+    id: "soft_grid",
+    label: "Soft Grid",
+    name: "Soft Grid",
+    category: "pattern",
+    description: "Kare/grid desenli temiz arka plan.",
+    preview: "linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px), #0B0D10",
+    background: "#0B0D10",
+    surface: "rgba(16,18,22,0.84)",
+    pattern: "grid",
+    defaultAccent: "#A7F3D0",
+    defaultTextColor: "#F8FAFC",
+    backgroundStyle: "grid",
+    buttonStyle: "glass",
+    bg: "linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px), #0B0D10",
+    backgroundSize: "32px 32px, 32px 32px, auto",
+    text: "#F8FAFC",
+    mutedText: "#CBD5E1",
+    cardBg: "rgba(16,18,22,0.84)",
+    cardBorder: "rgba(255,255,255,0.14)",
+    buttonBg: "rgba(255,255,255,0.08)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 16px 36px rgba(0,0,0,0.28)",
+    accent: "#A7F3D0",
+    shadow: "0 28px 78px rgba(0,0,0,0.40)",
+  },
+  {
+    id: "dot_matrix",
+    label: "Dot Matrix",
+    name: "Dot Matrix",
+    category: "pattern",
+    description: "Noktalı modern desen.",
+    preview: "radial-gradient(circle, rgba(255,255,255,.18) 1px, transparent 1px), #090909",
+    background: "#090909",
+    surface: "rgba(18,18,18,0.84)",
+    pattern: "dots",
+    defaultAccent: "#FDE047",
+    defaultTextColor: "#FAFAFA",
+    backgroundStyle: "grid",
+    buttonStyle: "outline",
+    bg: "radial-gradient(circle, rgba(255,255,255,.18) 1px, transparent 1px), #090909",
+    backgroundSize: "22px 22px",
+    text: "#FAFAFA",
+    mutedText: "#D4D4D8",
+    cardBg: "rgba(18,18,18,0.84)",
+    cardBorder: "rgba(255,255,255,0.14)",
+    buttonBg: "rgba(255,255,255,0.08)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 16px 36px rgba(0,0,0,0.28)",
+    accent: "#FDE047",
+    shadow: "0 28px 78px rgba(0,0,0,0.40)",
+  },
+  {
+    id: "wave_lines",
+    label: "Wave Lines",
+    name: "Wave Lines",
+    category: "pattern",
+    description: "Dalga çizgileriyle akıcı koyu tema.",
+    preview: "repeating-radial-gradient(ellipse at 50% -20%, rgba(255,255,255,.12) 0 2px, transparent 3px 18px), #081018",
+    background: "#081018",
+    surface: "rgba(10,20,30,0.84)",
+    pattern: "waves",
+    defaultAccent: "#67E8F9",
+    defaultTextColor: "#F8FAFC",
+    backgroundStyle: "gradient",
+    buttonStyle: "glass",
+    bg: "repeating-radial-gradient(ellipse at 50% -20%, rgba(255,255,255,.12) 0 2px, transparent 3px 18px), #081018",
+    text: "#F8FAFC",
+    mutedText: "#BAE6FD",
+    cardBg: "rgba(10,20,30,0.84)",
+    cardBorder: "rgba(186,230,253,0.18)",
+    buttonBg: "rgba(255,255,255,0.09)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 16px 36px rgba(0,0,0,0.30)",
+    accent: "#67E8F9",
+    shadow: "0 28px 78px rgba(0,0,0,0.42)",
+  },
+  {
+    id: "custom_photo",
+    label: "Kendi Fotoğrafın",
+    name: "Kendi Fotoğrafın",
+    category: "photo",
+    description: "Yüklediğin fotoğrafı koyu overlay ile kullan.",
+    preview: "linear-gradient(135deg, #111827 0%, #374151 100%)",
+    background: "custom-photo",
+    surface: "rgba(0,0,0,0.62)",
+    pattern: "photo",
+    defaultAccent: "#D6FF00",
+    defaultTextColor: "#FFFFFF",
+    backgroundStyle: "glass",
+    buttonStyle: "glass",
+    bg: "linear-gradient(rgba(0,0,0,0.48), rgba(0,0,0,0.72)), linear-gradient(135deg, #111827 0%, #374151 100%)",
+    text: "#FFFFFF",
+    mutedText: "rgba(255,255,255,0.82)",
+    cardBg: "rgba(0,0,0,0.62)",
+    cardBorder: "rgba(255,255,255,0.22)",
+    buttonBg: "rgba(255,255,255,0.14)",
+    buttonText: "{text}",
+    buttonBorder: "{accent}",
+    buttonShadow: "0 18px 42px rgba(0,0,0,0.32)",
+    accent: "#D6FF00",
+    shadow: "0 32px 90px rgba(0,0,0,0.48)",
+  },
+] as const satisfies readonly BioTheme[];
+
 export const BIO_THEMES = [
+  ...CORE_BIO_THEMES,
   {
     id: "lime_voltage",
     label: "Lime Voltage",
@@ -1540,6 +1848,25 @@ export function getBioTheme(themeId?: string | null): BioTheme {
   return BIO_THEMES.find(theme => theme.id === normalized) ?? BIO_THEMES[0];
 }
 
+export function getThemeCategory(theme: BioTheme): BioThemeCategory {
+  if (theme.category) return theme.category;
+  if (themeHasImageBackground(theme)) return "photo";
+  if (theme.backgroundStyle === "grid" || theme.bg.includes("repeating") || theme.bg.includes("radial-gradient")) return "pattern";
+  return "solid";
+}
+
+export function withCustomBackgroundImage(theme: BioTheme, imageUrl?: string | null): BioTheme {
+  if (!imageUrl?.trim()) return theme;
+  return {
+    ...theme,
+    id: theme.id === "custom_photo" ? "custom_photo" : theme.id,
+    category: "photo",
+    bg: `linear-gradient(rgba(0,0,0,0.46), rgba(0,0,0,0.74)), url("${imageUrl}") center center / cover no-repeat`,
+    previewBg: `linear-gradient(rgba(0,0,0,0.20), rgba(0,0,0,0.36)), url("${imageUrl}") center center / cover no-repeat`,
+    backgroundStyle: "glass",
+  };
+}
+
 export function isValidHexColor(value: string) {
   return /^#[0-9a-f]{6}$/i.test(value);
 }
@@ -1557,10 +1884,12 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function resolveThemeValue(value: string, accentColor: string) {
+export function resolveThemeValue(value: string, accentColor: string, textColor?: string) {
   const accent = safeAccentColor(accentColor);
+  const text = textColor && isValidHexColor(textColor) ? textColor : undefined;
   return value
     .replaceAll("{accent}", accent)
+    .replaceAll("{text}", text ?? accent)
     .replaceAll("{accentSoft}", hexToRgba(accent, 0.22))
     .replaceAll("{accentSofter}", hexToRgba(accent, 0.12))
     .replaceAll("{accentShadow}", hexToRgba(accent, 0.3));
@@ -1571,19 +1900,20 @@ export function themeHasImageBackground(theme: BioTheme) {
 }
 
 export function getBioBackgroundStyle(theme: BioTheme, accentColor: string): CSSProperties {
-  const resolvedBg = resolveThemeValue(theme.bg, accentColor);
-  const needsTintLayer = !resolvedBg.includes("{accent}");
-  const tintLayer = `linear-gradient(${hexToRgba(accentColor, theme.backgroundStyle === "color" ? 0.2 : 0.14)}, ${hexToRgba(accentColor, theme.backgroundStyle === "color" ? 0.2 : 0.14)})`;
-
+  const resolvedBg = resolveThemeValue(theme.bg, theme.defaultAccent ?? theme.accent);
   return {
-    background: needsTintLayer ? `${tintLayer}, ${resolvedBg}` : resolvedBg,
-    backgroundBlendMode: needsTintLayer ? "soft-light, normal" : undefined,
+    "--theme-bg": theme.background ?? theme.bg,
+    "--theme-surface": theme.surface ?? theme.cardBg,
+    "--theme-pattern": theme.pattern ?? "none",
+    "--accent-color": safeAccentColor(accentColor, theme.defaultAccent ?? theme.accent),
+    background: resolvedBg,
+    backgroundBlendMode: undefined,
     backgroundSize: theme.backgroundSize,
     backgroundPosition: theme.backgroundPosition,
     animation: theme.backgroundAnimation,
     backgroundAttachment: theme.backgroundAnimation || themeHasImageBackground(theme) ? undefined : "fixed",
     willChange: theme.backgroundAnimation ? "background-position, transform, opacity" : undefined,
-  };
+  } as CSSProperties;
 }
 
 // Use when we want the same theme background but without motion (e.g. phone preview).
@@ -1600,35 +1930,40 @@ export function getBioBackgroundStyleStatic(theme: BioTheme, accentColor: string
 
 export function getBioThemePreviewStyle(theme: BioTheme, accentColor: string): CSSProperties {
   const style = getBioBackgroundStyle(theme, accentColor);
-  const resolvedPreviewBg = resolveThemeValue(theme.previewBg ?? theme.bg, accentColor);
-  const needsTintLayer = !resolvedPreviewBg.includes("{accent}");
-  const tintLayer = `linear-gradient(${hexToRgba(accentColor, theme.backgroundStyle === "color" ? 0.2 : 0.14)}, ${hexToRgba(accentColor, theme.backgroundStyle === "color" ? 0.2 : 0.14)})`;
+  const resolvedPreviewBg = theme.preview ?? resolveThemeValue(theme.previewBg ?? theme.bg, theme.defaultAccent ?? theme.accent);
 
   return {
     ...style,
-    background: needsTintLayer ? `${tintLayer}, ${resolvedPreviewBg}` : resolvedPreviewBg,
-    backgroundBlendMode: needsTintLayer ? "soft-light, normal" : undefined,
+    background: resolvedPreviewBg,
+    backgroundBlendMode: undefined,
     backgroundAttachment: undefined,
   };
 }
 
-export function getBioButtonStyle(theme: BioTheme, accentColor: string): CSSProperties {
+export function getBioButtonStyle(theme: BioTheme, accentColor: string, textColor?: string): CSSProperties {
   return {
-    background: resolveThemeValue(theme.buttonBg, accentColor),
-    borderColor: resolveThemeValue(theme.buttonBorder, accentColor),
-    color: theme.buttonText,
-    boxShadow: resolveThemeValue(theme.buttonShadow, accentColor),
-  };
+    "--accent-color": safeAccentColor(accentColor, theme.defaultAccent ?? theme.accent),
+    "--text-color": textColor && isValidHexColor(textColor) ? textColor : theme.text,
+    background: resolveThemeValue(theme.buttonBg, accentColor, textColor),
+    borderColor: resolveThemeValue(theme.buttonBorder, accentColor, textColor),
+    color: resolveThemeValue(theme.buttonText, accentColor, textColor),
+    boxShadow: resolveThemeValue(theme.buttonShadow, accentColor, textColor),
+  } as CSSProperties;
 }
 
-export function getBioCardStyle(theme: BioTheme): CSSProperties {
+export function getBioCardStyle(theme: BioTheme, textColor?: string): CSSProperties {
+  const resolvedText = textColor && isValidHexColor(textColor) ? textColor : theme.text;
   return {
+    "--theme-bg": theme.background ?? theme.bg,
+    "--theme-surface": theme.surface ?? theme.cardBg,
+    "--theme-pattern": theme.pattern ?? "none",
+    "--text-color": resolvedText,
     background: theme.cardBg,
     borderColor: theme.cardBorder,
-    color: theme.text,
+    color: resolvedText,
     boxShadow: theme.shadow,
     backdropFilter: theme.backgroundStyle === "glass" ? "blur(22px)" : undefined,
-  };
+  } as CSSProperties;
 }
 
 export const BLOCK_TYPES = [
