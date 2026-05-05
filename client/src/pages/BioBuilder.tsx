@@ -461,15 +461,15 @@ function BlockEditor({
   };
 
   return (
-    <div className={`overflow-hidden rounded-[1.15rem] border shadow-sm transition-all ${block.isEnabled ? tone.frame : "border-border/40 bg-card/55 opacity-60"}`}>
-      <div className={`flex items-center gap-3 px-3.5 py-3.5 ${block.isEnabled ? tone.header : "border-b border-border/30 bg-background/45"}`}>
+    <div className={`min-w-0 overflow-hidden rounded-[1.15rem] border shadow-sm transition-all ${block.isEnabled ? tone.frame : "border-border/40 bg-card/55 opacity-60"}`}>
+      <div className={`flex flex-wrap items-start gap-3 px-3 py-3 sm:flex-nowrap sm:items-center sm:px-3.5 sm:py-3.5 ${block.isEnabled ? tone.header : "border-b border-border/30 bg-background/45"}`}>
         <button
           type="button"
           onTouchStart={(event) => {
             event.preventDefault();
             onTouchDragStart();
           }}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          className="mt-0.5 rounded p-1 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
           aria-label="Sürükleyerek sırala"
         >
           <GripVertical className="h-4 w-4 cursor-grab flex-shrink-0" />
@@ -479,19 +479,19 @@ function BlockEditor({
             <Icon className={`h-4 w-4 ${block.isEnabled ? tone.icon : "text-muted-foreground"}`} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="truncate text-sm font-medium">{blockLabel}</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span className="min-w-0 truncate text-sm font-medium">{blockLabel}</span>
               {(block.type === "link" || block.type === "social") && (
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground sm:text-[11px]">
                   {block.clicks ?? 0} tıklama
                 </span>
               )}
             </div>
-            <p className="truncate text-[11px] text-muted-foreground">{getBlockSummary(block)}</p>
+            <p className="mt-0.5 line-clamp-2 break-all text-[11px] leading-snug text-muted-foreground sm:truncate">{getBlockSummary(block)}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex w-full flex-shrink-0 items-center justify-between gap-1 rounded-xl border border-border/40 bg-background/45 px-2 py-1.5 sm:w-auto sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
           <button
             type="button"
             onClick={onMoveUp}
@@ -521,7 +521,7 @@ function BlockEditor({
       </div>
 
       {expanded && (
-        <div className="space-y-3 border-t border-border/40 px-3.5 pb-3.5 pt-3.5">
+        <div className="space-y-3 border-t border-border/40 px-3 pb-3 pt-3 sm:px-3.5 sm:pb-3.5 sm:pt-3.5">
           {block.type === "heading" && (
             <div className="space-y-2">
               <Input
@@ -576,7 +576,7 @@ function BlockEditor({
                     onChange({ ...block.data, align: value });
                   }}
                   variant="outline"
-                  className="w-full"
+                  className="grid w-full grid-cols-2"
                 >
                   <ToggleGroupItem value="center" className="gap-1.5 text-[10px] sm:text-[11px]">
                     <AlignCenter className="h-3.5 w-3.5" />
@@ -640,7 +640,7 @@ function BlockEditor({
               </div>
 
               <div className={`space-y-2 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                   {block.data.logoUrl || block.data.logoPreset || block.data.logoUrlSecondary ? (
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border/50 bg-background/80">
                       <div className="relative h-7 w-7">
@@ -659,7 +659,7 @@ function BlockEditor({
                       <Image className="h-4 w-4 text-muted-foreground" />
                     </div>
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium">{isCommerceLink ? "Mağaza logosu" : "Link logosu"}</p>
                     {isCommerceLink ? (
                       <p className="text-[11px] text-muted-foreground">
@@ -807,7 +807,7 @@ function BlockEditor({
                   onChange({ ...block.data, variant: value });
                 }}
                 variant="outline"
-                className="w-full"
+                className="grid w-full grid-cols-2"
               >
                 <ToggleGroupItem value="thin" className="gap-1.5 text-[11px]">
                   İnce Çizgi
@@ -1668,7 +1668,7 @@ export default function BioBuilder() {
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-card border border-border/50">
+            <div className="rounded-2xl border border-border/50 bg-card p-4 sm:p-5">
               <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <MessageCircle className="h-4 w-4 text-primary" />
@@ -1775,7 +1775,7 @@ export default function BioBuilder() {
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-card border border-border/50">
+            <div className="rounded-2xl border border-border/50 bg-card p-4 sm:p-5">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="font-semibold">İçerik Blokları</h2>
@@ -1819,7 +1819,7 @@ export default function BioBuilder() {
                 </div>
               </div>
 
-              <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
                 <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Aktif</p>
                   <p className="mt-1 text-2xl font-semibold">{activeBlockCount}</p>
@@ -1850,7 +1850,7 @@ export default function BioBuilder() {
                   <div
                     key={block.tempId}
                     data-block-id={block.tempId}
-                    draggable
+                    draggable={!touchDragActive}
                     onDragStart={() => {
                       setTouchDragActive(false);
                       setDraggingId(block.tempId);
