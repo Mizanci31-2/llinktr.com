@@ -1426,6 +1426,8 @@ export default function BioBuilder() {
   const handleThemeChange = (themeId: string) => {
     const selectedTheme = getBioTheme(themeId);
     setTheme(selectedTheme.id);
+    setAccentColor(selectedTheme.defaultAccent || selectedTheme.accent);
+    setTextColor(selectedTheme.defaultTextColor || selectedTheme.text);
     setActiveThemeCategory(getThemeCategory(selectedTheme));
     setIsDirty(true);
   };
@@ -1558,17 +1560,17 @@ export default function BioBuilder() {
         </div>
       </div>
 
-      <div className="flex-1 container max-w-[1520px] overflow-x-hidden py-6">
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,0.92fr)_minmax(460px,1.08fr)] 2xl:grid-cols-[minmax(320px,0.72fr)_minmax(460px,1fr)_minmax(360px,0.78fr)]">
+      <div className="flex-1 container max-w-[1480px] overflow-x-hidden py-6">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(560px,1fr)_minmax(420px,520px)] xl:items-start">
           <div className="space-y-6">
             <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
               <h2 className="font-semibold mb-4">Profil Detayları</h2>
-              <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_210px]">
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sayfa Başlığı</Label>
                     <div className="flex items-center gap-2">
-                      <Input value={pageTitle} onChange={(event) => { setPageTitle(event.target.value); setIsDirty(true); }} placeholder="Sayfa başlığı..." className="bg-input border-border/50" />
+                      <Input value={pageTitle} onChange={(event) => { setPageTitle(event.target.value); setIsDirty(true); }} placeholder="Sayfa başlığı..." className="min-w-0 bg-input border-border/50" />
                       <Button
                         type="button"
                         variant="outline"
@@ -2096,7 +2098,7 @@ export default function BioBuilder() {
             </div>
           </div>
 
-          <div className="h-fit min-w-0 xl:col-span-2 2xl:col-span-1 2xl:sticky 2xl:top-24">
+          <div className="h-fit min-w-0 xl:sticky xl:top-24">
             <div className="min-w-0 rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur sm:p-4">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
