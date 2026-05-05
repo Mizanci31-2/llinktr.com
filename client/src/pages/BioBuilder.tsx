@@ -1042,7 +1042,7 @@ function PhonePreview({
   return (
     <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
       <div className="flex min-w-0 flex-1 flex-col items-center overflow-x-hidden">
-        <div className="relative mx-auto aspect-[9/17.2] w-full max-w-full overflow-hidden rounded-[2.65rem] border-2 border-black/70 bg-black shadow-2xl sm:max-w-[360px]">
+        <div className="relative mx-auto aspect-[9/17.2] w-[min(100%,330px)] overflow-hidden rounded-[2.35rem] border-2 border-black/70 bg-black shadow-2xl sm:w-[360px]">
           <div className="absolute top-0 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
           <div
             className="h-full min-h-0 overflow-y-auto px-3.5 pt-7 pb-4.5"
@@ -1080,7 +1080,7 @@ function DesktopPreview({
   const accent = safeAccentColor(accentColor, themeConfig.accent);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-w-0 flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.8rem] border border-border/60 bg-card shadow-2xl">
         <div className="flex items-center gap-3 border-b border-border/50 bg-background/75 px-4 py-3">
           <div className="flex items-center gap-2">
@@ -1097,8 +1097,8 @@ function DesktopPreview({
             Masaüstü görünümü
           </div>
         </div>
-        <div className="min-h-[620px] p-5 md:p-7" style={getBioBackgroundStyle(themeConfig, accent)}>
-          <div className="mx-auto max-w-[40rem]">
+        <div className="min-h-[560px] overflow-y-auto p-4 md:p-6" style={getBioBackgroundStyle(themeConfig, accent)}>
+          <div className="mx-auto w-full max-w-[38rem]">
             <PreviewCardContents blocks={blocks} page={page} accentColor={accent} textColor={textColor} theme={theme} mode="desktop" />
           </div>
         </div>
@@ -1536,8 +1536,8 @@ export default function BioBuilder() {
         </div>
       </div>
 
-      <div className="flex-1 container overflow-x-hidden py-6">
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.18fr)_28rem]">
+      <div className="flex-1 container max-w-[1520px] overflow-x-hidden py-6">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,0.92fr)_minmax(460px,1.08fr)] 2xl:grid-cols-[minmax(320px,0.72fr)_minmax(460px,1fr)_minmax(360px,0.78fr)]">
           <div className="space-y-6">
             <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
               <h2 className="font-semibold mb-4">Profil Detayları</h2>
@@ -2048,7 +2048,7 @@ export default function BioBuilder() {
             </div>
           </div>
 
-          <div className="h-fit min-w-0 lg:sticky lg:top-24">
+          <div className="h-fit min-w-0 xl:col-span-2 2xl:col-span-1 2xl:sticky 2xl:top-24">
             <div className="min-w-0 rounded-2xl border border-border/50 bg-card/80 p-3 backdrop-blur sm:p-4">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>

@@ -1,10 +1,7 @@
 import { Link } from "wouter";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Instagram, Link2, Mail } from "lucide-react";
 
 export default function Footer() {
-  const { isAuthenticated } = useAuth();
-
   return (
     <footer className="border-t border-white/10 bg-black">
       <div className="container py-10">
@@ -27,19 +24,14 @@ export default function Footer() {
                 <Link2 className="h-4 w-4" />
               </Link>
             </div>
-            <p className="mt-5 text-xs text-muted-foreground/75">© 2026 llinktr. İçerik üreticileri ve küçük işletmeler için geliştirildi.</p>
           </div>
 
           <div>
             <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Ürün</h4>
             <ul className="space-y-3">
               <li><Link href="/dashboard" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Bio Düzenleyici</Link></li>
-              {isAuthenticated && (
-                <>
-                  <li><Link href="/shortener" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Link Kısaltıcı</Link></li>
-                  <li><Link href="/qr" className="text-sm text-muted-foreground transition-colors hover:text-foreground">QR Oluşturucu</Link></li>
-                </>
-              )}
+              <li><Link href="/shortener" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Link Kısaltıcı</Link></li>
+              <li><Link href="/qr" className="text-sm text-muted-foreground transition-colors hover:text-foreground">QR Oluşturucu</Link></li>
             </ul>
           </div>
 
@@ -60,6 +52,12 @@ export default function Footer() {
               <li><Link href="/kvkk" className="text-sm text-muted-foreground transition-colors hover:text-foreground">KVKK</Link></li>
             </ul>
           </div>
+        </div>
+
+        <div className="mt-9 border-t border-white/10 pt-5">
+          <p className="text-xs leading-relaxed text-muted-foreground/75">
+            © 2026 llinktr. İçerik üreticileri ve küçük işletmeler için geliştirildi.
+          </p>
         </div>
       </div>
     </footer>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SocialIcon } from "@/components/SocialIcon";
+import { readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
 import {
   ArrowRight,
   Check,
@@ -143,7 +144,18 @@ function BioExamplePhone({ item }: { item: (typeof examples)[number] }) {
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const [username, setUsername] = useState("");
+  const [adminSettings, setAdminSettings] = useState<HomeAdminSettings>(() => readHomeAdminSettings());
   const targetHref = isAuthenticated ? "/dashboard" : "/register";
+
+  useEffect(() => {
+    const refresh = () => setAdminSettings(readHomeAdminSettings());
+    window.addEventListener("storage", refresh);
+    window.addEventListener("llinktr-home-settings", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("llinktr-home-settings", refresh);
+    };
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -160,13 +172,13 @@ export default function Home() {
                 <div className="max-w-3xl">
                   <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-medium text-white/70 backdrop-blur">
                     <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    +150 kullanıcı • 250+ link • büyüyor
+                    {adminSettings.heroProof}
                   </div>
                   <h1 className="text-4xl font-black leading-[1.02] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                    Tüm linklerini tek sayfada topla
+                    {adminSettings.heroTitle}
                   </h1>
                   <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/66 sm:text-xl">
-                    Takipçini müşteriye çevir. Bio sayfanı saniyeler içinde oluştur.
+                    {adminSettings.heroSubtitle}
                   </p>
 
                   <div className="mt-8 max-w-xl rounded-[18px] border border-white/10 bg-[#111]/90 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur">
@@ -205,11 +217,11 @@ export default function Home() {
               <Reveal className="relative">
                 <div className="absolute -inset-8 rounded-[2rem] bg-primary/14 blur-3xl" aria-hidden />
                 <motion.img
-                  src="/images/hero-preview-1.png"
+                  src={adminSettings.heroImage}
                   alt="llinktr ana sayfa bio önizlemesi"
                   loading="eager"
                   decoding="async"
-                  className="relative w-full rounded-[28px] border border-white/10 shadow-[0_36px_120px_rgba(0,0,0,0.56)]"
+                  className="relative mx-auto w-full max-w-[560px] rounded-[24px] border border-white/10 object-cover shadow-[0_30px_95px_rgba(0,0,0,0.52)]"
                   whileHover={{ y: -8, scale: 1.01 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
                 />

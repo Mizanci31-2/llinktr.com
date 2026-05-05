@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,18 +23,6 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const { user, isAuthenticated, loading } = useAuth();
   const utils = trpc.useUtils();
-
-  useEffect(() => {
-    const existingScript = document.querySelector('script[src="https://nap5k.com/tag.min.js"][data-zone="10942885"]');
-
-    if (!existingScript) {
-      const s = document.createElement("script");
-      s.src = "https://nap5k.com/tag.min.js";
-      s.async = true;
-      s.dataset.zone = "10942885";
-      document.body.appendChild(s);
-    }
-  }, []);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);

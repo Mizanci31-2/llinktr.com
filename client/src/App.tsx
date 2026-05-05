@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
 const Home = lazy(() => import("./pages/Home"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
 const Login = lazy(() => import("./pages/Login"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const BioBuilder = lazy(() => import("./pages/BioBuilder"));
@@ -37,7 +38,7 @@ function Router() {
       <Route path="/kayitol" component={Login} />
       <Route path="/register" component={Login} />
       <Route path="/admin" component={AdminRedirect} />
-      <Route path="/admin31" component={Dashboard} />
+      <Route path="/admin31" component={AdminPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/:id" component={BioBuilder} />
       <Route path="/builder/:id" component={BioBuilder} />

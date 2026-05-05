@@ -33,7 +33,13 @@ export default function PublicBioPage() {
 
   const { data, isLoading, error } = trpc.bioPages.getBySlug.useQuery(
     { slug: slug || "" },
-    { enabled: !!slug },
+    {
+      enabled: !!slug,
+      staleTime: 1000 * 60 * 2,
+      gcTime: 1000 * 60 * 10,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
   );
   const pageUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/${slug}` : "";
   const [shareOpen, setShareOpen] = useState(false);
@@ -363,35 +369,49 @@ export default function PublicBioPage() {
     return <img src={String(blockData.logoUrlSecondary)} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
   };
 
+  const pageBackgroundStyle = getBioBackgroundStyle(themeConfig, accent);
+  const cardStyle = getBioCardStyle(themeConfig);
+
   return (
     <div
-      className="min-h-screen overflow-x-hidden px-0 py-0 md:flex md:items-center md:justify-center md:px-4 md:py-8"
-      style={{ ...getBioBackgroundStyle(themeConfig, accent), color: themeConfig.text }}
+      className="flex min-h-screen justify-center overflow-x-hidden px-4 pb-8 pt-10 md:items-center md:px-4 md:py-8"
+      style={{
+        ...pageBackgroundStyle,
+        background: `radial-gradient(circle at center, rgba(17, 17, 17, 0.94) 0%, rgba(0, 0, 0, 0.99) 100%), ${pageBackgroundStyle.background}`,
+        color: themeConfig.text,
+      }}
     >
       <main
-        className="mx-auto flex w-full max-w-none flex-col items-center overflow-x-hidden border-0 px-4 pb-6 pt-[10vh] text-center sm:px-5 sm:pb-7 md:max-w-[35rem] md:rounded-[2.35rem] md:border md:p-8 lg:max-w-[37rem]"
-        style={getBioCardStyle(themeConfig)}
+        className="mx-auto flex w-full max-w-[420px] flex-col items-center overflow-x-hidden rounded-[20px] border px-6 pb-6 pt-6 text-center md:max-w-[35rem] md:rounded-[2.35rem] md:p-8 lg:max-w-[37rem]"
+        style={{
+          ...cardStyle,
+          background: "rgba(0, 0, 0, 0.68)",
+          borderColor: "rgba(255, 255, 255, 0.05)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          boxShadow: cardStyle.boxShadow || "0 24px 64px rgba(0, 0, 0, 0.45)",
+        }}
       >
-        <div className="mb-3 flex flex-col items-center gap-4 md:mb-4 md:gap-5">
+        <div className="mb-4 flex flex-col items-center gap-4 md:mb-4 md:gap-5">
           {page.profileImageUrl ? (
             <img
               src={page.profileImageUrl}
               alt={page.title}
-              className="h-24 w-24 rounded-full object-cover border-2 md:h-28 md:w-28"
+              className="mb-4 h-24 w-24 rounded-full border-2 object-cover md:h-28 md:w-28"
               style={{ borderColor: `${accent}66` }}
             />
           ) : (
             <div
-              className="flex h-24 w-24 items-center justify-center rounded-full border-2 md:h-28 md:w-28"
+              className="mb-4 flex h-24 w-24 items-center justify-center rounded-full border-2 md:h-28 md:w-28"
               style={{ borderColor: `${accent}66`, background: `${accent}22` }}
             >
               <UserRound className="h-10 w-10 md:h-11 md:w-11" style={{ color: accent }} />
             </div>
           )}
           <div className="text-center">
-            <h1 className="text-xl font-bold md:text-[1.7rem]" style={{ color: themeConfig.text }}>{page.title}</h1>
+            <h1 className="mb-2 text-xl font-bold md:text-[1.7rem]" style={{ color: themeConfig.text }}>{page.title}</h1>
             {page.description && (
-              <p className="mt-1 text-sm md:text-[15px]" style={{ color: themeConfig.mutedText }}>{page.description}</p>
+              <p className="mb-4 text-sm md:text-[15px]" style={{ color: themeConfig.mutedText }}>{page.description}</p>
             )}
           </div>
         </div>
@@ -456,7 +476,7 @@ export default function PublicBioPage() {
                   href={blockData?.url ? `/go/${block.id}` : "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mx-auto grid min-h-[4.35rem] w-full max-w-[28rem] content-center place-items-center overflow-hidden rounded-xl border px-4 py-0 transition-all hover:opacity-90 active:scale-[0.98] sm:px-5 md:min-h-[5.1rem] md:max-w-none md:rounded-[1.2rem] md:px-7"
+                  className="link-card link-button mx-auto grid min-h-[4.35rem] w-full max-w-[20rem] content-center place-items-center overflow-visible rounded-[14px] border px-4 py-3.5 transition-all hover:opacity-90 active:scale-[0.98] md:min-h-[5.1rem] md:max-w-none md:rounded-[1.2rem] md:px-7"
                   style={buttonStyle}
                 >
                   <div className="relative grid h-full w-full place-items-center self-stretch">
@@ -474,7 +494,7 @@ export default function PublicBioPage() {
                         <span className="h-8 w-8 rounded-full md:h-9 md:w-9" />
                       )}
                     </div>
-                    <span className={`flex h-full w-full min-w-0 items-center justify-center truncate px-10 text-center text-sm font-medium leading-none md:px-12 md:text-base ${align === "left" ? "sm:justify-start sm:text-left" : ""}`}>
+                    <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible truncate px-10 text-center text-sm font-bold md:px-12 md:text-base ${align === "left" ? "sm:justify-start sm:text-left" : ""}`}>
                       {blockData?.title || "Link"}
                     </span>
                     <ExternalLink className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60 md:h-[18px] md:w-[18px]" />
@@ -496,7 +516,7 @@ export default function PublicBioPage() {
         </div>
 
         {socialBlocks.length > 0 && (
-          <div className="mt-8 flex flex-wrap justify-center gap-3 md:mt-9 md:gap-3.5">
+          <div className="mt-5 flex flex-wrap justify-center gap-3 md:mt-9 md:gap-3.5">
             {socialBlocks.map(block => {
               const blockData = block.data as Record<string, string | boolean | number> | null;
               return (
