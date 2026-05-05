@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRef } from "react";
 import type { ElementType } from "react";
 import { useParams, useLocation } from "wouter";
@@ -52,6 +52,7 @@ import {
   Minus,
   Monitor,
   MousePointerClick,
+  MessageCircle,
   MapPin,
   Plus,
   Save,
@@ -96,6 +97,20 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   divider: "İnce Çizgi",
   profile_image: "Logo / Görsel",
 };
+
+const QUICK_PALETTES = [
+  { label: "Neon", accent: "#D6FF00", text: "#F8FAFC" },
+  { label: "Buz", accent: "#7DD3FC", text: "#F8FAFC" },
+  { label: "Mint", accent: "#86EFAC", text: "#F8FAFC" },
+  { label: "Pembe", accent: "#F472B6", text: "#FFF7FB" },
+  { label: "Altın", accent: "#FBBF24", text: "#FFFBEB" },
+];
+
+const SMART_PRESETS = [
+  { kind: "influencer", label: "Influencer", desc: "Sosyal hesap + öne çıkan içerik", accent: "#D6FF00" },
+  { kind: "sales", label: "Satış", desc: "WhatsApp + ürün/satış linki", accent: "#86EFAC" },
+  { kind: "freelancer", label: "Freelancer", desc: "Portfolyo + teklif al", accent: "#7DD3FC" },
+] as const;
 
 function generateTempId() {
   return `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -1420,6 +1435,40 @@ export default function BioBuilder() {
     }, "Sekme logosu");
   };
 
+  const applyPalette = (accent: string, text: string) => {
+    setAccentColor(accent);
+    setTextColor(text);
+    setIsDirty(true);
+  };
+
+  const applySmartPreset = (kind: typeof SMART_PRESETS[number]["kind"]) => {
+    const preset = SMART_PRESETS.find(item => item.kind === kind);
+    if (!preset) return;
+
+    setAccentColor(preset.accent);
+    setIsDirty(true);
+
+    if (kind === "influencer") {
+      if (!pageDesc) setPageDesc("İçerik, iş birlikleri ve en güncel paylaşımlar");
+      addBlock("social");
+      addBlock("link");
+      toast.success("Influencer akışı için sosyal ve link bloğu eklendi");
+      return;
+    }
+
+    if (kind === "sales") {
+      if (!pageDesc) setPageDesc("Ürünler, kampanyalar ve hızlı sipariş");
+      addCommerceBlock("shopier_store");
+      addBlock("link");
+      toast.success("Satış akışı için mağaza ve aksiyon linki eklendi");
+      return;
+    }
+
+    if (!pageDesc) setPageDesc("Portfolyo, hizmetler ve teklif talepleri");
+    addBlock("link");
+    addBlock("description");
+    toast.success("Freelancer akışı için portfolyo ve açıklama bloğu eklendi");
+  };
   if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -1488,7 +1537,7 @@ export default function BioBuilder() {
       </div>
 
       <div className="flex-1 container overflow-x-hidden py-6">
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_28rem]">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.18fr)_28rem]">
           <div className="space-y-6">
             <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
               <h2 className="font-semibold mb-4">Profil Detayları</h2>
@@ -1596,6 +1645,26 @@ export default function BioBuilder() {
             </div>
 
             <div className="p-5 rounded-2xl bg-card border border-border/50">
+              <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-primary" />
+                  <h2 className="font-semibold">Akıllı başlangıç</h2>
+                </div>
+                <p className="mb-3 text-xs text-muted-foreground">Ne yapıyorsun? Seç, sana uygun blokları ve vurgu rengini anında hazırlayalım.</p>
+                <div className="grid gap-2">
+                  {SMART_PRESETS.map((preset) => (
+                    <button
+                      key={preset.kind}
+                      type="button"
+                      onClick={() => applySmartPreset(preset.kind)}
+                      className="rounded-xl border border-border/50 bg-background/55 px-3 py-2 text-left transition-colors hover:border-primary/45 hover:bg-primary/5"
+                    >
+                      <span className="block text-sm font-medium">{preset.label}</span>
+                      <span className="block text-[11px] text-muted-foreground">{preset.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex items-center gap-2 mb-4">
                 <BarChart3 className="h-4 w-4 text-primary" />
                 <h2 className="font-semibold">Tema ve Renk</h2>
@@ -1620,12 +1689,29 @@ export default function BioBuilder() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Arka Plan ve Vurgu Rengi</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Vurgu Rengi</Label>
                   <div className="flex items-center gap-3">
                     <input type="color" value={activeAccentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} className="h-10 w-16 rounded-lg cursor-pointer border border-border/50 bg-transparent" />
                     <Input value={accentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} placeholder="#22D3EE" className="bg-input border-border/50 font-mono text-sm" />
                   </div>
-                  <p className="text-xs text-muted-foreground">Seçtiğiniz renk arka plana ton verir ve buton vurgularını anında günceller.</p>
+                  <p className="text-xs text-muted-foreground">Seçtiğiniz renk butonları, vurguları ve tema tonunu anında günceller.</p>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-border/50 bg-background/40 p-3">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Hazır Paletler</Label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {QUICK_PALETTES.map((palette) => (
+                      <button
+                        key={palette.label}
+                        type="button"
+                        onClick={() => applyPalette(palette.accent, palette.text)}
+                        className="flex items-center gap-2 rounded-lg border border-border/50 bg-input px-2.5 py-2 text-xs transition-colors hover:border-primary/50"
+                      >
+                        <span className="h-4 w-4 rounded-full border border-white/20" style={{ background: palette.accent }} />
+                        {palette.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -2069,8 +2155,3 @@ export default function BioBuilder() {
     </div>
   );
 }
-
-
-
-
-

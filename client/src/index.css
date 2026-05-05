@@ -43,33 +43,33 @@
 }
 
 :root {
-  --primary: oklch(0.93 0.23 110);
+  --primary: #D6FF00;
   --primary-foreground: oklch(0.1 0 0);
-  --sidebar-primary: oklch(0.93 0.23 110);
+  --sidebar-primary: #D6FF00;
   --sidebar-primary-foreground: oklch(0.1 0 0);
-  --chart-1: oklch(0.93 0.23 110);
+  --chart-1: #D6FF00;
   --chart-2: oklch(0.7 0.15 200);
   --chart-3: oklch(0.7 0.15 280);
   --chart-4: oklch(0.7 0.15 30);
   --chart-5: oklch(0.7 0.15 160);
   --radius: 0.75rem;
-  --background: oklch(0.08 0 0);
+  --background: #0A0A0A;
   --foreground: oklch(0.92 0 0);
-  --card: oklch(0.12 0 0);
+  --card: #111111;
   --card-foreground: oklch(0.92 0 0);
-  --popover: oklch(0.12 0 0);
+  --popover: #111111;
   --popover-foreground: oklch(0.92 0 0);
   --secondary: oklch(0.16 0 0);
   --secondary-foreground: oklch(0.92 0 0);
   --muted: oklch(0.16 0 0);
   --muted-foreground: oklch(0.74 0.015 250);
-  --accent: oklch(0.93 0.23 110);
+  --accent: #D6FF00;
   --accent-foreground: oklch(0.1 0 0);
   --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.56 0.02 250);
   --input: oklch(0.16 0 0);
-  --ring: oklch(0.93 0.23 110);
+  --ring: #D6FF00;
   --sidebar: oklch(0.1 0 0);
   --sidebar-foreground: oklch(0.92 0 0);
   --sidebar-accent: oklch(0.16 0 0);
@@ -79,28 +79,28 @@
 }
 
 .dark {
-  --primary: oklch(0.93 0.23 110);
+  --primary: #D6FF00;
   --primary-foreground: oklch(0.1 0 0);
-  --sidebar-primary: oklch(0.93 0.23 110);
+  --sidebar-primary: #D6FF00;
   --sidebar-primary-foreground: oklch(0.1 0 0);
-  --background: oklch(0.08 0 0);
+  --background: #0A0A0A;
   --foreground: oklch(0.92 0 0);
-  --card: oklch(0.12 0 0);
+  --card: #111111;
   --card-foreground: oklch(0.92 0 0);
-  --popover: oklch(0.12 0 0);
+  --popover: #111111;
   --popover-foreground: oklch(0.92 0 0);
   --secondary: oklch(0.16 0 0);
   --secondary-foreground: oklch(0.92 0 0);
   --muted: oklch(0.16 0 0);
   --muted-foreground: oklch(0.74 0.015 250);
-  --accent: oklch(0.93 0.23 110);
+  --accent: #D6FF00;
   --accent-foreground: oklch(0.1 0 0);
   --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.56 0.02 250);
   --input: oklch(0.16 0 0);
-  --ring: oklch(0.93 0.23 110);
-  --chart-1: oklch(0.93 0.23 110);
+  --ring: #D6FF00;
+  --chart-1: #D6FF00;
   --chart-2: oklch(0.7 0.15 200);
   --chart-3: oklch(0.7 0.15 280);
   --chart-4: oklch(0.7 0.15 30);
@@ -305,4 +305,70 @@
   100% {
     background-position: 20% 20%, 80% 20%, 50% 80%, 50% 50%;
   }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  button,
+  a[href],
+  input,
+  textarea,
+  [role="button"] {
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active,
+  a[href]:active {
+    transform: scale(0.985);
+  }
+}
+
+@layer components {
+  .landing-surface {
+    background:
+      radial-gradient(circle at 16% 20%, rgba(214, 255, 0, 0.12), transparent 34%),
+      radial-gradient(circle at 84% 18%, rgba(34, 211, 238, 0.08), transparent 30%),
+      linear-gradient(180deg, rgba(10, 10, 10, 0.94) 0%, rgba(10, 10, 10, 1) 100%);
+  }
+
+  .landing-glow {
+    box-shadow: 0 0 70px rgba(214, 255, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+
+  .premium-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 20px 60px rgba(0, 0, 0, 0.28);
+  }
+
+  .premium-card:hover,
+  .template-card:hover,
+  .landing-phone:hover {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 24px 70px rgba(0, 0, 0, 0.34),
+      0 0 36px rgba(214, 255, 0, 0.09);
+  }
+
+  .template-card {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015)),
+      radial-gradient(circle at 75% 0%, rgba(214,255,0,0.12), transparent 34%),
+      #151515;
+  }
+
+  .mini-chart-bar {
+    transform-origin: bottom;
+    animation: llinktr-rise 700ms ease-out both;
+  }
+}
+
+@keyframes llinktr-rise {
+  from { transform: scaleY(0.35); opacity: 0.45; }
+  to { transform: scaleY(1); opacity: 1; }
 }
