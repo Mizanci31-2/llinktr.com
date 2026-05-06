@@ -37,8 +37,8 @@ export default function PublicBioPage() {
     { slug: slug || "" },
     {
       enabled: !!slug,
-      staleTime: 1000 * 60 * 2,
-      gcTime: 1000 * 60 * 10,
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 15,
       refetchOnWindowFocus: false,
       retry: 1,
     },
@@ -501,10 +501,10 @@ export default function PublicBioPage() {
                         <span className="h-8 w-8 rounded-full md:h-9 md:w-9" />
                       )}
                     </div>
-                    <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible truncate px-10 text-center text-sm font-bold md:px-12 md:text-base ${align === "left" ? "sm:justify-start sm:text-left" : ""}`}>
+                    <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible truncate px-10 text-center text-sm font-bold md:px-12 md:text-base ${align === "left" ? "sm:justify-start sm:text-left" : ""}`} style={{ color: resolvedTextColor }}>
                       {blockData?.title || "Link"}
                     </span>
-                    <ExternalLink className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60 md:h-[18px] md:w-[18px]" />
+                    <ExternalLink className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60 md:h-[18px] md:w-[18px]" style={{ color: resolvedTextColor }} />
                   </div>
                 </a>
               );

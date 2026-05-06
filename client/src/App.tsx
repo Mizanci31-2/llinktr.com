@@ -5,6 +5,14 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
+function AppLoading() {
+  return (
+    <div className="grid min-h-screen place-items-center bg-background text-foreground">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
 const Home = lazy(() => import("./pages/Home"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const Login = lazy(() => import("./pages/Login"));
@@ -66,7 +74,7 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
-          <Suspense fallback={null}>
+          <Suspense fallback={<AppLoading />}>
             <Router />
           </Suspense>
         </TooltipProvider>

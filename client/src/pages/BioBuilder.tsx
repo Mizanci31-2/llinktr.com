@@ -943,10 +943,10 @@ function PreviewCardContents({
                 <span className={`${isDesktop ? "h-8 w-8" : "h-7 w-7"} rounded-full`} />
               )}
             </div>
-            <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible truncate text-center font-medium ${isDesktop ? "px-10 text-[15px]" : "px-8 text-xs"} ${align === "left" ? "sm:justify-start sm:text-left" : ""}`}>
+            <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible truncate text-center font-medium ${isDesktop ? "px-10 text-[15px]" : "px-8 text-xs"} ${align === "left" ? "sm:justify-start sm:text-left" : ""}`} style={{ color: resolvedTextColor }}>
               {String(block.data.title || "Link")}
             </span>
-            <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3 w-3"} absolute right-0 top-1/2 -translate-y-1/2 opacity-55`} />
+            <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3 w-3"} absolute right-0 top-1/2 -translate-y-1/2 opacity-55`} style={{ color: resolvedTextColor }} />
           </div>
         </div>
       );
