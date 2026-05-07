@@ -38,7 +38,8 @@ export default function Dashboard() {
   const pageCount = pages?.length ?? 0;
   const totalViews = pages?.reduce((sum, page) => sum + (page.views ?? 0), 0) ?? 0;
   const totalClicks = pages?.reduce((sum, page) => sum + (page.totalClicks ?? 0), 0) ?? 0;
-  const todayClicks = Math.max(0, Math.round(totalClicks * 0.18));
+  const todayClicks = pages?.reduce((sum, page) => sum + (page.todayClicks ?? 0), 0) ?? 0;
+  const todayViews = pages?.reduce((sum, page) => sum + (page.todayViews ?? 0), 0) ?? 0;
   const bestPage = pages?.slice().sort((a, b) => (b.totalClicks ?? 0) - (a.totalClicks ?? 0))[0];
   const chartValues = [32, 46, 38, 58, 48, 72, Math.max(28, Math.min(92, todayClicks + 28))];
   const reachedPageLimit = pageCount >= MAX_BIO_PAGES;
@@ -193,7 +194,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
+        <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Bugün tıklama</p>
@@ -205,6 +206,14 @@ export default function Dashboard() {
                 <span key={index} className="mini-chart-bar flex-1 rounded-t bg-primary/80" style={{ height: `${value}%`, animationDelay: `${index * 70}ms` }} />
               ))}
             </div>
+          </div>
+          <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">BugÃ¼n gÃ¶rÃ¼ntÃ¼leme</p>
+              <Eye className="h-5 w-5 text-primary" />
+            </div>
+            <p className="text-3xl font-bold">{todayViews}</p>
+            <p className="mt-5 text-sm text-muted-foreground">BugÃ¼n bio sayfalarÄ±nÄ±n aldÄ±ÄŸÄ± gÃ¶rÃ¼ntÃ¼leme.</p>
           </div>
           <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
             <div className="mb-4 flex items-center justify-between">

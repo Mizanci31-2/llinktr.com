@@ -14,7 +14,7 @@ var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
 
 // server/db.ts
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 
 // drizzle/schema.ts
@@ -56,6 +56,9 @@ var bioPages = mysqlTable("bio_pages", {
   themeCategory: varchar("theme_category", { length: 24 }),
   isPublished: boolean("isPublished").default(true).notNull(),
   views: int("views").default(0).notNull(),
+  todayClicks: int("todayClicks").default(0).notNull(),
+  todayViews: int("todayViews").default(0).notNull(),
+  statsDate: varchar("statsDate", { length: 10 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
 });
@@ -119,6 +122,45 @@ var remoteSnapshotHydrated = false;
 var lastRemoteSnapshotError = "";
 function now() {
   return /* @__PURE__ */ new Date();
+}
+function getTodayKey() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(/* @__PURE__ */ new Date());
+}
+function getCurrentDailyStats(page) {
+  const key = getTodayKey();
+  if (page?.statsDate === key) {
+    return {
+      todayClicks: page.todayClicks ?? 0,
+      todayViews: page.todayViews ?? 0,
+      statsDate: key
+    };
+  }
+  return { todayClicks: 0, todayViews: 0, statsDate: key };
+}
+var dailyStatsColumnsReady = false;
+async function ensureDailyStatsColumns(db) {
+  if (dailyStatsColumnsReady) return;
+  const statements = [
+    sql`ALTER TABLE bio_pages ADD COLUMN todayClicks int NOT NULL DEFAULT 0`,
+    sql`ALTER TABLE bio_pages ADD COLUMN todayViews int NOT NULL DEFAULT 0`,
+    sql`ALTER TABLE bio_pages ADD COLUMN statsDate varchar(10)`
+  ];
+  for (const statement of statements) {
+    try {
+      await db.execute(statement);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/duplicate|already exists|ER_DUP_FIELDNAME/i.test(message)) {
+        console.warn("[Database] Daily stats migration skipped:", message);
+      }
+    }
+  }
+  dailyStatsColumnsReady = true;
 }
 function applyMemorySnapshot(parsed) {
   if (typeof parsed === "string") {
@@ -349,6 +391,7 @@ async function getBioPagesByUserId(userId) {
     usingMemoryDb();
     return memory.pages.filter((page) => page.userId === userId);
   }
+  await ensureDailyStatsColumns(db);
   return db.select().from(bioPages).where(eq(bioPages.userId, userId));
 }
 async function getBioPagesWithStatsByUserId(userId) {
@@ -357,7 +400,7 @@ async function getBioPagesWithStatsByUserId(userId) {
     pages.map(async (page) => {
       const blocks = await getBioBlocksByPageId(page.id);
       const totalClicks = blocks.reduce((sum, block) => sum + (block.clicks ?? 0), 0);
-      return { ...page, totalClicks };
+      return { ...page, ...getCurrentDailyStats(page), totalClicks };
     })
   );
 }
@@ -367,6 +410,7 @@ async function getBioPageBySlug(slug) {
     usingMemoryDb();
     return memory.pages.find((page) => page.slug === slug);
   }
+  await ensureDailyStatsColumns(db);
   const result = await db.select().from(bioPages).where(eq(bioPages.slug, slug)).limit(1);
   return result[0];
 }
@@ -376,6 +420,7 @@ async function getBioPageById(id, userId) {
     usingMemoryDb();
     return memory.pages.find((page) => page.id === id && page.userId === userId);
   }
+  await ensureDailyStatsColumns(db);
   const result = await db.select().from(bioPages).where(and(eq(bioPages.id, id), eq(bioPages.userId, userId))).limit(1);
   return result[0];
 }
@@ -385,6 +430,7 @@ async function getBioPageByPublicId(id) {
     usingMemoryDb();
     return memory.pages.find((page) => page.id === id);
   }
+  await ensureDailyStatsColumns(db);
   const result = await db.select().from(bioPages).where(eq(bioPages.id, id)).limit(1);
   return result[0];
 }
@@ -462,13 +508,29 @@ async function incrementBioPageViews(id) {
     const page = memory.pages.find((item) => item.id === id);
     if (page) {
       page.views += 1;
+      const dailyStats = getCurrentDailyStats(page);
+      page.todayViews = dailyStats.todayViews + 1;
+      page.todayClicks = dailyStats.todayClicks;
+      page.statsDate = dailyStats.statsDate;
       await persistMemorySnapshotNow();
     }
     return;
   }
-  const result = await db.select({ views: bioPages.views }).from(bioPages).where(eq(bioPages.id, id)).limit(1);
+  await ensureDailyStatsColumns(db);
+  const result = await db.select({
+    views: bioPages.views,
+    todayViews: bioPages.todayViews,
+    todayClicks: bioPages.todayClicks,
+    statsDate: bioPages.statsDate
+  }).from(bioPages).where(eq(bioPages.id, id)).limit(1);
+  const dailyStats = getCurrentDailyStats(result[0]);
   const currentViews = result[0]?.views ?? 0;
-  await db.update(bioPages).set({ views: currentViews + 1 }).where(eq(bioPages.id, id));
+  await db.update(bioPages).set({
+    views: currentViews + 1,
+    todayViews: dailyStats.todayViews + 1,
+    todayClicks: dailyStats.todayClicks,
+    statsDate: dailyStats.statsDate
+  }).where(eq(bioPages.id, id));
 }
 async function deleteBioPage(id, userId) {
   const db = await getDb();
@@ -545,13 +607,28 @@ async function incrementBioBlockClicks(id) {
     const block2 = memory.blocks.find((item) => item.id === id);
     if (block2) {
       block2.clicks += 1;
+      const page = memory.pages.find((item) => item.id === block2.pageId);
+      if (page) {
+        const dailyStats = getCurrentDailyStats(page);
+        page.todayClicks = dailyStats.todayClicks + 1;
+        page.todayViews = dailyStats.todayViews;
+        page.statsDate = dailyStats.statsDate;
+      }
       await persistMemorySnapshotNow();
     }
     return;
   }
   const block = await getBioBlockById(id);
   if (block) {
+    await ensureDailyStatsColumns(db);
+    const page = await getBioPageByPublicId(block.pageId);
+    const dailyStats = getCurrentDailyStats(page);
     await db.update(bioBlocks).set({ clicks: (block.clicks ?? 0) + 1 }).where(eq(bioBlocks.id, id));
+    await db.update(bioPages).set({
+      todayClicks: dailyStats.todayClicks + 1,
+      todayViews: dailyStats.todayViews,
+      statsDate: dailyStats.statsDate
+    }).where(eq(bioPages.id, block.pageId));
   }
 }
 async function deleteBioBlock(id) {

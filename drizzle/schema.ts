@@ -79,6 +79,9 @@ export const bioPages = pgTable("bio_pages", {
   themeCategory: varchar("theme_category", { length: 24 }),
   isPublished: boolean("isPublished").default(true),
   views: integer("views").default(0),
+  todayClicks: integer("todayClicks").default(0),
+  todayViews: integer("todayViews").default(0),
+  statsDate: varchar("statsDate", { length: 10 }),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
 });
