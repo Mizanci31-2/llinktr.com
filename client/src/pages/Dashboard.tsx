@@ -209,11 +209,11 @@ export default function Dashboard() {
           </div>
           <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">BugÃ¼n gÃ¶rÃ¼ntÃ¼leme</p>
+              <p className="text-sm text-muted-foreground">Bugün görüntüleme</p>
               <Eye className="h-5 w-5 text-primary" />
             </div>
             <p className="text-3xl font-bold">{todayViews}</p>
-            <p className="mt-5 text-sm text-muted-foreground">BugÃ¼n bio sayfalarÄ±nÄ±n aldÄ±ÄŸÄ± gÃ¶rÃ¼ntÃ¼leme.</p>
+            <p className="mt-5 text-sm text-muted-foreground">Bugün bio sayfalarının aldığı görüntüleme.</p>
           </div>
           <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
