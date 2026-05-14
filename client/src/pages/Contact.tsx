@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Instagram, Loader2, Mail, MessageSquare, Send } from "lucide-react";
@@ -23,18 +24,35 @@ const faqs = [
   },
 ];
 
+const subjectOptions = [
+  "Destek talebi",
+  "Hesap işlemleri",
+  "Şifremi unuttum",
+  "Ödeme / satış",
+  "Öneri ve geri bildirim",
+  "İş birliği",
+  "Diğer",
+];
+
 export default function Contact() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState("Destek talebi");
+  const [customSubject, setCustomSubject] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    const finalSubject = subject === "Diğer" ? customSubject.trim() : subject;
 
     if (!name.trim() || !email.trim() || !message.trim()) {
       toast.error("Lütfen ad, e-posta ve mesaj alanlarını doldurun.");
+      return;
+    }
+
+    if (!finalSubject) {
+      toast.error("Lütfen konuyu yazın.");
       return;
     }
 
@@ -46,7 +64,7 @@ export default function Contact() {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
-          subject: subject.trim(),
+          subject: finalSubject,
           message: message.trim(),
         }),
       });
@@ -56,7 +74,8 @@ export default function Contact() {
 
       setName("");
       setEmail("");
-      setSubject("");
+      setSubject("Destek talebi");
+      setCustomSubject("");
       setMessage("");
       toast.success("Mesajınız alındı. En kısa sürede dönüş yapacağız.");
     } catch (error) {
@@ -78,7 +97,7 @@ export default function Contact() {
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(360px,1fr)]">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(360px,1fr)]">
           <section className="rounded-[18px] border border-white/10 bg-card p-6 shadow-2xl">
             <h2 className="text-2xl font-semibold">İletişim bilgileri</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -127,7 +146,7 @@ export default function Contact() {
             </div>
           </section>
 
-          <section className="rounded-[18px] border border-white/10 bg-card p-6 shadow-2xl">
+          <section className="self-start rounded-[18px] border border-white/10 bg-card p-6 shadow-2xl">
             <h2 className="text-2xl font-semibold">Mesaj gönder</h2>
             <p className="mt-2 text-sm text-muted-foreground">Formu gönderdiğinizde talebiniz admin panelinden görüntülenebilir.</p>
 
@@ -145,8 +164,32 @@ export default function Contact() {
 
               <div className="space-y-2">
                 <Label htmlFor="contact-subject">Konu</Label>
-                <Input id="contact-subject" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Destek talebi" maxLength={120} />
+                <Select value={subject} onValueChange={setSubject}>
+                  <SelectTrigger id="contact-subject" className="w-full border-border/50 bg-background/70">
+                    <SelectValue placeholder="Konu seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjectOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
+              {subject === "Diğer" && (
+                <div className="space-y-2">
+                  <Label htmlFor="contact-custom-subject">Konuyu yazın</Label>
+                  <Input
+                    id="contact-custom-subject"
+                    value={customSubject}
+                    onChange={(event) => setCustomSubject(event.target.value)}
+                    placeholder="Kısa konu başlığı"
+                    maxLength={120}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="contact-message">Mesajınız</Label>
