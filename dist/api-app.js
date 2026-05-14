@@ -111,10 +111,12 @@ var memory = {
   nextPageId: 1,
   nextBlockId: 1,
   nextShortLinkId: 1,
+  nextContactMessageId: 1,
   users: [],
   pages: [],
   blocks: [],
-  shortLinks: []
+  shortLinks: [],
+  contactMessages: []
 };
 var memorySnapshotPath = process.env.LLINKTR_MEMORY_PATH || path.join(os.tmpdir(), "llinktr-memory-db.json");
 var remoteSnapshotClient = null;
@@ -175,6 +177,7 @@ function applyMemorySnapshot(parsed) {
   memory.nextPageId = Number.isFinite(parsed.nextPageId) ? parsed.nextPageId : memory.nextPageId;
   memory.nextBlockId = Number.isFinite(parsed.nextBlockId) ? parsed.nextBlockId : memory.nextBlockId;
   memory.nextShortLinkId = Number.isFinite(parsed.nextShortLinkId) ? parsed.nextShortLinkId : memory.nextShortLinkId;
+  memory.nextContactMessageId = Number.isFinite(parsed.nextContactMessageId) ? parsed.nextContactMessageId : memory.nextContactMessageId;
   memory.users = Array.isArray(parsed.users) ? parsed.users.map((item) => ({
     ...item,
     createdAt: item?.createdAt ? new Date(item.createdAt) : now(),
@@ -192,6 +195,10 @@ function applyMemorySnapshot(parsed) {
     updatedAt: item?.updatedAt ? new Date(item.updatedAt) : now()
   })) : [];
   memory.shortLinks = Array.isArray(parsed.shortLinks) ? parsed.shortLinks.map((item) => ({
+    ...item,
+    createdAt: item?.createdAt ? new Date(item.createdAt) : now()
+  })) : [];
+  memory.contactMessages = Array.isArray(parsed.contactMessages) ? parsed.contactMessages.map((item) => ({
     ...item,
     createdAt: item?.createdAt ? new Date(item.createdAt) : now()
   })) : [];
@@ -271,6 +278,41 @@ function usingMemoryDb() {
     console.warn("[Database] DATABASE_URL not configured. Using in-memory local demo data.");
     warnedAboutMemoryDb = true;
   }
+}
+function sanitizeContactText(value, maxLength) {
+  return String(value ?? "").trim().slice(0, maxLength);
+}
+function isValidContactEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+async function createContactMessage(input) {
+  usingMemoryDb();
+  const message = {
+    id: memory.nextContactMessageId++,
+    name: sanitizeContactText(input.name, 80),
+    email: sanitizeContactText(input.email, 120).toLowerCase(),
+    subject: sanitizeContactText(input.subject, 120),
+    message: sanitizeContactText(input.message, 2e3),
+    createdAt: now()
+  };
+  memory.contactMessages.unshift(message);
+  memory.contactMessages = memory.contactMessages.slice(0, 500);
+  await persistMemorySnapshotNow();
+  return message;
+}
+async function getContactMessages() {
+  usingMemoryDb();
+  await ensureRemoteSnapshotHydrated();
+  return [...(memory.contactMessages ?? [])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+async function deleteContactMessage(id) {
+  usingMemoryDb();
+  await ensureRemoteSnapshotHydrated();
+  const before = memory.contactMessages.length;
+  memory.contactMessages = memory.contactMessages.filter((message) => message.id !== id);
+  const deleted = memory.contactMessages.length !== before;
+  if (deleted) await persistMemorySnapshotNow();
+  return deleted;
 }
 async function getDb() {
   const rawUrl = process.env.DATABASE_URL ?? "";
@@ -2021,6 +2063,53 @@ function createApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  app.post("/api/contact-messages", async (req, res) => {
+    try {
+      const name = sanitizeContactText(req.body?.name, 80);
+      const email = sanitizeContactText(req.body?.email, 120).toLowerCase();
+      const subject = sanitizeContactText(req.body?.subject, 120);
+      const message = sanitizeContactText(req.body?.message, 2e3);
+      if (!name || !email || !message) {
+        res.status(400).json({ message: "Ad, e-posta ve mesaj zorunludur." });
+        return;
+      }
+      if (!isValidContactEmail(email)) {
+        res.status(400).json({ message: "Geçerli bir e-posta adresi girin." });
+        return;
+      }
+      await createContactMessage({ name, email, subject, message });
+      res.status(201).json({ success: true });
+    } catch (err) {
+      console.error("[Contact] Create failed:", err);
+      res.status(500).json({ message: "Mesaj kaydedilemedi." });
+    }
+  });
+  app.get("/api/contact-messages", async (req, res) => {
+    if (req.headers["x-admin-password"] !== "247398") {
+      res.status(401).json({ message: "Yetkisiz işlem" });
+      return;
+    }
+    try {
+      const messages = await getContactMessages();
+      res.json({ messages });
+    } catch (err) {
+      console.error("[Contact] List failed:", err);
+      res.status(500).json({ message: "Mesajlar alınamadı." });
+    }
+  });
+  app.delete("/api/contact-messages/:id", async (req, res) => {
+    if (req.headers["x-admin-password"] !== "247398") {
+      res.status(401).json({ message: "Yetkisiz işlem" });
+      return;
+    }
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) {
+      res.status(400).json({ message: "Geçersiz mesaj" });
+      return;
+    }
+    const deleted = await deleteContactMessage(id);
+    res.json({ success: deleted });
+  });
   app.get("/r/:code", async (req, res) => {
     const { code } = req.params;
     try {

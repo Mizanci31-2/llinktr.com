@@ -6,8 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { ImagePlus, Lock, Save, RotateCcw } from "lucide-react";
+import { ImagePlus, Inbox, Lock, RefreshCw, Save, RotateCcw, Trash2 } from "lucide-react";
 import { HOME_ADMIN_SETTINGS_KEY, defaultHomeAdminSettings, readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
+
+type ContactMessage = {
+  id: number;
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+  createdAt: string;
+};
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -22,9 +31,31 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [unlocked, setUnlocked] = useState(() => window.sessionStorage.getItem("llinktr.admin") === "1");
   const [settings, setSettings] = useState<HomeAdminSettings>(() => readHomeAdminSettings());
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
     if (unlocked) window.sessionStorage.setItem("llinktr.admin", "1");
+  }, [unlocked]);
+
+  const loadMessages = async () => {
+    setMessagesLoading(true);
+    try {
+      const response = await fetch("/api/contact-messages", {
+        headers: { "x-admin-password": "247398" },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || "Mesajlar alınamadı");
+      setMessages(Array.isArray(data.messages) ? data.messages : []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Mesajlar alınamadı");
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (unlocked) void loadMessages();
   }, [unlocked]);
 
   const update = (patch: Partial<HomeAdminSettings>) => setSettings((current) => ({ ...current, ...patch }));
@@ -54,6 +85,21 @@ export default function AdminPage() {
     }
     update({ heroImage: await fileToDataUrl(file) });
     toast.success("Görsel eklendi, kaydetmeyi unutma");
+  };
+
+  const deleteMessage = async (id: number) => {
+    try {
+      const response = await fetch(`/api/contact-messages/${id}`, {
+        method: "DELETE",
+        headers: { "x-admin-password": "247398" },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || "Mesaj silinemedi");
+      setMessages((current) => current.filter((message) => message.id !== id));
+      toast.success("Mesaj silindi");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Mesaj silinemedi");
+    }
   };
 
   if (!unlocked) {
@@ -142,6 +188,49 @@ export default function AdminPage() {
             <p className="mt-3 text-xs text-primary">{settings.heroProof}</p>
           </section>
         </div>
+
+        <section className="mt-6 rounded-[18px] border border-white/10 bg-card p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <Inbox className="h-5 w-5 text-primary" />
+                İletişim Formları
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">İletişim sayfasından gönderilen mesajlar burada görünür.</p>
+            </div>
+            <Button variant="outline" onClick={() => void loadMessages()} disabled={messagesLoading}>
+              <RefreshCw className={`h-4 w-4 ${messagesLoading ? "animate-spin" : ""}`} />
+              Yenile
+            </Button>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {messagesLoading ? (
+              <div className="rounded-2xl border border-border/50 bg-background/35 p-5 text-sm text-muted-foreground">Mesajlar yükleniyor...</div>
+            ) : messages.length === 0 ? (
+              <div className="rounded-2xl border border-border/50 bg-background/35 p-5 text-sm text-muted-foreground">Henüz gönderilmiş iletişim formu yok.</div>
+            ) : (
+              messages.map((item) => (
+                <article key={item.id} className="rounded-2xl border border-border/60 bg-background/40 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold">{item.subject || "Konu belirtilmedi"}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {item.name} • <a href={`mailto:${item.email}`} className="text-primary hover:underline">{item.email}</a>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground/80">{new Date(item.createdAt).toLocaleString("tr-TR")}</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="border-border/50 text-destructive hover:text-destructive" onClick={() => void deleteMessage(item.id)}>
+                      <Trash2 className="h-4 w-4" />
+                      Sil
+                    </Button>
+                  </div>
+                  <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{item.message}</p>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
       </main>
       <Footer />
     </div>

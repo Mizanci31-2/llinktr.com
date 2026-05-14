@@ -50,6 +50,7 @@ export default function Footer() {
               <li><Link href="/terms" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Kullanım Şartları</Link></li>
               <li><Link href="/cookies" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Çerez Politikası</Link></li>
               <li><Link href="/kvkk" className="text-sm text-muted-foreground transition-colors hover:text-foreground">KVKK</Link></li>
+              <li><Link href="/contact" className="text-sm text-muted-foreground transition-colors hover:text-foreground">İletişim</Link></li>
             </ul>
           </div>
         </div>
