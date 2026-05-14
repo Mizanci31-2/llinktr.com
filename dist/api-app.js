@@ -287,6 +287,7 @@ function isValidContactEmail(value) {
 }
 async function createContactMessage(input) {
   usingMemoryDb();
+  await ensureRemoteSnapshotHydrated();
   const message = {
     id: memory.nextContactMessageId++,
     name: sanitizeContactText(input.name, 80),
