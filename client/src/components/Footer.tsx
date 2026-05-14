@@ -39,6 +39,7 @@ export default function Footer() {
             <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Şirket</h4>
             <ul className="space-y-3">
               <li><Link href="/about" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Hakkımızda</Link></li>
+              <li><Link href="/contact" className="text-sm text-muted-foreground transition-colors hover:text-foreground">İletişim</Link></li>
             </ul>
           </div>
 
@@ -49,7 +50,6 @@ export default function Footer() {
               <li><Link href="/terms" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Kullanım Şartları</Link></li>
               <li><Link href="/cookies" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Çerez Politikası</Link></li>
               <li><Link href="/kvkk" className="text-sm text-muted-foreground transition-colors hover:text-foreground">KVKK</Link></li>
-              <li><Link href="/contact" className="text-sm text-muted-foreground transition-colors hover:text-foreground">İletişim</Link></li>
             </ul>
           </div>
         </div>
