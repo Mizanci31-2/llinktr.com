@@ -1899,10 +1899,18 @@ export function themeHasImageBackground(theme: BioTheme) {
   return (theme.previewBg ?? theme.bg).includes("url(");
 }
 
+function getThemeBackground(theme: BioTheme) {
+  return resolveThemeValue(theme.bg, theme.defaultAccent ?? theme.accent, theme.defaultTextColor ?? theme.text);
+}
+
+function getThemePreviewBackground(theme: BioTheme) {
+  return theme.preview ?? resolveThemeValue(theme.previewBg ?? theme.bg, theme.defaultAccent ?? theme.accent, theme.defaultTextColor ?? theme.text);
+}
+
 export function getBioBackgroundStyle(theme: BioTheme, accentColor: string): CSSProperties {
-  const resolvedBg = resolveThemeValue(theme.bg, theme.defaultAccent ?? theme.accent);
+  const resolvedBg = getThemeBackground(theme);
   return {
-    "--theme-bg": theme.background ?? theme.bg,
+    "--theme-bg": resolvedBg,
     "--theme-surface": theme.surface ?? theme.cardBg,
     "--theme-pattern": theme.pattern ?? "none",
     "--accent-color": safeAccentColor(accentColor, theme.defaultAccent ?? theme.accent),
@@ -1930,7 +1938,7 @@ export function getBioBackgroundStyleStatic(theme: BioTheme, accentColor: string
 
 export function getBioThemePreviewStyle(theme: BioTheme, accentColor: string): CSSProperties {
   const style = getBioBackgroundStyle(theme, accentColor);
-  const resolvedPreviewBg = theme.preview ?? resolveThemeValue(theme.previewBg ?? theme.bg, theme.defaultAccent ?? theme.accent);
+  const resolvedPreviewBg = getThemePreviewBackground(theme);
 
   return {
     ...style,

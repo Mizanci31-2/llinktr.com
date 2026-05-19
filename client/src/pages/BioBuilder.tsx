@@ -1045,10 +1045,10 @@ function PhonePreview({
   return (
     <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
       <div className="flex min-w-0 flex-1 flex-col items-center overflow-x-hidden">
-        <div className="relative mx-auto aspect-[9/17.2] w-[min(100%,330px)] overflow-hidden rounded-[2.35rem] border-2 border-black/70 bg-black shadow-2xl sm:w-[360px]">
+        <div className="relative mx-auto aspect-[9/17.2] w-[min(100%,310px)] max-w-full overflow-hidden rounded-[2.15rem] border-2 border-black/70 bg-black shadow-2xl sm:w-[330px] lg:w-[340px]">
           <div className="absolute top-0 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
           <div
-            className="h-full min-h-0 overflow-y-auto px-3.5 pt-7 pb-4.5"
+            className="h-full min-h-0 overflow-x-hidden overflow-y-auto px-3 pt-7 pb-4"
             style={getBioBackgroundStyleStatic(themeConfig, accent)}
           >
             <PreviewCardContents blocks={blocks} page={page} accentColor={accent} textColor={textColor} theme={theme} mode="phone" />

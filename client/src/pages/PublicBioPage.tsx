@@ -384,7 +384,6 @@ export default function PublicBioPage() {
       className="flex min-h-screen justify-center overflow-x-hidden px-4 pb-8 pt-10 md:items-center md:px-4 md:py-8"
       style={{
         ...pageBackgroundStyle,
-        background: `radial-gradient(circle at center, rgba(17, 17, 17, 0.94) 0%, rgba(0, 0, 0, 0.99) 100%), ${pageBackgroundStyle.background}`,
         color: resolvedTextColor,
       }}
     >
@@ -392,9 +391,7 @@ export default function PublicBioPage() {
         className="mx-auto flex w-full max-w-[420px] flex-col items-center overflow-x-hidden rounded-[20px] border px-6 pb-6 pt-6 text-center md:max-w-[35rem] md:rounded-[2.35rem] md:p-8 lg:max-w-[37rem]"
         style={{
           ...cardStyle,
-          background: "rgba(0, 0, 0, 0.68)",
-          borderColor: "rgba(255, 255, 255, 0.05)",
-          backdropFilter: "blur(10px)",
+          backdropFilter: cardStyle.backdropFilter || "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           boxShadow: cardStyle.boxShadow || "0 24px 64px rgba(0, 0, 0, 0.45)",
         }}
