@@ -1448,7 +1448,7 @@ function registerOAuthRoutes(app) {
     if (!googleEnabled) {
       res.status(400).json({
         success: false,
-        message: "Google girisi aktif degil. Supabase panelinde Authentication > Providers > Google acilmali."
+        message: "Google girisi yakinda aktif olacak."
       });
       return;
     }
@@ -1799,7 +1799,7 @@ var bioPagesRouter = router({
   getBySlug: publicProcedure.input(z2.object({ slug: z2.string() })).query(async ({ input }) => {
     const page = await getBioPageBySlug(input.slug);
     if (!page || !page.isPublished) return null;
-    await incrementBioPageViews(page.id);
+    void incrementBioPageViews(page.id).catch((error) => console.warn("[BioPage] view increment failed:", error));
     const blocks = await getBioBlocksByPageId(page.id);
     return { page, blocks };
   }),
@@ -1886,7 +1886,7 @@ var bioBlocksRouter = router({
     id: z2.number(),
     pageId: z2.number(),
     isEnabled: z2.boolean().optional(),
-    data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number()])).optional()
+    data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number(), z2.null()])).optional()
   })).mutation(async ({ ctx, input }) => {
     const page = await getBioPageById(input.pageId, ctx.user.id);
     if (!page) throw new Error("Sayfa bulunamad\u0131");
@@ -1911,19 +1911,20 @@ var bioBlocksRouter = router({
   }),
   bulkSave: protectedProcedure.input(z2.object({
     pageId: z2.number(),
+    allowEmpty: z2.boolean().optional(),
     blocks: z2.array(z2.object({
       id: z2.number().optional(),
       type: z2.enum(["heading", "description", "text", "link", "social", "divider", "profile_image"]),
       sortOrder: z2.number(),
       isEnabled: z2.boolean(),
-      data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number()]))
+      data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number(), z2.null()]))
     }))
   })).mutation(async ({ ctx, input }) => {
     const page = await getBioPageById(input.pageId, ctx.user.id);
     if (!page) throw new Error("Sayfa bulunamad\u0131");
     if (input.blocks.length > 50) throw new Error("Maksimum 50 \xF6\u011Fe s\u0131n\u0131r\u0131na ula\u015Ft\u0131n\u0131z");
     const existingBlocks = await getBioBlocksByPageId(input.pageId);
-    if (input.blocks.length === 0 && existingBlocks.length > 0) {
+    if (input.blocks.length === 0 && existingBlocks.length > 0 && !input.allowEmpty) {
       throw new Error("Bo\u015F i\xE7erik kayd\u0131 engellendi. T\xFCm bloklar\u0131 silmek istiyorsan\u0131z \xF6nce tek tek kald\u0131r\u0131n.");
     }
     const incomingIds = new Set(input.blocks.map((block) => block.id).filter((id) => typeof id === "number"));

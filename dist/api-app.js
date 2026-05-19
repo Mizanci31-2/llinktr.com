@@ -1473,7 +1473,7 @@ function registerOAuthRoutes(app) {
     if (!googleEnabled) {
       res.status(400).json({
         success: false,
-        message: "Google girisi aktif degil. Supabase panelinde Authentication > Providers > Google acilmali."
+        message: "Google girisi yakinda aktif olacak."
       });
       return;
     }
@@ -1538,7 +1538,62 @@ function registerOAuthRoutes(app) {
 }
 
 // server/_core/storageProxy.ts
+var MAX_IMAGE_UPLOAD_BYTES = 7 * 1024 * 1024;
+var ALLOWED_IMAGE_TYPES = /* @__PURE__ */ new Map([
+  ["image/jpeg", "jpg"],
+  ["image/png", "png"],
+  ["image/webp", "webp"],
+  ["image/gif", "gif"],
+  ["image/svg+xml", "svg"]
+]);
+function createStorageKey(contentType) {
+  const ext = ALLOWED_IMAGE_TYPES.get(contentType) || "bin";
+  const id = globalThis.crypto.randomUUID().replace(/-/g, "");
+  return `bio-images/${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}/${Date.now()}-${id}.${ext}`;
+}
 function registerStorageProxy(app) {
+  app.post(["/api/storage/presign-put", "/storage/presign-put"], async (req, res) => {
+    const contentType = typeof req.body?.contentType === "string" ? req.body.contentType : "";
+    const size = Number(req.body?.size || 0);
+    if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
+      res.status(400).json({ message: "L\xFCtfen ge\xE7erli bir g\xF6rsel dosyas\u0131 se\xE7in" });
+      return;
+    }
+    if (!Number.isFinite(size) || size <= 0 || size > MAX_IMAGE_UPLOAD_BYTES) {
+      res.status(400).json({ message: "G\xF6rsel en fazla 7 MB olabilir" });
+      return;
+    }
+    if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+      res.status(503).json({ message: "G\xF6rsel do\u011Frudan taray\u0131c\u0131da haz\u0131rlanacak. L\xFCtfen sayfay\u0131 yenileyip tekrar deneyin." });
+      return;
+    }
+    try {
+      const key = createStorageKey(contentType);
+      const forgeUrl = new URL(
+        "v1/storage/presign/put",
+        ENV.forgeApiUrl.replace(/\/+$/, "") + "/"
+      );
+      forgeUrl.searchParams.set("path", key);
+      const forgeResp = await fetch(forgeUrl, {
+        headers: { Authorization: `Bearer ${ENV.forgeApiKey}` }
+      });
+      if (!forgeResp.ok) {
+        const body = await forgeResp.text().catch(() => "");
+        console.error(`[StorageProxy] forge put error: ${forgeResp.status} ${body}`);
+        res.status(502).json({ message: "Storage backend error" });
+        return;
+      }
+      const { url: uploadUrl } = await forgeResp.json();
+      if (!uploadUrl) {
+        res.status(502).json({ message: "Empty signed URL from backend" });
+        return;
+      }
+      res.json({ uploadUrl, key, url: `/manus-storage/${key}` });
+    } catch (err) {
+      console.error("[StorageProxy] presign put failed:", err);
+      res.status(502).json({ message: "Storage proxy error" });
+    }
+  });
   app.get("/manus-storage/*", async (req, res) => {
     const key = req.params[0];
     if (!key) {
@@ -1546,7 +1601,7 @@ function registerStorageProxy(app) {
       return;
     }
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(500).send("Storage proxy not configured");
+      res.status(503).send("Storage proxy unavailable");
       return;
     }
     try {
@@ -1826,7 +1881,7 @@ var bioPagesRouter = router({
     if (!page) return null;
     const isPaused = !page.isPublished;
     if (!isPaused) {
-      await incrementBioPageViews(page.id);
+      void incrementBioPageViews(page.id).catch((error) => console.warn("[BioPage] view increment failed:", error));
     }
     const blocks = await getBioBlocksByPageId(page.id);
     return { page, blocks, isPaused };
@@ -1859,7 +1914,7 @@ var bioPagesRouter = router({
       accentColor: "#22D3EE",
       isPublished: true
     });
-    await persistMemorySnapshotNow();
+    void persistMemorySnapshotNow();
     return { success: true };
   }),
   update: protectedProcedure.input(z2.object({
@@ -1883,7 +1938,7 @@ var bioPagesRouter = router({
       if (!available) throw new Error("Bu slug zaten kullan\u0131l\u0131yor");
     }
     await updateBioPage(id, ctx.user.id, data);
-    await persistMemorySnapshotNow();
+    void persistMemorySnapshotNow();
     return { success: true };
   }),
   delete: protectedProcedure.input(z2.object({ id: z2.number() })).mutation(async ({ ctx, input }) => {
@@ -1922,7 +1977,7 @@ var bioBlocksRouter = router({
     id: z2.number(),
     pageId: z2.number(),
     isEnabled: z2.boolean().optional(),
-    data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number()])).optional()
+    data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number(), z2.null()])).optional()
   })).mutation(async ({ ctx, input }) => {
     const page = await getBioPageById(input.pageId, ctx.user.id);
     if (!page) throw new Error("Sayfa bulunamad\u0131");
@@ -1950,19 +2005,20 @@ var bioBlocksRouter = router({
   }),
   bulkSave: protectedProcedure.input(z2.object({
     pageId: z2.number(),
+    allowEmpty: z2.boolean().optional(),
     blocks: z2.array(z2.object({
       id: z2.number().optional(),
       type: z2.enum(["heading", "description", "text", "link", "social", "divider", "profile_image"]),
       sortOrder: z2.number(),
       isEnabled: z2.boolean(),
-      data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number()]))
+      data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number(), z2.null()]))
     }))
   })).mutation(async ({ ctx, input }) => {
     const page = await getBioPageById(input.pageId, ctx.user.id);
     if (!page) throw new Error("Sayfa bulunamad\u0131");
     if (input.blocks.length > 50) throw new Error("Maksimum 50 \xF6\u011Fe s\u0131n\u0131r\u0131na ula\u015Ft\u0131n\u0131z");
     const existingBlocks = await getBioBlocksByPageId(input.pageId);
-    if (input.blocks.length === 0 && existingBlocks.length > 0) {
+    if (input.blocks.length === 0 && existingBlocks.length > 0 && !input.allowEmpty) {
       throw new Error("Bo\u015F i\xE7erik kayd\u0131 engellendi. T\xFCm bloklar\u0131 silmek istiyorsan\u0131z \xF6nce tek tek kald\u0131r\u0131n.");
     }
     const incomingIds = new Set(input.blocks.map((block) => block.id).filter((id) => typeof id === "number"));
@@ -1988,7 +2044,7 @@ var bioBlocksRouter = router({
         data: block.data
       });
     }
-    await persistMemorySnapshotNow();
+    void persistMemorySnapshotNow();
     return getBioBlocksByPageId(input.pageId);
   })
 });

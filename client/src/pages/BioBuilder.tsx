@@ -190,7 +190,12 @@ async function compressImageFile(file: File, label: string) {
 
   const originalDataUrl = await readFileAsDataUrl(file);
   const image = await loadImageElement(originalDataUrl);
-  const maxSide = label.toLocaleLowerCase("tr").includes("profil") ? 800 : 512;
+  const lowerLabel = label.toLocaleLowerCase("tr");
+  const maxSide = lowerLabel.includes("profil")
+    ? 520
+    : lowerLabel.includes("arka plan")
+      ? 900
+      : 256;
   const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
   const width = Math.max(1, Math.round(image.naturalWidth * scale));
   const height = Math.max(1, Math.round(image.naturalHeight * scale));
@@ -204,10 +209,10 @@ async function compressImageFile(file: File, label: string) {
   }
 
   context.drawImage(image, 0, 0, width, height);
-  const compressed = canvas.toDataURL("image/webp", 0.82);
+  const compressed = canvas.toDataURL("image/webp", 0.72);
 
-  if (compressed.length > 1_200_000) {
-    return canvas.toDataURL("image/jpeg", 0.72);
+  if (compressed.length > 650_000) {
+    return canvas.toDataURL("image/jpeg", 0.64);
   }
 
   return compressed;
@@ -225,9 +230,10 @@ function readImageFile(file: File, onLoaded: (url: string) => void, label = "Gö
   }
 
   const loadingToast = toast.loading(`${label} hazırlanıyor...`);
-  void compressImageFile(file, label)
-    .then((dataUrl) => {
-      onLoaded(dataUrl);
+  void uploadImageFile(file)
+    .catch(() => compressImageFile(file, label))
+    .then((url) => {
+      onLoaded(url);
       toast.success(`${label} yüklendi`, { id: loadingToast });
     })
     .catch((error) => {
@@ -1223,40 +1229,85 @@ export default function BioBuilder() {
         if (!confirmed) return;
       }
 
-      await updatePageMutation.mutateAsync({
+      const pagePatch: {
+        id: number;
+        title: string;
+        description: string | null;
+        profileImageUrl?: string | null;
+        faviconUrl?: string | null;
+        theme: string;
+        selectedThemeId: string;
+        accentColor: string;
+        textColor: string;
+        customBackgroundImageUrl?: string | null;
+        themeCategory: "solid" | "pattern" | "photo" | null;
+        isPublished: boolean;
+      } = {
         id: pageId,
         title: pageTitle,
         description: pageDesc || null,
-        profileImageUrl: profileImageUrl || null,
-        faviconUrl: faviconUrl || null,
         theme,
         selectedThemeId: theme,
         accentColor: activeAccentColor,
         textColor,
-        customBackgroundImageUrl: customBackgroundImageUrl || null,
         themeCategory: activeThemeCategory === "all" ? null : activeThemeCategory,
         isPublished,
-      });
+      };
 
-      await bulkSaveMutation.mutateAsync({
-        pageId,
-        allowEmpty: allowEmptyBlocks,
-        blocks: blocks.map((block, index) => ({
-          id: block.id,
-          type: block.type,
-          sortOrder: index,
-          isEnabled: block.isEnabled,
-          data: sanitizeBlockData(block.data),
-        })),
-      });
+      const savedPage = pageData?.page as
+        | {
+            profileImageUrl?: string | null;
+            faviconUrl?: string | null;
+            customBackgroundImageUrl?: string | null;
+          }
+        | undefined;
 
-      await Promise.allSettled([
-        utils.bioPages.getById.invalidate({ id: pageId }),
-        utils.bioPages.list.invalidate(),
-        pageData?.page?.slug
-          ? utils.bioPages.getBySlug.invalidate({ slug: pageData.page.slug })
-          : Promise.resolve(),
+      if ((savedPage?.profileImageUrl || "") !== (profileImageUrl || "")) {
+        pagePatch.profileImageUrl = profileImageUrl || null;
+      }
+
+      if ((savedPage?.faviconUrl || "") !== (faviconUrl || "")) {
+        pagePatch.faviconUrl = faviconUrl || null;
+      }
+
+      if ((savedPage?.customBackgroundImageUrl || "") !== (customBackgroundImageUrl || "")) {
+        pagePatch.customBackgroundImageUrl = customBackgroundImageUrl || null;
+      }
+
+      const [, savedBlocks] = await Promise.all([
+        updatePageMutation.mutateAsync(pagePatch),
+        bulkSaveMutation.mutateAsync({
+          pageId,
+          allowEmpty: allowEmptyBlocks,
+          blocks: blocks.map((block, index) => ({
+            id: block.id,
+            type: block.type,
+            sortOrder: index,
+            isEnabled: block.isEnabled,
+            data: sanitizeBlockData(block.data),
+          })),
+        }),
       ]);
+
+      if (pageData?.page) {
+        const nextPage = {
+          ...pageData.page,
+          ...pagePatch,
+          profileImageUrl: "profileImageUrl" in pagePatch ? pagePatch.profileImageUrl : pageData.page.profileImageUrl,
+          faviconUrl: "faviconUrl" in pagePatch ? pagePatch.faviconUrl : pageData.page.faviconUrl,
+          customBackgroundImageUrl: "customBackgroundImageUrl" in pagePatch
+            ? pagePatch.customBackgroundImageUrl
+            : (pageData.page as { customBackgroundImageUrl?: string | null }).customBackgroundImageUrl,
+          updatedAt: new Date(),
+        };
+
+        utils.bioPages.getById.setData({ id: pageId }, { page: nextPage, blocks: savedBlocks });
+        if (pageData.page.slug) {
+          utils.bioPages.getBySlug.setData({ slug: pageData.page.slug }, { page: nextPage, blocks: savedBlocks, isPaused: !isPublished });
+        }
+      }
+
+      void utils.bioPages.list.invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.");
     }
