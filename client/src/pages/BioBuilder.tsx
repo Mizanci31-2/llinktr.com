@@ -132,6 +132,18 @@ function sanitizeBlockData(data: Record<string, string | boolean | number>) {
   );
 }
 
+function serializeBlocksForSave(blocks: Array<{ id?: number | null; type: string; sortOrder: number; isEnabled: boolean; data: unknown }>) {
+  return JSON.stringify(
+    blocks.map((block, index) => ({
+      id: block.id ?? null,
+      type: block.type,
+      sortOrder: index,
+      isEnabled: block.isEnabled,
+      data: block.data ?? {},
+    })),
+  );
+}
+
 async function uploadImageFile(file: File) {
   const presignResponse = await fetch("/api/storage/presign-put", {
     method: "POST",
@@ -1213,7 +1225,6 @@ export default function BioBuilder() {
         data: (block.data as Record<string, string | boolean | number>) || {},
       }))));
       setIsDirty(false);
-      toast.success("Kaydedildi");
     },
     onError: (error) => toast.error(error.message),
   });
@@ -1274,19 +1285,52 @@ export default function BioBuilder() {
         pagePatch.customBackgroundImageUrl = customBackgroundImageUrl || null;
       }
 
+      const pageHasChanges =
+        !pageData?.page ||
+        pageData.page.title !== pagePatch.title ||
+        (pageData.page.description || null) !== pagePatch.description ||
+        pageData.page.theme !== pagePatch.theme ||
+        pageData.page.accentColor !== pagePatch.accentColor ||
+        ((pageData.page as { textColor?: string | null }).textColor || "") !== pagePatch.textColor ||
+        ((pageData.page as { themeCategory?: string | null }).themeCategory || null) !== pagePatch.themeCategory ||
+        pageData.page.isPublished !== pagePatch.isPublished ||
+        "profileImageUrl" in pagePatch ||
+        "faviconUrl" in pagePatch ||
+        "customBackgroundImageUrl" in pagePatch;
+
+      const blocksPayload = blocks.map((block, index) => ({
+        id: block.id,
+        type: block.type,
+        sortOrder: index,
+        isEnabled: block.isEnabled,
+        data: sanitizeBlockData(block.data),
+      }));
+      const savedBlocksPayload = (pageData?.blocks ?? []).map((block, index) => ({
+        id: block.id,
+        type: block.type,
+        sortOrder: index,
+        isEnabled: block.isEnabled,
+        data: block.data || {},
+      }));
+      const blocksHaveChanges =
+        !pageData?.blocks ||
+        serializeBlocksForSave(blocksPayload) !== serializeBlocksForSave(savedBlocksPayload);
+
+      if (!pageHasChanges && !blocksHaveChanges) {
+        setIsDirty(false);
+        toast.success("Kaydedildi");
+        return;
+      }
+
       const [, savedBlocks] = await Promise.all([
-        updatePageMutation.mutateAsync(pagePatch),
-        bulkSaveMutation.mutateAsync({
-          pageId,
-          allowEmpty: allowEmptyBlocks,
-          blocks: blocks.map((block, index) => ({
-            id: block.id,
-            type: block.type,
-            sortOrder: index,
-            isEnabled: block.isEnabled,
-            data: sanitizeBlockData(block.data),
-          })),
-        }),
+        pageHasChanges ? updatePageMutation.mutateAsync(pagePatch) : Promise.resolve({ success: true }),
+        blocksHaveChanges
+          ? bulkSaveMutation.mutateAsync({
+              pageId,
+              allowEmpty: allowEmptyBlocks,
+              blocks: blocksPayload,
+            })
+          : Promise.resolve(pageData?.blocks ?? []),
       ]);
 
       if (pageData?.page) {
@@ -1308,6 +1352,8 @@ export default function BioBuilder() {
       }
 
       void utils.bioPages.list.invalidate();
+      setIsDirty(false);
+      toast.success("Kaydedildi");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.");
     }

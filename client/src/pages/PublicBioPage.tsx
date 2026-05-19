@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import {
   COMMERCE_LINK_PRESETS,
   SOCIAL_PLATFORMS,
-  getBioBackgroundStyle,
+  getBioBackgroundStyleStatic,
   getBioButtonStyle,
   getBioCardStyle,
   getBioTheme,
@@ -376,19 +376,19 @@ export default function PublicBioPage() {
     return <img src={String(blockData.logoUrlSecondary)} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
   };
 
-  const pageBackgroundStyle = getBioBackgroundStyle(themeConfig, accent);
+  const pageBackgroundStyle = getBioBackgroundStyleStatic(themeConfig, accent);
   const cardStyle = getBioCardStyle(themeConfig, resolvedTextColor);
 
   return (
     <div
-      className="flex min-h-screen justify-center overflow-x-hidden px-4 pb-8 pt-10 md:items-center md:px-4 md:py-8"
+      className="public-bio-shell flex min-h-screen justify-center overflow-x-hidden px-4 pb-8 pt-10 md:items-center md:px-4 md:py-8"
       style={{
         ...pageBackgroundStyle,
         color: resolvedTextColor,
       }}
     >
       <main
-        className="mx-auto flex w-full max-w-[420px] flex-col items-center overflow-x-hidden rounded-[20px] border px-6 pb-6 pt-6 text-center md:max-w-[35rem] md:rounded-[2.35rem] md:p-8 lg:max-w-[37rem]"
+        className="public-bio-card mx-auto flex w-full max-w-[420px] flex-col items-center overflow-x-hidden rounded-[20px] border px-6 pb-6 pt-6 text-center md:max-w-[35rem] md:rounded-[2.35rem] md:p-8 lg:max-w-[37rem]"
         style={{
           ...cardStyle,
           backdropFilter: cardStyle.backdropFilter || "blur(10px)",

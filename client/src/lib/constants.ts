@@ -1919,8 +1919,7 @@ export function getBioBackgroundStyle(theme: BioTheme, accentColor: string): CSS
     backgroundSize: theme.backgroundSize,
     backgroundPosition: theme.backgroundPosition,
     animation: theme.backgroundAnimation,
-    backgroundAttachment: theme.backgroundAnimation || themeHasImageBackground(theme) ? undefined : "fixed",
-    willChange: theme.backgroundAnimation ? "background-position, transform, opacity" : undefined,
+    backgroundAttachment: undefined,
   } as CSSProperties;
 }
 

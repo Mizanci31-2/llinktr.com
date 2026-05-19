@@ -2021,29 +2021,26 @@ var bioBlocksRouter = router({
     if (input.blocks.length === 0 && existingBlocks.length > 0 && !input.allowEmpty) {
       throw new Error("Bo\u015F i\xE7erik kayd\u0131 engellendi. T\xFCm bloklar\u0131 silmek istiyorsan\u0131z \xF6nce tek tek kald\u0131r\u0131n.");
     }
+    const existingIds = new Set(existingBlocks.map((block) => block.id));
     const incomingIds = new Set(input.blocks.map((block) => block.id).filter((id) => typeof id === "number"));
-    for (const block of existingBlocks) {
-      if (!incomingIds.has(block.id)) {
-        await deleteBioBlock(block.id);
-      }
-    }
-    for (const block of input.blocks) {
-      if (block.id && existingBlocks.some((existing) => existing.id === block.id)) {
-        await updateBioBlock(block.id, {
+    const deleteJobs = existingBlocks.filter((block) => !incomingIds.has(block.id)).map((block) => deleteBioBlock(block.id));
+    const saveJobs = input.blocks.map((block) => {
+      if (block.id && existingIds.has(block.id)) {
+        return updateBioBlock(block.id, {
           sortOrder: block.sortOrder,
           isEnabled: block.isEnabled,
           data: block.data
         });
-        continue;
       }
-      await createBioBlock({
+      return createBioBlock({
         pageId: input.pageId,
         type: block.type,
         sortOrder: block.sortOrder,
         isEnabled: block.isEnabled,
         data: block.data
       });
-    }
+    });
+    await Promise.all([...deleteJobs, ...saveJobs]);
     void persistMemorySnapshotNow();
     return getBioBlocksByPageId(input.pageId);
   })

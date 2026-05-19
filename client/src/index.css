@@ -224,6 +224,31 @@
     padding-bottom: 4px !important;
   }
 
+  .public-bio-shell {
+    background-size: cover, cover, auto;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .public-bio-card {
+    background-color: color-mix(in srgb, var(--theme-surface, rgba(18, 18, 18, 0.86)) 72%, transparent) !important;
+  }
+
+  @media (max-width: 640px) {
+    .public-bio-shell {
+      padding-left: 0.875rem;
+      padding-right: 0.875rem;
+      padding-top: 1.5rem;
+      background-attachment: scroll !important;
+    }
+
+    .public-bio-card {
+      background-color: color-mix(in srgb, var(--theme-surface, rgba(18, 18, 18, 0.86)) 42%, transparent) !important;
+      backdrop-filter: blur(5px) !important;
+      -webkit-backdrop-filter: blur(5px) !important;
+    }
+  }
+
   .flex {
     min-height: 0;
     min-width: 0;
