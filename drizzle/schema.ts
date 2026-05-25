@@ -99,6 +99,7 @@ export const bioBlocks = pgTable("bio_blocks", {
     "text",
     "link",
     "social",
+    "location",
     "divider",
     "profile_image",
   ])("type").notNull(),

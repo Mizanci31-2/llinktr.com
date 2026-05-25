@@ -54,27 +54,27 @@ export function SocialLinksModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-border/60 bg-[#111418] sm:max-w-3xl">
+      <DialogContent className="max-h-[92svh] w-[calc(100vw-1rem)] overflow-hidden border-border/60 bg-[#111418] sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Sosyal medya paneli</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
           <div className="rounded-2xl border border-border/60 bg-[#151a20] p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
+            <div className="mb-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold">Ust alanda gorunen sosyal hesaplar</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Yeni hesap ekledikce saga dogru acilir. Sayfanin ust kismina bu sirayla yerlesir.
                 </p>
               </div>
-              <Button variant="outline" onClick={onAdd} className="border-dashed border-border/50">
+              <Button variant="outline" onClick={onAdd} className="justify-center border-dashed border-border/50 sm:justify-start">
                 <Plus className="mr-1.5 h-4 w-4" />
                 Yeni sosyal medya ekle
               </Button>
             </div>
 
-            <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="grid max-h-[18rem] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
               {items.map((item, index) => {
                 const platform = SOCIAL_PLATFORMS.find((entry) => entry.id === item.platform);
                 const isActive = item.id === activeItem?.id;
@@ -83,7 +83,7 @@ export function SocialLinksModal({
                     key={item.id}
                     type="button"
                     onClick={() => setActiveId(item.id)}
-                    className={`min-w-[112px] rounded-2xl border p-3 text-left transition ${
+                    className={`min-w-0 rounded-2xl border p-3 text-left transition ${
                       isActive ? "border-primary bg-primary/10" : "border-border/60 bg-background/55 hover:border-primary/35"
                     }`}
                   >
@@ -103,7 +103,7 @@ export function SocialLinksModal({
               <button
                 type="button"
                 onClick={onAdd}
-                className="flex min-w-[112px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-background/40 p-3 text-center transition hover:border-primary/35"
+                className="flex min-h-[8.75rem] min-w-0 flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-background/40 p-3 text-center transition hover:border-primary/35"
               >
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-border/60 bg-[#1b222a]">
                   <Plus className="h-5 w-5 text-primary" />

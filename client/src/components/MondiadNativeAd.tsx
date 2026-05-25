@@ -11,7 +11,7 @@ export default function MondiadNativeAd({ className = "", compact = false }: Mon
     >
       <div
         data-mndazid="827ce39b-7d7a-4349-8fbc-3d3f12c791c9"
-        className="mx-auto min-h-0 w-full overflow-hidden"
+        className="mx-auto min-h-0 w-full max-w-full overflow-hidden"
       />
     </div>
   );

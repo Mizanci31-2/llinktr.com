@@ -71,6 +71,7 @@ var bioBlocks = mysqlTable("bio_blocks", {
     "text",
     "link",
     "social",
+    "location",
     "divider",
     "profile_image"
   ]).notNull(),
@@ -1955,7 +1956,7 @@ var bioBlocksRouter = router({
   }),
   add: protectedProcedure.input(z2.object({
     pageId: z2.number(),
-    type: z2.enum(["heading", "description", "text", "link", "social", "divider", "profile_image"]),
+    type: z2.enum(["heading", "description", "text", "link", "social", "location", "divider", "profile_image"]),
     sortOrder: z2.number(),
     data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number()]))
   })).mutation(async ({ ctx, input }) => {
@@ -2008,7 +2009,7 @@ var bioBlocksRouter = router({
     allowEmpty: z2.boolean().optional(),
     blocks: z2.array(z2.object({
       id: z2.number().optional(),
-      type: z2.enum(["heading", "description", "text", "link", "social", "divider", "profile_image"]),
+      type: z2.enum(["heading", "description", "text", "link", "social", "location", "divider", "profile_image"]),
       sortOrder: z2.number(),
       isEnabled: z2.boolean(),
       data: z2.record(z2.string(), z2.union([z2.string(), z2.boolean(), z2.number(), z2.null()]))

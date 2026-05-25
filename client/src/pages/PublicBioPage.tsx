@@ -842,7 +842,7 @@ export default function PublicBioPage() {
                         <span className="h-8 w-8 rounded-full md:h-9 md:w-9" />
                       )}
                     </div>
-                    <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-hidden truncate px-10 text-center text-sm md:px-12 md:text-base ${fontPresetClass} ${align === "left" ? "sm:justify-start sm:text-left" : ""}`} style={{ color: String(blockData?.textColor || resolvedTextColor) }}>
+                    <span className={`link-title flex min-h-full w-full min-w-0 max-w-full items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap px-8 text-center text-xs md:px-12 md:text-base ${fontPresetClass} ${align === "left" ? "sm:justify-start sm:text-left" : ""}`} style={{ color: String(blockData?.textColor || resolvedTextColor) }}>
                       {blockData?.title || "Link"}
                     </span>
                     <ExternalLink className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60 md:h-[18px] md:w-[18px]" style={{ color: String(blockData?.textColor || resolvedTextColor) }} />
