@@ -39,38 +39,11 @@
     />
     <script async src="https://ss.mrmnd.com/native.js"></script>
     <script async src="https://ss.mrmnd.com/dynamic.js" data-mddynid="1d5d5e82-4824-4d08-a3bf-8f75012e211c"></script>
-    <script>
-      window.addEventListener("load", function () {
-        var run = function () {
-          [
-            ["https://nap5k.com/tag.min.js", "10942885"],
-            ["https://n6wxm.com/vignette.min.js", "10942886"],
-          ].forEach(function (item) {
-            var script = document.createElement("script");
-            script.async = true;
-            script.dataset.zone = item[1];
-            script.src = item[0];
-            document.body.appendChild(script);
-          });
-
-          var ads = document.createElement("script");
-          ads.async = true;
-          ads.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149878077525212";
-          ads.crossOrigin = "anonymous";
-          document.body.appendChild(ads);
-        };
-
-        if ("requestIdleCallback" in window) {
-          window.requestIdleCallback(run, { timeout: 3500 });
-        } else {
-          window.setTimeout(run, 2500);
-        }
-      });
-    </script>
   </head>
 
   <body translate="no" class="notranslate">
     <div id="root" class="notranslate" translate="no"></div>
+    <div data-mndazid="827ce39b-7d7a-4349-8fbc-3d3f12c791c9" style="display: none"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
