@@ -42,15 +42,42 @@ function getDividerVariant(data: Record<string, string | boolean | number> | nul
   return data?.variant === "thick" ? "thick" : "thin";
 }
 
-function buildMapQuery(data: Record<string, string | boolean | number> | null | undefined) {
-  if (!data) return "";
+function detectMapProvider(rawUrl: string) {
+  const value = rawUrl.toLowerCase();
+  if (value.includes("maps.apple.com")) return "apple_maps";
+  if (value.includes("google.com/maps") || value.includes("maps.google.") || value.includes("maps.app.goo.gl") || value.includes("goo.gl/maps")) return "google_maps";
+  return "auto_maps";
+}
+
+function getLocationProviderLabel(provider?: string | number | boolean) {
+  if (provider === "google_maps") return "Google Maps";
+  if (provider === "apple_maps") return "Apple Maps";
+  return "Otomatik";
+}
+
+function getValidCoordinates(data: Record<string, string | boolean | number> | null | undefined) {
+  if (!data) return null;
   const lat = String(data.lat || "").trim();
   const lng = String(data.lng || "").trim();
-  if (lat && lng) return `${lat},${lng}`;
+  if (!lat || !lng) return null;
+  const latNumber = Number(lat);
+  const lngNumber = Number(lng);
+  if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return null;
+  if (latNumber < -90 || latNumber > 90 || lngNumber < -180 || lngNumber > 180) return null;
+  return { lat: latNumber, lng: lngNumber };
+}
+
+function buildMapQuery(data: Record<string, string | boolean | number> | null | undefined) {
+  if (!data) return "";
+  const coordinates = getValidCoordinates(data);
+  if (coordinates) return `${coordinates.lat},${coordinates.lng}`;
+  if (data.url && detectMapProvider(String(data.url)) !== "apple_maps") return String(data.url);
   return String(data.address || data.title || "").trim();
 }
 
 function buildMapEmbedUrl(data: Record<string, string | boolean | number> | null | undefined) {
+  const provider = data?.provider === "auto_maps" && data?.url ? detectMapProvider(String(data.url)) : String(data?.provider || "auto_maps");
+  if (provider === "apple_maps") return "";
   const query = buildMapQuery(data);
   if (!query) return "";
   return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
@@ -699,6 +726,7 @@ export default function PublicBioPage() {
               const description = String(blockData?.description || "");
               const address = String(blockData?.address || "");
               const buttonText = String(blockData?.buttonText || "Yol Tarifi Al");
+              const provider = blockData?.provider === "auto_maps" && blockData?.url ? detectMapProvider(String(blockData.url)) : String(blockData?.provider || "auto_maps");
               const mapEmbedUrl = buildMapEmbedUrl(blockData);
               const hasUrl = Boolean(blockData?.url);
 
@@ -714,13 +742,27 @@ export default function PublicBioPage() {
                         <MapPin className="h-5 w-5" style={{ color: accent }} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="line-clamp-1 text-sm font-bold md:text-base" style={{ color: resolvedTextColor }}>{title}</p>
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <p className="line-clamp-1 text-sm font-bold md:text-base" style={{ color: resolvedTextColor }}>{title}</p>
+                          {provider !== "auto_maps" ? (
+                            <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold" style={{ borderColor: themeConfig.cardBorder, color: resolvedTextColor }}>
+                              {getLocationProviderLabel(provider)}
+                            </span>
+                          ) : null}
+                        </div>
                         {description ? <p className="mt-1 line-clamp-2 text-xs leading-relaxed opacity-75" style={{ color: resolvedTextColor }}>{description}</p> : null}
                         {address ? <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed opacity-65" style={{ color: resolvedTextColor }}>{address}</p> : null}
                       </div>
                     </div>
                   </div>
-                  {mapEmbedUrl ? (
+                  {provider === "apple_maps" ? (
+                    <div className="grid h-32 place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] md:h-40">
+                      <div className="text-center">
+                        <MapPin className="mx-auto mb-1 h-6 w-6" style={{ color: accent }} />
+                        <p className="text-xs font-semibold" style={{ color: resolvedTextColor }}>Apple Maps konumu</p>
+                      </div>
+                    </div>
+                  ) : mapEmbedUrl ? (
                     <iframe
                       title={`${title} harita onizlemesi`}
                       src={mapEmbedUrl}

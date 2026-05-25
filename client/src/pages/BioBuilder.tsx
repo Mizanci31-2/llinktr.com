@@ -397,20 +397,91 @@ function getLocationPresetByProvider(provider?: string | number | boolean) {
 
 function getLocationProviderLabel(provider?: string | number | boolean) {
   if (provider === "google_maps") return "Google Maps";
-  if (provider === "yandex_maps") return "Yandex Maps";
   if (provider === "apple_maps") return "Apple Maps";
   return "Otomatik";
 }
 
-function buildMapQuery(data: Record<string, string | boolean | number> | null | undefined) {
+function detectMapProvider(rawUrl: string) {
+  const value = rawUrl.toLowerCase();
+  if (value.includes("maps.apple.com")) return "apple_maps";
+  if (value.includes("google.com/maps") || value.includes("maps.google.") || value.includes("maps.app.goo.gl") || value.includes("goo.gl/maps")) return "google_maps";
+  return "auto_maps";
+}
+
+function parseCoordinatePair(value: string) {
+  const match = value.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat: String(lat), lng: String(lng) };
+}
+
+function extractCoordinatesFromMapUrl(rawUrl: string) {
+  const value = rawUrl.trim();
+  if (!value) return null;
+  let decoded = value;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    decoded = value;
+  }
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]center=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+  ];
+  for (const pattern of patterns) {
+    const match = decoded.match(pattern);
+    if (match) {
+      const parsed = parseCoordinatePair(`${match[1]},${match[2]}`);
+      if (parsed) return parsed;
+    }
+  }
+  return parseCoordinatePair(decoded);
+}
+
+function getValidCoordinates(data: Record<string, string | boolean | number> | null | undefined) {
   if (!data) return "";
   const lat = String(data.lat || "").trim();
   const lng = String(data.lng || "").trim();
-  if (lat && lng) return `${lat},${lng}`;
+  if (!lat || !lng) return null;
+  const latNumber = Number(lat);
+  const lngNumber = Number(lng);
+  if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return null;
+  if (latNumber < -90 || latNumber > 90 || lngNumber < -180 || lngNumber > 180) return null;
+  return { lat: latNumber, lng: lngNumber };
+}
+
+function getCoordinateValidationMessage(data: Record<string, string | boolean | number> | null | undefined) {
+  if (!data) return "";
+  const lat = String(data.lat || "").trim();
+  const lng = String(data.lng || "").trim();
+  if (lat) {
+    const latNumber = Number(lat);
+    if (!Number.isFinite(latNumber) || latNumber < -90 || latNumber > 90) return "Enlem degeri -90 ile 90 arasinda olmali.";
+  }
+  if (lng) {
+    const lngNumber = Number(lng);
+    if (!Number.isFinite(lngNumber) || lngNumber < -180 || lngNumber > 180) return "Boylam degeri -180 ile 180 arasinda olmali.";
+  }
+  return "";
+}
+
+function buildMapQuery(data: Record<string, string | boolean | number> | null | undefined) {
+  if (!data) return "";
+  const coordinates = getValidCoordinates(data);
+  if (coordinates) return `${coordinates.lat},${coordinates.lng}`;
+  if (data.url && detectMapProvider(String(data.url)) !== "apple_maps") return String(data.url);
   return String(data.address || data.title || "").trim();
 }
 
 function buildMapEmbedUrl(data: Record<string, string | boolean | number> | null | undefined) {
+  const provider = data?.provider === "auto_maps" && data?.url ? detectMapProvider(String(data.url)) : String(data?.provider || "auto_maps");
+  if (provider === "apple_maps") return "";
   const query = buildMapQuery(data);
   if (!query) return "";
   return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
@@ -598,6 +669,10 @@ function BlockEditor({
   const showLinkVisual = block.type === "link" && Boolean(block.data.logoUrl || block.data.logoPreset || block.data.logoUrlSecondary);
   const showSocialVisual = block.type === "social" && Boolean(firstInlineSocialAccount?.platform || block.data.platform);
   const showLocationVisual = block.type === "location";
+  const locationUrl = String(block.data.url || "").trim();
+  const locationProvider = block.type === "location" && block.data.provider === "auto_maps" && locationUrl ? detectMapProvider(locationUrl) : String(block.data.provider || "auto_maps");
+  const locationUsesLink = block.type === "location" && Boolean(locationUrl) && block.data.addressMode !== "address";
+  const locationValidationMessage = block.type === "location" ? getCoordinateValidationMessage(block.data) : "";
 
   const handleImageUpload = (file?: File) => {
     if (!file) return;
@@ -717,6 +792,34 @@ function BlockEditor({
 
   const updateInlineSocialAccounts = (accounts: SocialAccountData[]) => {
     onChange(withInlineSocialAccounts(block.data, accounts));
+  };
+
+  const findLocationFromUrl = () => {
+    const rawUrl = String(block.data.url || "").trim();
+    if (!rawUrl) {
+      toast.error("Once konum linki girin.");
+      return;
+    }
+
+    const detectedProvider = detectMapProvider(rawUrl);
+    const coordinates = extractCoordinatesFromMapUrl(rawUrl);
+    if (!coordinates) {
+      if (rawUrl.toLowerCase().includes("maps.app.goo.gl")) {
+        toast.error("Kisaltilmis Google Maps linkinden koordinat okunamadi. Lutfen tam Google Maps linki girin.");
+        return;
+      }
+      toast.error("Konum linkinden koordinat bulunamadi. Lutfen adres veya koordinat girin.");
+      return;
+    }
+
+    onChange({
+      ...block.data,
+      lat: coordinates.lat,
+      lng: coordinates.lng,
+      provider: detectedProvider === "auto_maps" ? block.data.provider || "auto_maps" : detectedProvider,
+      addressMode: "link",
+    });
+    toast.success("Konum bulundu.");
   };
 
   const addInlineSocialAccount = () => {
@@ -1219,7 +1322,7 @@ function BlockEditor({
                     <p className="mt-1 text-[11px] text-muted-foreground">Adres, harita linki ve yol tarifi butonunu buradan duzenleyin.</p>
                   </div>
                   <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
-                    {getLocationProviderLabel(block.data.provider)}
+                    {getLocationProviderLabel(locationProvider)}
                   </span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -1242,19 +1345,38 @@ function BlockEditor({
                     className="bg-input border-border/60 text-sm resize-none sm:col-span-2"
                     rows={2}
                   />
-                  <Textarea
-                    value={String(block.data.address || "")}
-                    onChange={(event) => onChange({ ...block.data, address: event.target.value })}
-                    placeholder="Adres"
-                    className="bg-input border-border/60 text-sm resize-none sm:col-span-2"
-                    rows={2}
-                  />
-                  <Input
-                    value={String(block.data.url || "")}
-                    onChange={(event) => onChange({ ...block.data, url: event.target.value })}
-                    placeholder={selectedLocationPreset?.placeholder || "https://maps.google.com/?q=..."}
-                    className="bg-input border-border/60 text-sm sm:col-span-2"
-                  />
+                  <div className="space-y-2 sm:col-span-2">
+                    <div className="flex gap-2">
+                      <Input
+                        value={String(block.data.url || "")}
+                        onChange={(event) => onChange({ ...block.data, url: event.target.value, addressMode: event.target.value.trim() ? "link" : "address" })}
+                        placeholder={selectedLocationPreset?.placeholder || "https://maps.google.com/?q=..."}
+                        className="bg-input border-border/60 text-sm"
+                      />
+                      <Button type="button" onClick={findLocationFromUrl} className="shrink-0 bg-primary text-primary-foreground">
+                        Bul
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Google Maps veya Apple Maps linki yapistirin, sonra Bul butonuna basin.</p>
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Textarea
+                      value={String(block.data.address || "")}
+                      onChange={(event) => onChange({ ...block.data, address: event.target.value, addressMode: "address" })}
+                      placeholder="Adres"
+                      disabled={locationUsesLink}
+                      className="bg-input border-border/60 text-sm resize-none disabled:opacity-55"
+                      rows={2}
+                    />
+                    {locationUsesLink ? (
+                      <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-background/55 p-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-[11px] text-muted-foreground">Konum linki kullanildigi icin adres alani kapali.</p>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => onChange({ ...block.data, addressMode: "address" })} className="h-8 px-2 text-xs">
+                          Adresle duzenle
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
@@ -1272,7 +1394,6 @@ function BlockEditor({
                       <SelectContent>
                         <SelectItem value="auto_maps">Otomatik</SelectItem>
                         <SelectItem value="google_maps">Google Maps</SelectItem>
-                        <SelectItem value="yandex_maps">Yandex Maps</SelectItem>
                         <SelectItem value="apple_maps">Apple Maps</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1296,19 +1417,32 @@ function BlockEditor({
                     />
                   </div>
                 </div>
+                {locationValidationMessage ? (
+                  <p className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
+                    {locationValidationMessage}
+                  </p>
+                ) : null}
               </div>
 
               <div className="overflow-hidden rounded-xl border border-border/70 bg-card/70 shadow-sm">
-                {buildMapEmbedUrl(block.data) ? (
+                {locationProvider === "apple_maps" ? (
+                  <div className="flex h-56 items-center justify-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.14),transparent_55%),linear-gradient(135deg,#151a20,#0b0d10)] sm:h-64">
+                    <div className="text-center">
+                      <MapPin className="mx-auto mb-2 h-7 w-7 text-primary" />
+                      <p className="text-sm font-semibold">Apple Maps konumu</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Onizleme yerine Yol Tarifi Al butonu kullanilir.</p>
+                    </div>
+                  </div>
+                ) : buildMapEmbedUrl(block.data) && !locationValidationMessage ? (
                   <iframe
                     title="Harita onizlemesi"
                     src={buildMapEmbedUrl(block.data)}
                     loading="lazy"
-                    className="h-44 w-full border-0"
+                    className="h-56 w-full border-0 sm:h-64"
                     referrerPolicy="no-referrer-when-downgrade"
                   />
                 ) : (
-                  <div className="flex h-44 items-center justify-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.14),transparent_55%),linear-gradient(135deg,#151a20,#0b0d10)]">
+                  <div className="flex h-56 items-center justify-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.14),transparent_55%),linear-gradient(135deg,#151a20,#0b0d10)] sm:h-64">
                     <div className="text-center">
                       <MapPin className="mx-auto mb-2 h-6 w-6 text-primary" />
                       <p className="text-sm font-semibold">Harita onizlemesi</p>
@@ -1668,6 +1802,7 @@ function PreviewCardContents({
       const description = String(block.data.description || "");
       const address = String(block.data.address || "");
       const buttonText = String(block.data.buttonText || "Yol Tarifi Al");
+      const provider = block.data.provider === "auto_maps" && block.data.url ? detectMapProvider(String(block.data.url)) : String(block.data.provider || "auto_maps");
       const mapEmbedUrl = buildMapEmbedUrl(block.data);
       return (
         <div
@@ -1681,13 +1816,27 @@ function PreviewCardContents({
                 <MapPin className="h-5 w-5" style={{ color: accent }} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className={`line-clamp-1 font-bold ${isDesktop ? "text-base" : "text-sm"}`} style={{ color: resolvedTextColor }}>{title}</p>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <p className={`line-clamp-1 font-bold ${isDesktop ? "text-base" : "text-sm"}`} style={{ color: resolvedTextColor }}>{title}</p>
+                  {provider !== "auto_maps" ? (
+                    <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold" style={{ borderColor: themeConfig.cardBorder, color: resolvedTextColor }}>
+                      {getLocationProviderLabel(provider)}
+                    </span>
+                  ) : null}
+                </div>
                 {description ? <p className="mt-1 line-clamp-2 text-xs opacity-75" style={{ color: resolvedTextColor }}>{description}</p> : null}
                 {address ? <p className="mt-1 line-clamp-2 text-[11px] opacity-65" style={{ color: resolvedTextColor }}>{address}</p> : null}
               </div>
             </div>
           </div>
-          {mapEmbedUrl ? (
+          {provider === "apple_maps" ? (
+            <div className={`grid place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] ${isDesktop ? "h-40" : "h-28"}`}>
+              <div className="text-center">
+                <MapPin className="mx-auto mb-1 h-6 w-6" style={{ color: accent }} />
+                <p className="text-xs font-semibold" style={{ color: resolvedTextColor }}>Apple Maps konumu</p>
+              </div>
+            </div>
+          ) : mapEmbedUrl ? (
             <iframe title="Harita onizlemesi" src={mapEmbedUrl} loading="lazy" className={isDesktop ? "h-40 w-full border-0" : "h-28 w-full border-0"} />
           ) : (
             <div className={`grid place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] ${isDesktop ? "h-40" : "h-28"}`}>
@@ -2250,7 +2399,7 @@ export default function BioBuilder() {
           : type === "link"
             ? { align: "center", ...(initialData || {}) }
             : type === "location"
-              ? { title: "Konum", description: "", address: "", url: "", buttonText: "Yol Tarifi Al", provider: "auto_maps", ...(initialData || {}) }
+              ? { title: "Konum", description: "", address: "", url: "", buttonText: "Yol Tarifi Al", provider: "auto_maps", addressMode: "address", ...(initialData || {}) }
             : type === "divider"
               ? { variant: "thin" }
               : initialData || {},

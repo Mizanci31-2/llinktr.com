@@ -33,7 +33,6 @@ export const SOCIAL_PLATFORMS = [
   { id: "vk", label: "VK", color: "#0077FF", placeholder: "https://vk.com/kullanici" },
   { id: "tumblr", label: "Tumblr", color: "#36465D", placeholder: "https://kullanici.tumblr.com" },
   { id: "google_maps", label: "Google Maps", color: "#4285F4", placeholder: "https://maps.google.com/?q=Konum+Adi" },
-  { id: "yandex_maps", label: "Yandex Maps", color: "#FC3F1D", placeholder: "https://yandex.com/maps/?text=Konum+Adi" },
   { id: "apple_maps", label: "Apple Maps", color: "#111827", placeholder: "https://maps.apple.com/?q=Konum+Adi" },
 ] as const;
 
@@ -78,14 +77,6 @@ export const LOCATION_LINK_PRESETS = [
     color: "#4285F4",
     logoUrl: "https://www.gstatic.com/images/branding/product/2x/maps_96dp.png",
     placeholder: "https://maps.google.com/?q=Istanbul+Kadikoy",
-  },
-  {
-    id: "location_yandex_maps",
-    platform: "yandex_maps",
-    label: "Yandex Maps Konumu",
-    color: "#FC3F1D",
-    logoUrl: "https://yastatic.net/s3/home-static/_/7/7jGqM0nD1u4M2XyX8X3yqZ7N0.svg",
-    placeholder: "https://yandex.com/maps/?text=Istanbul+Kadikoy",
   },
   {
     id: "location_apple_maps",
