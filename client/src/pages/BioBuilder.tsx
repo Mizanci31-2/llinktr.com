@@ -530,8 +530,7 @@ function buildMapQuery(data: Record<string, string | boolean | number> | null | 
 function buildMapEmbedUrl(data: Record<string, string | boolean | number> | null | undefined) {
   const provider = data?.provider === "auto_maps" && data?.url ? detectMapProvider(String(data.url)) : String(data?.provider || "auto_maps");
   if (provider === "apple_maps") return "";
-  const query = buildMapQuery(data);
-  if (!query) return "";
+  const query = buildMapQuery(data) || "39.0,35.0";
   return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
 }
 
@@ -1896,7 +1895,10 @@ function PreviewCardContents({
             </div>
           )}
           <div className={isDesktop ? "p-4 pt-3" : "p-3 pt-2"}>
-            <div className="grid min-h-10 place-items-center rounded-xl px-3 text-xs font-bold" style={{ background: accent, color: "#111827" }}>
+            <div
+              className="grid min-h-10 place-items-center rounded-xl border px-3 text-xs font-extrabold shadow-[0_0_18px_rgba(214,255,0,0.20)] transition hover:border-white/80 hover:shadow-[0_0_28px_rgba(214,255,0,0.42)]"
+              style={{ background: accent, color: "#05070a", borderColor: "rgba(255,255,255,0.42)" }}
+            >
               {buttonText}
             </div>
           </div>

@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import MondiadNativeAd from "@/components/MondiadNativeAd";
 
 function AppLoading() {
   return (
@@ -69,20 +68,12 @@ function Router() {
   );
 }
 
-function shouldShowGlobalNativeAd() {
-  if (typeof window === "undefined") return true;
-  return !/(checkout|payment|billing|odeme|ödeme|abonelik|subscription|plans?|pricing)/i.test(window.location.pathname);
-}
-
 function App() {
-  const showGlobalNativeAd = shouldShowGlobalNativeAd();
-
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
-          {showGlobalNativeAd ? <MondiadNativeAd compact className="border-b border-white/5 bg-[#07090c] py-1.5" /> : null}
           <Suspense fallback={<AppLoading />}>
             <Router />
           </Suspense>

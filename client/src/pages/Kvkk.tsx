@@ -1,6 +1,5 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import MondiadNativeAd from "@/components/MondiadNativeAd";
 
 const sections = [
   {
@@ -59,7 +58,6 @@ export default function Kvkk() {
         </div>
         <p className="mt-8 text-xs text-muted-foreground">Bu ücretsiz araç Silahşör Ağı tarafından sunulmaktadır.</p>
       </main>
-      <MondiadNativeAd className="pb-10" />
       <Footer />
     </div>
   );

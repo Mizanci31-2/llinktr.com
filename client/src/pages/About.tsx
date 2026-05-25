@@ -1,6 +1,5 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import MondiadNativeAd from "@/components/MondiadNativeAd";
 import { Link2, Palette, QrCode, Zap } from "lucide-react";
 
 export default function About() {
@@ -62,7 +61,6 @@ export default function About() {
           </section>
         </div>
       </div>
-      <MondiadNativeAd className="pb-10" />
       <Footer />
     </div>
   );

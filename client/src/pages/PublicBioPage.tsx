@@ -17,7 +17,6 @@ import {
 import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import { SocialIcon } from "@/components/SocialIcon";
-import MondiadNativeAd from "@/components/MondiadNativeAd";
 
 type BlockType = "heading" | "description" | "text" | "link" | "social" | "location" | "divider" | "profile_image";
 
@@ -92,8 +91,7 @@ function buildMapQuery(data: Record<string, string | boolean | number> | null | 
 function buildMapEmbedUrl(data: Record<string, string | boolean | number> | null | undefined) {
   const provider = data?.provider === "auto_maps" && data?.url ? detectMapProvider(String(data.url)) : String(data?.provider || "auto_maps");
   if (provider === "apple_maps") return "";
-  const query = buildMapQuery(data);
-  if (!query) return "";
+  const query = buildMapQuery(data) || "39.0,35.0";
   return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
 }
 
@@ -591,8 +589,6 @@ export default function PublicBioPage() {
         color: resolvedTextColor,
       }}
     >
-      <MondiadNativeAd compact className="mb-6" />
-
       <main
         className="public-bio-card mx-auto flex w-full max-w-[420px] flex-col items-center overflow-x-hidden rounded-[20px] border px-6 pb-6 pt-6 text-center md:max-w-[35rem] md:rounded-[2.35rem] md:p-8 lg:max-w-[37rem]"
         style={{
@@ -794,8 +790,8 @@ export default function PublicBioPage() {
                       href={directionsUrl ? `/go/${block.id}` : "#"}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="grid min-h-11 place-items-center rounded-xl px-3 text-center text-sm font-bold transition hover:opacity-90 active:scale-[0.98]"
-                      style={{ background: accent, color: "#111827" }}
+                      className="grid min-h-11 place-items-center rounded-xl border px-3 text-center text-sm font-extrabold shadow-[0_0_18px_rgba(214,255,0,0.20)] transition hover:border-white/80 hover:opacity-95 hover:shadow-[0_0_28px_rgba(214,255,0,0.42)] active:scale-[0.98]"
+                      style={{ background: accent, color: "#05070a", borderColor: "rgba(255,255,255,0.42)" }}
                     >
                       {buttonText}
                     </a>
@@ -870,8 +866,6 @@ export default function PublicBioPage() {
           </Link>
         </div>
       </main>
-
-      <MondiadNativeAd compact className="mt-6" />
 
       <button
         type="button"

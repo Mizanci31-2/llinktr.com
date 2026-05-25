@@ -2,7 +2,6 @@ import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import MondiadNativeAd from "@/components/MondiadNativeAd";
 
 export default function PublicProfile() {
   const params = useParams<{ username: string }>();
@@ -63,8 +62,6 @@ export default function PublicProfile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-8">
-      <MondiadNativeAd compact className="mb-8" />
-
       <div className="mx-auto max-w-md">
         <div className="mb-8 text-center">
           {profileData.avatarUrl && (
@@ -116,8 +113,6 @@ export default function PublicProfile() {
           <p>Powered by llinktr</p>
         </div>
       </div>
-
-      <MondiadNativeAd compact className="mt-8" />
     </div>
   );
 }
