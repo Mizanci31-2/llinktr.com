@@ -20,10 +20,7 @@ export default function NativeAdSlot({ className = "", compact = false, placemen
       data-ad-placement={placement}
       aria-label="Reklam alani"
     >
-      <div
-        data-mndazid="827ce39b-7d7a-4349-8fbc-3d3f12c791c9"
-        className="mx-auto block min-h-px w-full max-w-full overflow-visible"
-      />
+      <div data-mndazid="827ce39b-7d7a-4349-8fbc-3d3f12c791c9"></div>
     </div>
   );
 }

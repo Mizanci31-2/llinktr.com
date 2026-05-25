@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Instagram, Link2, Mail } from "lucide-react";
+import NativeAdSlot from "@/components/ads/NativeAdSlot";
 
 export default function Footer() {
   return (
@@ -55,6 +56,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-9 border-t border-white/10 pt-5">
+          <NativeAdSlot placement="footer" compact className="mb-5" />
           <p className="text-xs leading-relaxed text-muted-foreground/75">
             © 2026 llinktr. İçerik üreticileri ve küçük işletmeler için geliştirildi.
           </p>
