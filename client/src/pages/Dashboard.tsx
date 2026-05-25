@@ -167,7 +167,7 @@ export default function Dashboard() {
 
       <div className="flex-1 container py-8">
         {/* Header */}
-        <div className="mb-8 rounded-2xl border border-border/70 bg-card/70 px-4 py-4 panel-strong sm:px-5">
+        <div className="mb-8 rounded-3xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] px-4 py-5 panel-strong sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
             <h1 className="text-3xl font-bold">Hoş geldin, {user?.name || "kullanıcı"}</h1>
@@ -203,7 +203,7 @@ export default function Dashboard() {
         </div>
 
         <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
+          <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Bugün tıklama</p>
               <MousePointerClick className="h-5 w-5 text-primary" />
@@ -215,7 +215,7 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-          <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
+          <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Bugün görüntüleme</p>
               <Eye className="h-5 w-5 text-primary" />
@@ -223,7 +223,7 @@ export default function Dashboard() {
             <p className="text-3xl font-bold">{todayViews}</p>
             <p className="mt-5 text-sm text-muted-foreground">Bugün bio sayfalarının aldığı görüntüleme.</p>
           </div>
-          <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
+          <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Toplam görüntülenme</p>
               <Eye className="h-5 w-5 text-primary" />
@@ -231,7 +231,7 @@ export default function Dashboard() {
             <p className="text-3xl font-bold">{totalViews}</p>
             <p className="mt-5 text-sm text-muted-foreground">Tüm bio sayfalarının toplam görünürlüğü.</p>
           </div>
-          <div className="panel-strong rounded-2xl border border-border/70 bg-card p-5">
+          <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">En iyi link</p>
               <Trophy className="h-5 w-5 text-primary" />
@@ -352,7 +352,7 @@ export default function Dashboard() {
                   {/* Actions */}
                   <div className="flex flex-wrap gap-2">
                     <Link href={`/builder/${page.id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full border-border/50 text-xs">
+                      <Button variant="outline" size="sm" className="w-full border-white/12 bg-white/[0.035] text-xs hover:border-primary/45 hover:bg-primary/10">
                         <Edit2 className="h-3 w-3 mr-1.5" />
                         Düzenle
                       </Button>
@@ -360,21 +360,21 @@ export default function Dashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-border/50 text-xs"
+                      className="border-white/12 bg-white/[0.035] text-xs hover:border-primary/45 hover:bg-primary/10"
                       onClick={() => setAnalyticsPageId(page.id)}
                     >
                       <BarChart3 className="h-3 w-3 mr-1.5" />
                       Analiz
                     </Button>
                     <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="border-border/50 text-xs">
+                      <Button variant="outline" size="sm" className="border-white/12 bg-white/[0.035] text-xs hover:border-primary/45 hover:bg-primary/10">
                         <Eye className="h-3 w-3" />
                       </Button>
                     </a>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-border/50 text-xs"
+                      className="border-white/12 bg-white/[0.035] text-xs hover:border-primary/45 hover:bg-primary/10"
                       disabled={publishMutation.isPending}
                       onClick={() => publishMutation.mutate({ id: page.id, isPublished: !page.isPublished })}
                     >
@@ -384,7 +384,7 @@ export default function Dashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-border/50 text-destructive hover:text-destructive text-xs"
+                      className="border-white/12 bg-white/[0.035] text-xs text-destructive hover:border-destructive/45 hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => setDeleteId(page.id)}
                     >
                       <Trash2 className="h-3 w-3" />

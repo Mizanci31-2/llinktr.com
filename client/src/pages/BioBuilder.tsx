@@ -2228,10 +2228,14 @@ export default function BioBuilder() {
 
   const themeConfig = withCustomBackgroundImage(getBioTheme(theme), customBackgroundImageUrl);
   const activeAccentColor = safeAccentColor(accentColor, themeConfig.accent);
-  const visibleThemes = useMemo(
-    () => BIO_THEMES.filter((item) => activeThemeCategory === "all" || getThemeCategory(item) === activeThemeCategory),
-    [activeThemeCategory],
-  );
+  const visibleThemes = useMemo(() => {
+    const seen = new Set<string>();
+    return BIO_THEMES.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return activeThemeCategory === "all" || getThemeCategory(item) === activeThemeCategory;
+    });
+  }, [activeThemeCategory]);
   const totalClicks = useMemo(() => blocks.reduce((sum, block) => sum + (block.clicks ?? 0), 0), [blocks]);
   const activeBlockCount = useMemo(() => blocks.filter(block => block.isEnabled).length, [blocks]);
   const hiddenBlockCount = blocks.length - activeBlockCount;
@@ -3059,12 +3063,12 @@ export default function BioBuilder() {
             disabled={blocks.length >= 50}
           />
           {isThemeDialogOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-              <div className="w-full max-w-4xl rounded-[1.5rem] border border-border/50 bg-card p-5 shadow-2xl">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
+              <div className="w-full max-w-6xl rounded-[1.5rem] border border-white/12 bg-[#101419]/95 p-4 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-5">
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-semibold">Tema Secimi</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Tum temalar tek yerde. Dokunup aninda uygulayin.</p>
+                    <h3 className="text-xl font-semibold">Tema Seçimi</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Tekrarsız tema kütüphanesi. Dokunup anında uygulayın.</p>
                   </div>
                   <button
                     type="button"
@@ -3076,13 +3080,13 @@ export default function BioBuilder() {
                   </button>
                 </div>
 
-                <div className="mb-4 flex flex-wrap gap-2">
+                <div className="mb-4 grid gap-2 sm:grid-cols-4">
                   {THEME_CATEGORY_TABS.map((tab) => (
                     <button
                       key={`theme-tab-${tab.id}`}
                       type="button"
                       onClick={() => setActiveThemeCategory(tab.id)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${activeThemeCategory === tab.id ? "border-primary bg-primary text-primary-foreground" : "border-border/50 text-muted-foreground hover:border-primary/45 hover:text-foreground"}`}
+                      className={`rounded-2xl border px-3 py-2.5 text-xs font-semibold transition-all ${activeThemeCategory === tab.id ? "border-primary bg-primary text-primary-foreground shadow-[0_0_24px_rgba(214,255,0,0.18)]" : "border-white/10 bg-white/[0.035] text-muted-foreground hover:border-primary/45 hover:bg-primary/5 hover:text-foreground"}`}
                     >
                       {tab.label}
                     </button>
@@ -3108,7 +3112,7 @@ export default function BioBuilder() {
                   </div>
                 )}
                 <div className="max-h-[65vh] overflow-y-auto pr-1">
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
                     {visibleThemes.map(item => (
                       <button
                         key={`theme-modal-${item.id}`}
@@ -3117,9 +3121,9 @@ export default function BioBuilder() {
                           handleThemeChange(item.id);
                           setIsThemeDialogOpen(false);
                         }}
-                        className={`rounded-xl border p-2 text-left transition-all ${themeConfig.id === item.id ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/40"}`}
+                        className={`group rounded-2xl border p-2.5 text-left transition-all hover:-translate-y-0.5 ${themeConfig.id === item.id ? "border-primary bg-primary/10 shadow-[0_0_28px_rgba(214,255,0,0.16)]" : "border-white/10 bg-white/[0.035] hover:border-primary/40 hover:bg-white/[0.055]"}`}
                       >
-                        <div className="mb-2 h-20 rounded-lg border border-white/20" style={getBioThemePreviewStyle(item, item.accent)} />
+                        <div className="mb-2 h-24 rounded-xl border border-white/15 shadow-inner transition-transform duration-300 group-hover:scale-[1.015]" style={getBioThemePreviewStyle(item, item.accent)} />
                         <div className="mb-2 flex items-center gap-1.5">
                           {themeHasImageBackground(item) && (
                             <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -3132,7 +3136,8 @@ export default function BioBuilder() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs font-medium leading-tight">{item.label}</p>
+                        <p className="text-xs font-semibold leading-tight">{item.label}</p>
+                        <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-muted-foreground">{item.description}</p>
                       </button>
                     ))}
                   </div>
