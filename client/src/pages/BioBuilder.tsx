@@ -423,6 +423,19 @@ function isShortGoogleMapUrl(rawUrl: string) {
   return value.includes("maps.app.goo.gl") || value.includes("goo.gl/maps");
 }
 
+function extractMapUrlFromInput(rawValue: string) {
+  const value = rawValue.trim();
+  if (!value) return "";
+
+  const srcMatch = value.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+  if (srcMatch?.[1]) return srcMatch[1].trim();
+
+  const urlMatch = value.match(/https?:\/\/[^\s"'<>]+/i);
+  if (urlMatch?.[0]) return urlMatch[0].trim();
+
+  return value;
+}
+
 function parseCoordinatePair(value: string) {
   const match = value.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
   if (!match) return null;
@@ -434,7 +447,7 @@ function parseCoordinatePair(value: string) {
 }
 
 function extractCoordinatesFromMapUrl(rawUrl: string) {
-  const value = rawUrl.trim();
+  const value = extractMapUrlFromInput(rawUrl);
   if (!value) return null;
   let decoded = value.replace(/\+/g, " ");
   try {
@@ -444,11 +457,11 @@ function extractCoordinatesFromMapUrl(rawUrl: string) {
   }
 
   const patterns = [
-    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
     /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
     /[?&]ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
     /[?&]center=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
-    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
   ];
   for (const pattern of patterns) {
     const match = decoded.match(pattern);
@@ -457,19 +470,25 @@ function extractCoordinatesFromMapUrl(rawUrl: string) {
       if (parsed) return parsed;
     }
   }
+  const embedMatch = decoded.match(/!2d(-?\d+(?:\.\d+)?)!3d(-?\d+(?:\.\d+)?)/);
+  if (embedMatch) {
+    const parsed = parseCoordinatePair(`${embedMatch[2]},${embedMatch[1]}`);
+    if (parsed) return parsed;
+  }
   return parseCoordinatePair(decoded);
 }
 
 async function resolveMapUrl(rawUrl: string) {
-  if (!isShortGoogleMapUrl(rawUrl)) return rawUrl;
+  const cleanUrl = extractMapUrlFromInput(rawUrl);
+  if (!isShortGoogleMapUrl(cleanUrl)) return cleanUrl;
 
   try {
-    const response = await fetch(`/api/resolve-map-url?url=${encodeURIComponent(rawUrl)}`);
-    if (!response.ok) return rawUrl;
+    const response = await fetch(`/api/resolve-map-url?url=${encodeURIComponent(cleanUrl)}`);
+    if (!response.ok) return cleanUrl;
     const payload = (await response.json()) as { url?: string };
-    return payload.url || rawUrl;
+    return payload.url || cleanUrl;
   } catch {
-    return rawUrl;
+    return cleanUrl;
   }
 }
 
@@ -1390,7 +1409,7 @@ function BlockEditor({
                         {isResolvingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : "Bul"}
                       </Button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">Google Maps veya Apple Maps linki yapistirin, sonra Bul butonuna basin.</p>
+                    <p className="text-[11px] text-muted-foreground">Google/Apple Maps linki ya da Google Harita HTML kodu yapistirin, sonra Bul butonuna basin.</p>
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Textarea
@@ -1462,8 +1481,8 @@ function BlockEditor({
                   <div className="flex h-56 items-center justify-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.14),transparent_55%),linear-gradient(135deg,#151a20,#0b0d10)] sm:h-64">
                     <div className="text-center">
                       <MapPin className="mx-auto mb-2 h-7 w-7 text-primary" />
-                      <p className="text-sm font-semibold">Apple Maps konumu</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Onizleme yerine Yol Tarifi Al butonu kullanilir.</p>
+                      <p className="text-sm font-semibold">Harita onizlemesi</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Apple Maps linki Yol Tarifi Al butonunda acilir.</p>
                     </div>
                   </div>
                 ) : buildMapEmbedUrl(block.data) && !locationValidationMessage ? (
@@ -1864,11 +1883,11 @@ function PreviewCardContents({
           </div>
           {provider === "apple_maps" ? (
             <div className={`grid place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] ${isDesktop ? "h-40" : "h-28"}`}>
-              <div className="text-center">
-                <MapPin className="mx-auto mb-1 h-6 w-6" style={{ color: accent }} />
-                <p className="text-xs font-semibold" style={{ color: resolvedTextColor }}>Apple Maps konumu</p>
+                <div className="text-center">
+                  <MapPin className="mx-auto mb-1 h-6 w-6" style={{ color: accent }} />
+                <p className="text-xs font-semibold" style={{ color: resolvedTextColor }}>Harita konumu</p>
+                </div>
               </div>
-            </div>
           ) : mapEmbedUrl ? (
             <iframe title="Harita onizlemesi" src={mapEmbedUrl} loading="lazy" className={isDesktop ? "h-40 w-full border-0" : "h-28 w-full border-0"} />
           ) : (

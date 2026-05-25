@@ -67,6 +67,20 @@ function getValidCoordinates(data: Record<string, string | boolean | number> | n
   return { lat: latNumber, lng: lngNumber };
 }
 
+function buildMapDirectionsUrl(data: Record<string, string | boolean | number> | null | undefined) {
+  if (!data) return "";
+  const rawUrl = String(data.url || "").trim();
+  if (rawUrl) return rawUrl;
+
+  const provider = data.provider === "auto_maps" && rawUrl ? detectMapProvider(rawUrl) : String(data.provider || "auto_maps");
+  const coordinates = getValidCoordinates(data);
+  const query = coordinates ? `${coordinates.lat},${coordinates.lng}` : String(data.address || data.title || "").trim();
+  if (!query) return "";
+
+  if (provider === "apple_maps") return `https://maps.apple.com/?daddr=${encodeURIComponent(query)}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+}
+
 function buildMapQuery(data: Record<string, string | boolean | number> | null | undefined) {
   if (!data) return "";
   const coordinates = getValidCoordinates(data);
@@ -728,7 +742,7 @@ export default function PublicBioPage() {
               const buttonText = String(blockData?.buttonText || "Yol Tarifi Al");
               const provider = blockData?.provider === "auto_maps" && blockData?.url ? detectMapProvider(String(blockData.url)) : String(blockData?.provider || "auto_maps");
               const mapEmbedUrl = buildMapEmbedUrl(blockData);
-              const hasUrl = Boolean(blockData?.url);
+              const directionsUrl = buildMapDirectionsUrl(blockData);
 
               return (
                 <div
@@ -759,7 +773,7 @@ export default function PublicBioPage() {
                     <div className="grid h-32 place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] md:h-40">
                       <div className="text-center">
                         <MapPin className="mx-auto mb-1 h-6 w-6" style={{ color: accent }} />
-                        <p className="text-xs font-semibold" style={{ color: resolvedTextColor }}>Apple Maps konumu</p>
+                        <p className="text-xs font-semibold" style={{ color: resolvedTextColor }}>Harita konumu</p>
                       </div>
                     </div>
                   ) : mapEmbedUrl ? (
@@ -777,7 +791,7 @@ export default function PublicBioPage() {
                   )}
                   <div className="p-4 pt-3">
                     <a
-                      href={hasUrl ? `/go/${block.id}` : "#"}
+                      href={directionsUrl ? `/go/${block.id}` : "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="grid min-h-11 place-items-center rounded-xl px-3 text-center text-sm font-bold transition hover:opacity-90 active:scale-[0.98]"

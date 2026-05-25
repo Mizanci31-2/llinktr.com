@@ -12,6 +12,29 @@ import {
   incrementShortLinkClicks,
 } from "../db";
 
+function detectMapProvider(rawUrl: string) {
+  const value = rawUrl.toLowerCase();
+  if (value.includes("maps.apple.com")) return "apple_maps";
+  if (value.includes("google.com/maps") || value.includes("maps.google.") || value.includes("maps.app.goo.gl") || value.includes("goo.gl/maps")) return "google_maps";
+  return "auto_maps";
+}
+
+function buildLocationRedirectUrl(blockData: Record<string, string> | null | undefined) {
+  if (!blockData) return "";
+  const rawUrl = blockData.url?.trim();
+  if (rawUrl) return rawUrl;
+
+  const provider = blockData.provider === "auto_maps" && rawUrl ? detectMapProvider(rawUrl) : blockData.provider || "auto_maps";
+  const lat = Number(blockData.lat);
+  const lng = Number(blockData.lng);
+  const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  const query = hasCoordinates ? `${lat},${lng}` : (blockData.address || blockData.title || "").trim();
+  if (!query) return "";
+
+  if (provider === "apple_maps") return `https://maps.apple.com/?daddr=${encodeURIComponent(query)}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+}
+
 export function createApp() {
   const app = express();
 
@@ -95,7 +118,7 @@ export function createApp() {
       }
 
       const blockData = block.data as Record<string, string> | null;
-      const rawUrl = blockData?.url?.trim();
+      const rawUrl = block.type === "location" ? buildLocationRedirectUrl(blockData) : blockData?.url?.trim();
       if (!rawUrl) {
         res.status(404).send("Link bulunamadi");
         return;

@@ -2111,6 +2111,25 @@ async function createContext(opts) {
 }
 
 // server/_core/app.ts
+function detectMapProvider(rawUrl) {
+  const value = rawUrl.toLowerCase();
+  if (value.includes("maps.apple.com")) return "apple_maps";
+  if (value.includes("google.com/maps") || value.includes("maps.google.") || value.includes("maps.app.goo.gl") || value.includes("goo.gl/maps")) return "google_maps";
+  return "auto_maps";
+}
+function buildLocationRedirectUrl(blockData) {
+  if (!blockData) return "";
+  const rawUrl = blockData.url?.trim();
+  if (rawUrl) return rawUrl;
+  const provider = blockData.provider === "auto_maps" && rawUrl ? detectMapProvider(rawUrl) : blockData.provider || "auto_maps";
+  const lat = Number(blockData.lat);
+  const lng = Number(blockData.lng);
+  const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  const query = hasCoordinates ? `${lat},${lng}` : (blockData.address || blockData.title || "").trim();
+  if (!query) return "";
+  if (provider === "apple_maps") return `https://maps.apple.com/?daddr=${encodeURIComponent(query)}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+}
 function createApp() {
   const app = express();
   app.use(express.json({ limit: "50mb" }));
@@ -2229,7 +2248,7 @@ function createApp() {
         return;
       }
       const blockData = block.data;
-      const url = blockData?.url;
+      const url = block.type === "location" ? buildLocationRedirectUrl(blockData) : blockData?.url;
       if (!url) {
         res.status(404).send("Link bulunamadi");
         return;
