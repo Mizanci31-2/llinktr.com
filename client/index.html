@@ -42,18 +42,18 @@
   </head>
 
   <body translate="no" class="notranslate">
-    <div id="root" class="notranslate" translate="no"></div>
     <div
       id="mondiad-static-native"
       data-mndazid="827ce39b-7d7a-4349-8fbc-3d3f12c791c9"
-      style="min-height:0;max-width:420px;width:100%;margin:0 auto;overflow:hidden"
+      style="display:block;min-height:0;max-width:420px;width:100%;margin:0 auto;overflow:hidden;background:#07090c"
     ></div>
     <script>
-      if (/(payment|checkout|billing|odeme|ödeme|plan|subscription|subscribe)/i.test(location.pathname)) {
+      if (/(payment|checkout|billing|odeme|ödeme|plan|subscription|subscribe|success|failed|cancel)/i.test(location.pathname)) {
         var mndStaticNative = document.getElementById("mondiad-static-native");
-        if (mndStaticNative) mndStaticNative.style.display = "none";
+        if (mndStaticNative) mndStaticNative.remove();
       }
     </script>
+    <div id="root" class="notranslate" translate="no"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

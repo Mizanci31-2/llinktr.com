@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import MondiadNativeAd from "@/components/MondiadNativeAd";
+import NativeAdSlot from "@/components/ads/NativeAdSlot";
 import { SocialIcon } from "@/components/SocialIcon";
 import { readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
 import {
@@ -287,7 +287,7 @@ export default function Home() {
           </div>
         </section>
 
-        <MondiadNativeAd className="py-8 md:py-10" />
+        <NativeAdSlot placement="home-middle" className="py-8 md:py-10" />
 
         <section className="py-16 md:py-24">
           <div className="container">
