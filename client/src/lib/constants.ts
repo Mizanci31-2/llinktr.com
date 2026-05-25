@@ -95,6 +95,14 @@ export const LOCATION_LINK_PRESETS = [
     logoUrl: "https://www.apple.com/favicon.ico",
     placeholder: "https://maps.apple.com/?q=Istanbul+Kadikoy",
   },
+  {
+    id: "location_custom",
+    platform: "auto_maps",
+    label: "Özel Harita Linki",
+    color: "#D6FF00",
+    logoUrl: "https://www.google.com/s2/favicons?domain_url=https://www.openstreetmap.org&sz=128",
+    placeholder: "https://maps.google.com/?q=Istanbul+Kadikoy",
+  },
 ] as const;
 
 export type LocationLinkPresetId = typeof LOCATION_LINK_PRESETS[number]["id"];
@@ -1979,6 +1987,7 @@ export const BLOCK_TYPES = [
   { type: "text", label: "Metin", icon: "Type", desc: "Serbest metin bloğu" },
   { type: "link", label: "Link", icon: "Link", desc: "Tıklanabilir link alanı" },
   { type: "social", label: "Sosyal Hesap", icon: "Share2", desc: "Altta yuvarlak ikon olarak görünür" },
+  { type: "location", label: "Konum / Harita", icon: "MapPin", desc: "Küçük harita kartı ve yol tarifi butonu" },
   { type: "divider", label: "İnce Çizgi", icon: "Minus", desc: "İnce veya kalın ayırıcı çizgi" },
   { type: "profile_image", label: "Logo / Görsel", icon: "Image", desc: "Bio sayfanıza logo veya görsel ekleyin" },
 ] as const;

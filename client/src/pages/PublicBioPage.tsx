@@ -14,12 +14,12 @@ import {
   safeAccentColor,
   withCustomBackgroundImage,
 } from "@/lib/constants";
-import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle } from "lucide-react";
+import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import { SocialIcon } from "@/components/SocialIcon";
 import MondiadNativeAd from "@/components/MondiadNativeAd";
 
-type BlockType = "heading" | "description" | "text" | "link" | "social" | "divider" | "profile_image";
+type BlockType = "heading" | "description" | "text" | "link" | "social" | "location" | "divider" | "profile_image";
 
 function isVideoMediaUrl(value?: string | null) {
   if (!value) return false;
@@ -40,6 +40,20 @@ function getLogoPreset(presetId?: string | null) {
 
 function getDividerVariant(data: Record<string, string | boolean | number> | null) {
   return data?.variant === "thick" ? "thick" : "thin";
+}
+
+function buildMapQuery(data: Record<string, string | boolean | number> | null | undefined) {
+  if (!data) return "";
+  const lat = String(data.lat || "").trim();
+  const lng = String(data.lng || "").trim();
+  if (lat && lng) return `${lat},${lng}`;
+  return String(data.address || data.title || "").trim();
+}
+
+function buildMapEmbedUrl(data: Record<string, string | boolean | number> | null | undefined) {
+  const query = buildMapQuery(data);
+  if (!query) return "";
+  return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
 }
 
 function getRadiusValue(preset?: string | number | boolean) {
@@ -676,6 +690,60 @@ export default function PublicBioPage() {
                       </a>
                     );
                   })}
+                </div>
+              );
+            }
+
+            if (blockType === "location") {
+              const title = String(blockData?.title || "Konum");
+              const description = String(blockData?.description || "");
+              const address = String(blockData?.address || "");
+              const buttonText = String(blockData?.buttonText || "Yol Tarifi Al");
+              const mapEmbedUrl = buildMapEmbedUrl(blockData);
+              const hasUrl = Boolean(blockData?.url);
+
+              return (
+                <div
+                  key={block.id}
+                  className="mx-auto w-full max-w-[20rem] overflow-hidden rounded-[1.2rem] border text-left md:max-w-none"
+                  style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder, boxShadow: themeConfig.shadow }}
+                >
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border" style={{ borderColor: themeConfig.cardBorder, background: `${accent}18` }}>
+                        <MapPin className="h-5 w-5" style={{ color: accent }} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-1 text-sm font-bold md:text-base" style={{ color: resolvedTextColor }}>{title}</p>
+                        {description ? <p className="mt-1 line-clamp-2 text-xs leading-relaxed opacity-75" style={{ color: resolvedTextColor }}>{description}</p> : null}
+                        {address ? <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed opacity-65" style={{ color: resolvedTextColor }}>{address}</p> : null}
+                      </div>
+                    </div>
+                  </div>
+                  {mapEmbedUrl ? (
+                    <iframe
+                      title={`${title} harita onizlemesi`}
+                      src={mapEmbedUrl}
+                      loading="lazy"
+                      className="h-32 w-full border-0 md:h-40"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  ) : (
+                    <div className="grid h-32 place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] md:h-40">
+                      <MapPin className="h-6 w-6" style={{ color: accent }} />
+                    </div>
+                  )}
+                  <div className="p-4 pt-3">
+                    <a
+                      href={hasUrl ? `/go/${block.id}` : "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="grid min-h-11 place-items-center rounded-xl px-3 text-center text-sm font-bold transition hover:opacity-90 active:scale-[0.98]"
+                      style={{ background: accent, color: "#111827" }}
+                    >
+                      {buttonText}
+                    </a>
+                  </div>
                 </div>
               );
             }

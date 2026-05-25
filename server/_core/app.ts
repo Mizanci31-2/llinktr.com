@@ -45,7 +45,7 @@ export function createApp() {
 
     try {
       const block = await getBioBlockById(blockId);
-      if (!block || !block.isEnabled || !["link", "social"].includes(block.type)) {
+      if (!block || !block.isEnabled || !["link", "social", "location"].includes(block.type)) {
         res.status(404).send("Link bulunamadi");
         return;
       }

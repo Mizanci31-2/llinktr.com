@@ -27,12 +27,14 @@ function getTopBlocks(
     | undefined,
 ) {
   return (blocks ?? [])
-    .filter((block) => block.type === "link" || block.type === "social")
+    .filter((block) => block.type === "link" || block.type === "social" || block.type === "location")
     .map((block) => {
       const data = (block.data ?? {}) as Record<string, string | number | boolean>;
       const label =
         block.type === "social"
           ? String(data.platform || "Sosyal hesap")
+          : block.type === "location"
+            ? String(data.title || data.address || "Konum")
           : String(data.title || data.url || "Link");
       return {
         id: block.id,

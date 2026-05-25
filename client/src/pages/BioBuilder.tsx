@@ -86,6 +86,7 @@ const BLOCK_ICONS: Record<BlockType, ElementType> = {
   text: Type,
   link: Link,
   social: Share2,
+  location: MapPin,
   divider: Minus,
   profile_image: Image,
 };
@@ -96,6 +97,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   text: "Metin",
   link: "Link",
   social: "Sosyal Hesap",
+  location: "Konum / Harita",
   divider: "Ince Cizgi",
   profile_image: "Logo / Gorsel",
 };
@@ -356,6 +358,10 @@ function getBlockSummary(block: LocalBlock) {
     return `${title} - ${url}`;
   }
 
+  if (block.type === "location") {
+    return String(block.data.address || block.data.title || "Adres ve harita bilgisi ekleyin");
+  }
+
   if (block.type === "social") {
     if (getSocialPlacement(block.data) !== "top") {
       const accounts = getInlineSocialAccounts(block.data);
@@ -383,6 +389,31 @@ function getCommercePreset(presetId?: string) {
 
 function getLocationPreset(presetId?: string) {
   return LOCATION_LINK_PRESETS.find(item => item.id === presetId);
+}
+
+function getLocationPresetByProvider(provider?: string | number | boolean) {
+  return LOCATION_LINK_PRESETS.find(item => item.platform === provider || item.id === provider);
+}
+
+function getLocationProviderLabel(provider?: string | number | boolean) {
+  if (provider === "google_maps") return "Google Maps";
+  if (provider === "yandex_maps") return "Yandex Maps";
+  if (provider === "apple_maps") return "Apple Maps";
+  return "Otomatik";
+}
+
+function buildMapQuery(data: Record<string, string | boolean | number> | null | undefined) {
+  if (!data) return "";
+  const lat = String(data.lat || "").trim();
+  const lng = String(data.lng || "").trim();
+  if (lat && lng) return `${lat},${lng}`;
+  return String(data.address || data.title || "").trim();
+}
+
+function buildMapEmbedUrl(data: Record<string, string | boolean | number> | null | undefined) {
+  const query = buildMapQuery(data);
+  if (!query) return "";
+  return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
 }
 
 function getLogoPreset(presetId?: string) {
@@ -555,6 +586,7 @@ function BlockEditor({
   const Icon = BLOCK_ICONS[block.type];
   const linkAlign = block.type === "link" ? getLinkAlignment(block.data) : "center";
   const selectedCommercePreset = block.type === "link" ? getCommercePreset(String(block.data.logoPreset || "")) : undefined;
+  const selectedLocationPreset = block.type === "location" ? getLocationPresetByProvider(block.data.provider || block.data.logoPreset) : undefined;
   const inlineSocialAccounts = block.type === "social" && getSocialPlacement(block.data) !== "top" ? getInlineSocialAccounts(block.data) : [];
   const firstInlineSocialAccount = inlineSocialAccounts.find((account) => account.platform) ?? inlineSocialAccounts[0];
   const selectedSocialPlatform = block.type === "social"
@@ -565,6 +597,7 @@ function BlockEditor({
   const blockLabel = getBlockLabel(block);
   const showLinkVisual = block.type === "link" && Boolean(block.data.logoUrl || block.data.logoPreset || block.data.logoUrlSecondary);
   const showSocialVisual = block.type === "social" && Boolean(firstInlineSocialAccount?.platform || block.data.platform);
+  const showLocationVisual = block.type === "location";
 
   const handleImageUpload = (file?: File) => {
     if (!file) return;
@@ -753,6 +786,19 @@ function BlockEditor({
                   <Share2 className="h-2.5 w-2.5 text-primary" />
                 </div>
               </div>
+            ) : showLocationVisual ? (
+              <div className="relative h-7 w-7">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {selectedLocationPreset?.logoUrl ? (
+                    <img src={selectedLocationPreset.logoUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+                  ) : (
+                    <MapPin className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-black/30 bg-[#111418]">
+                  <MapPin className="h-2.5 w-2.5 text-primary" />
+                </div>
+              </div>
             ) : (
               <Icon className={`h-4 w-4 ${block.isEnabled ? tone.icon : "text-muted-foreground"}`} />
             )}
@@ -760,7 +806,7 @@ function BlockEditor({
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <span className="min-w-0 truncate text-sm font-medium">{blockLabel}</span>
-              {(block.type === "link" || block.type === "social") && (
+              {(block.type === "link" || block.type === "social" || block.type === "location") && (
                 <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground sm:text-[11px]">
                   {block.clicks ?? 0} tiklama
                 </span>
@@ -1164,6 +1210,116 @@ function BlockEditor({
             </div>
           )}
 
+          {block.type === "location" && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold">Konum / Harita bilgileri</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">Adres, harita linki ve yol tarifi butonunu buradan duzenleyin.</p>
+                  </div>
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
+                    {getLocationProviderLabel(block.data.provider)}
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    value={String(block.data.title || "")}
+                    onChange={(event) => onChange({ ...block.data, title: event.target.value })}
+                    placeholder="Baslik"
+                    className="bg-input border-border/60 text-sm"
+                  />
+                  <Input
+                    value={String(block.data.buttonText || "")}
+                    onChange={(event) => onChange({ ...block.data, buttonText: event.target.value })}
+                    placeholder="Yol Tarifi Al"
+                    className="bg-input border-border/60 text-sm"
+                  />
+                  <Textarea
+                    value={String(block.data.description || "")}
+                    onChange={(event) => onChange({ ...block.data, description: event.target.value })}
+                    placeholder="Kisa aciklama"
+                    className="bg-input border-border/60 text-sm resize-none sm:col-span-2"
+                    rows={2}
+                  />
+                  <Textarea
+                    value={String(block.data.address || "")}
+                    onChange={(event) => onChange({ ...block.data, address: event.target.value })}
+                    placeholder="Adres"
+                    className="bg-input border-border/60 text-sm resize-none sm:col-span-2"
+                    rows={2}
+                  />
+                  <Input
+                    value={String(block.data.url || "")}
+                    onChange={(event) => onChange({ ...block.data, url: event.target.value })}
+                    placeholder={selectedLocationPreset?.placeholder || "https://maps.google.com/?q=..."}
+                    className="bg-input border-border/60 text-sm sm:col-span-2"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.65fr)_minmax(0,0.65fr)]">
+                  <div>
+                    <Label className="text-xs">Harita saglayici</Label>
+                    <Select
+                      value={String(block.data.provider || "auto_maps")}
+                      onValueChange={(value) => onChange({ ...block.data, provider: value })}
+                    >
+                      <SelectTrigger className="mt-1 bg-input border-border/60 text-sm">
+                        <SelectValue placeholder="Otomatik" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto_maps">Otomatik</SelectItem>
+                        <SelectItem value="google_maps">Google Maps</SelectItem>
+                        <SelectItem value="yandex_maps">Yandex Maps</SelectItem>
+                        <SelectItem value="apple_maps">Apple Maps</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Enlem</Label>
+                    <Input
+                      value={String(block.data.lat || "")}
+                      onChange={(event) => onChange({ ...block.data, lat: event.target.value })}
+                      placeholder="41.0082"
+                      className="mt-1 bg-input border-border/60 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Boylam</Label>
+                    <Input
+                      value={String(block.data.lng || "")}
+                      onChange={(event) => onChange({ ...block.data, lng: event.target.value })}
+                      placeholder="28.9784"
+                      className="mt-1 bg-input border-border/60 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-border/70 bg-card/70 shadow-sm">
+                {buildMapEmbedUrl(block.data) ? (
+                  <iframe
+                    title="Harita onizlemesi"
+                    src={buildMapEmbedUrl(block.data)}
+                    loading="lazy"
+                    className="h-44 w-full border-0"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  <div className="flex h-44 items-center justify-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.14),transparent_55%),linear-gradient(135deg,#151a20,#0b0d10)]">
+                    <div className="text-center">
+                      <MapPin className="mx-auto mb-2 h-6 w-6 text-primary" />
+                      <p className="text-sm font-semibold">Harita onizlemesi</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Adres veya enlem/boylam girince gorunur.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {block.type === "social" && (
             <div className="space-y-3">
               {getSocialPlacement(block.data) === "top" ? (
@@ -1507,6 +1663,46 @@ function PreviewCardContents({
       );
     }
 
+    if (block.type === "location") {
+      const title = String(block.data.title || "Konum");
+      const description = String(block.data.description || "");
+      const address = String(block.data.address || "");
+      const buttonText = String(block.data.buttonText || "Yol Tarifi Al");
+      const mapEmbedUrl = buildMapEmbedUrl(block.data);
+      return (
+        <div
+          key={block.tempId}
+          className={`mx-auto w-full overflow-hidden rounded-2xl border ${isDesktop ? "max-w-[32rem]" : "max-w-[28rem]"}`}
+          style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder, boxShadow: themeConfig.shadow }}
+        >
+          <div className={isDesktop ? "p-4" : "p-3"}>
+            <div className="flex items-start gap-3 text-left">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border" style={{ borderColor: themeConfig.cardBorder, background: `${accent}18` }}>
+                <MapPin className="h-5 w-5" style={{ color: accent }} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={`line-clamp-1 font-bold ${isDesktop ? "text-base" : "text-sm"}`} style={{ color: resolvedTextColor }}>{title}</p>
+                {description ? <p className="mt-1 line-clamp-2 text-xs opacity-75" style={{ color: resolvedTextColor }}>{description}</p> : null}
+                {address ? <p className="mt-1 line-clamp-2 text-[11px] opacity-65" style={{ color: resolvedTextColor }}>{address}</p> : null}
+              </div>
+            </div>
+          </div>
+          {mapEmbedUrl ? (
+            <iframe title="Harita onizlemesi" src={mapEmbedUrl} loading="lazy" className={isDesktop ? "h-40 w-full border-0" : "h-28 w-full border-0"} />
+          ) : (
+            <div className={`grid place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] ${isDesktop ? "h-40" : "h-28"}`}>
+              <MapPin className="h-6 w-6" style={{ color: accent }} />
+            </div>
+          )}
+          <div className={isDesktop ? "p-4 pt-3" : "p-3 pt-2"}>
+            <div className="grid min-h-10 place-items-center rounded-xl px-3 text-xs font-bold" style={{ background: accent, color: "#111827" }}>
+              {buttonText}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (block.type === "profile_image" && block.data.url) {
       return (
         <div key={block.tempId} className={isDesktop ? "py-3" : "py-2"}>
@@ -1835,7 +2031,7 @@ export default function BioBuilder() {
   const activeBlockCount = useMemo(() => blocks.filter(block => block.isEnabled).length, [blocks]);
   const hiddenBlockCount = blocks.length - activeBlockCount;
   const actionBlockCount = useMemo(
-    () => blocks.filter(block => block.type === "link" || block.type === "social").length,
+    () => blocks.filter(block => block.type === "link" || block.type === "social" || block.type === "location").length,
     [blocks],
   );
 
@@ -2053,6 +2249,8 @@ export default function BioBuilder() {
               }
           : type === "link"
             ? { align: "center", ...(initialData || {}) }
+            : type === "location"
+              ? { title: "Konum", description: "", address: "", url: "", buttonText: "Yol Tarifi Al", provider: "auto_maps", ...(initialData || {}) }
             : type === "divider"
               ? { variant: "thin" }
               : initialData || {},
@@ -2139,15 +2337,18 @@ export default function BioBuilder() {
 
     const newBlock: LocalBlock = {
       tempId: generateTempId(),
-      type: "link",
+      type: "location",
       sortOrder: blocks.length,
       isEnabled: true,
       clicks: 0,
       data: {
         title: preset.label,
+        description: "",
+        address: "",
         url: "",
+        buttonText: "Yol Tarifi Al",
+        provider: preset.platform,
         logoPreset: preset.platform,
-        align: "center",
       },
     };
 

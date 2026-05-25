@@ -4,6 +4,7 @@ export type BlockType =
   | "text"
   | "link"
   | "social"
+  | "location"
   | "divider"
   | "profile_image";
 
