@@ -167,6 +167,16 @@
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
   }
+
+  input[type="date"] {
+    color-scheme: dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.8);
+    opacity: 1;
+    cursor: pointer;
+  }
 }
 
 @layer components {

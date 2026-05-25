@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import {
   COMMERCE_LINK_PRESETS,
+  LOCATION_LINK_PRESETS,
   SOCIAL_PLATFORMS,
   getBioBackgroundStyleStatic,
   getBioButtonStyle,
@@ -15,8 +17,14 @@ import {
 import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle } from "lucide-react";
 import { Link } from "wouter";
 import { SocialIcon } from "@/components/SocialIcon";
+import MondiadNativeAd from "@/components/MondiadNativeAd";
 
 type BlockType = "heading" | "description" | "text" | "link" | "social" | "divider" | "profile_image";
+
+function isVideoMediaUrl(value?: string | null) {
+  if (!value) return false;
+  return /^data:video\//i.test(value) || /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(value);
+}
 
 function getLinkAlignment(data: Record<string, string | boolean | number> | null) {
   return data?.align === "left" ? "left" : "center";
@@ -26,8 +34,149 @@ function getCommercePreset(presetId?: string | null) {
   return COMMERCE_LINK_PRESETS.find(item => item.id === presetId);
 }
 
+function getLogoPreset(presetId?: string | null) {
+  return getCommercePreset(presetId) || LOCATION_LINK_PRESETS.find(item => item.platform === presetId || item.id === presetId);
+}
+
 function getDividerVariant(data: Record<string, string | boolean | number> | null) {
   return data?.variant === "thick" ? "thick" : "thin";
+}
+
+function getRadiusValue(preset?: string | number | boolean) {
+  if (preset === "pill") return "9999px";
+  if (preset === "square") return "12px";
+  return "18px";
+}
+
+function getFontPresetClass(preset?: string | number | boolean) {
+  switch (preset) {
+    case "bold":
+      return "font-bold tracking-[0.01em]";
+    case "caps":
+      return "font-semibold uppercase tracking-[0.12em]";
+    case "wide":
+      return "font-semibold tracking-[0.06em]";
+    case "compact":
+      return "font-medium";
+    default:
+      return "font-semibold";
+  }
+}
+
+function getTextStyleClass(preset?: string | number | boolean) {
+  switch (preset) {
+    case "bold":
+      return "font-bold";
+    case "light":
+      return "font-light";
+    case "display":
+      return "text-xl font-bold";
+    case "small":
+      return "text-xs font-medium";
+    case "accent":
+      return "font-semibold underline underline-offset-4";
+    default:
+      return "font-medium";
+  }
+}
+
+function getTextAlignClass(align?: string | number | boolean) {
+  if (align === "left") return "text-left";
+  if (align === "right") return "text-right";
+  return "text-center";
+}
+
+function getTextStyleInline(preset?: string | number | boolean): CSSProperties {
+  switch (preset) {
+    case "bold":
+      return { fontWeight: 800 };
+    case "light":
+      return { fontWeight: 300 };
+    case "display":
+      return { fontSize: "1.45em", fontWeight: 850, lineHeight: 1.15 };
+    case "small":
+      return { fontSize: "0.86em", fontWeight: 500 };
+    case "accent":
+      return { fontWeight: 750, letterSpacing: "0.02em" };
+    default:
+      return { fontWeight: 500 };
+  }
+}
+
+function getTextLinkParts(text: string, data: Record<string, string | boolean | number> | null | undefined) {
+  if (!data) return null;
+  const start = Number(data.textLinkStart);
+  const end = Number(data.textLinkEnd);
+  const url = String(data.textLinkUrl || "");
+  if (!url || Number.isNaN(start) || Number.isNaN(end) || start < 0 || end <= start || end > text.length) return null;
+  return { before: text.slice(0, start), linked: text.slice(start, end), after: text.slice(end), url };
+}
+
+function RichText({
+  text,
+  data,
+  linkColor,
+}: {
+  text: string;
+  data: Record<string, string | boolean | number> | null | undefined;
+  linkColor: string;
+}) {
+  const parts = getTextLinkParts(text, data);
+  if (!parts) return <>{text}</>;
+  return (
+    <>
+      {parts.before}
+      <a href={parts.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4" style={{ color: linkColor }}>
+        {parts.linked}
+      </a>
+      {parts.after}
+    </>
+  );
+}
+
+function getSocialPlacement(data: Record<string, string | boolean | number> | null | undefined) {
+  return data?.placement === "top" ? "top" : "inline";
+}
+
+type SocialAccountData = {
+  id: string;
+  platform: string;
+  url: string;
+  isEnabled: boolean;
+};
+
+function getInlineSocialAccounts(data: Record<string, string | boolean | number> | null | undefined): SocialAccountData[] {
+  if (!data) return [];
+
+  if (typeof data.accounts === "string" && data.accounts.trim()) {
+    try {
+      const parsed = JSON.parse(data.accounts) as Array<Partial<SocialAccountData>>;
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item, index) => ({
+            id: String(item.id || `legacy_${index}`),
+            platform: String(item.platform || ""),
+            url: String(item.url || ""),
+            isEnabled: item.isEnabled !== false,
+          }));
+      }
+    } catch {
+      // Old social records are handled below.
+    }
+  }
+
+  if (data.platform || data.url) {
+    return [
+      {
+        id: "legacy_0",
+        platform: String(data.platform || ""),
+        url: String(data.url || ""),
+        isEnabled: true,
+      },
+    ];
+  }
+
+  return [];
 }
 
 export default function PublicBioPage() {
@@ -338,8 +487,8 @@ export default function PublicBioPage() {
   const accent = safeAccentColor(page.accentColor, themeConfig.accent);
   const resolvedTextColor = isValidHexColor(savedThemeSettings.textColor || "") ? savedThemeSettings.textColor! : themeConfig.text;
   const enabledBlocks = blocks.filter(block => block.isEnabled);
-  const contentBlocks = enabledBlocks.filter(block => block.type !== "social");
-  const socialBlocks = enabledBlocks.filter(block => block.type === "social" && (block.data as Record<string, string | boolean | number> | null)?.url);
+  const contentBlocks = enabledBlocks.filter(block => block.type !== "social" || getSocialPlacement(block.data as Record<string, string | boolean | number> | null) !== "top");
+  const topSocialBlocks = enabledBlocks.filter(block => block.type === "social" && (block.data as Record<string, string | boolean | number> | null)?.url && getSocialPlacement(block.data as Record<string, string | boolean | number> | null) === "top");
   const buttonStyle = getBioButtonStyle(themeConfig, accent, resolvedTextColor);
 
   const getSocialLabel = (block: typeof blocks[number]) => {
@@ -356,7 +505,7 @@ export default function PublicBioPage() {
 
   const renderLinkLogo = (blockData: Record<string, string | boolean | number> | null, size: number) => {
     if (blockData?.logoPreset) {
-      const preset = getCommercePreset(String(blockData.logoPreset));
+      const preset = getLogoPreset(String(blockData.logoPreset));
       if (preset?.logoUrl) {
         return <img src={preset.logoUrl} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
       }
@@ -381,12 +530,14 @@ export default function PublicBioPage() {
 
   return (
     <div
-      className="public-bio-shell flex min-h-screen justify-center overflow-x-hidden px-4 pb-8 pt-10 md:items-center md:px-4 md:py-8"
+      className="public-bio-shell flex min-h-screen flex-col items-center justify-center overflow-x-hidden px-4 pb-8 pt-6 md:px-4 md:py-8"
       style={{
         ...pageBackgroundStyle,
         color: resolvedTextColor,
       }}
     >
+      <MondiadNativeAd compact className="mb-6" />
+
       <main
         className="public-bio-card mx-auto flex w-full max-w-[420px] flex-col items-center overflow-x-hidden rounded-[20px] border px-6 pb-6 pt-6 text-center md:max-w-[35rem] md:rounded-[2.35rem] md:p-8 lg:max-w-[37rem]"
         style={{
@@ -398,12 +549,24 @@ export default function PublicBioPage() {
       >
         <div className="mb-4 flex flex-col items-center gap-4 md:mb-4 md:gap-5">
           {page.profileImageUrl ? (
-            <img
-              src={page.profileImageUrl}
-              alt={page.title}
-              className="mb-4 h-24 w-24 rounded-full border-2 object-cover md:h-28 md:w-28"
-              style={{ borderColor: `${accent}66` }}
-            />
+            isVideoMediaUrl(page.profileImageUrl) ? (
+              <video
+                src={page.profileImageUrl}
+                className="mb-4 h-24 w-24 rounded-full border-2 object-cover md:h-28 md:w-28"
+                style={{ borderColor: `${accent}66` }}
+                muted
+                playsInline
+                autoPlay
+                loop
+              />
+            ) : (
+              <img
+                src={page.profileImageUrl}
+                alt={page.title}
+                className="mb-4 h-24 w-24 rounded-full border-2 object-cover md:h-28 md:w-28"
+                style={{ borderColor: `${accent}66` }}
+              />
+            )
           ) : (
             <div
               className="mb-4 flex h-24 w-24 items-center justify-center rounded-full border-2 md:h-28 md:w-28"
@@ -413,9 +576,29 @@ export default function PublicBioPage() {
             </div>
           )}
           <div className="text-center">
-            <h1 className="mb-2 text-xl font-bold md:text-[1.7rem]" style={{ color: resolvedTextColor }}>{page.title}</h1>
+            <h1 className="mx-auto mb-2 line-clamp-2 max-w-full overflow-hidden break-words text-xl font-bold [overflow-wrap:anywhere] md:text-[1.7rem]" style={{ color: resolvedTextColor }}>{page.title}</h1>
             {page.description && (
-              <p className="mb-4 text-sm md:text-[15px]" style={{ color: resolvedTextColor }}>{page.description}</p>
+              <p className="mx-auto mb-4 line-clamp-3 max-w-full overflow-hidden break-words text-sm [overflow-wrap:anywhere] md:text-[15px]" style={{ color: resolvedTextColor }}>{page.description}</p>
+            )}
+            {topSocialBlocks.length > 0 && (
+              <div className="mt-1 flex flex-wrap justify-center gap-3 md:mt-3 md:gap-3.5">
+                {topSocialBlocks.map(block => {
+                  const blockData = block.data as Record<string, string | boolean | number> | null;
+                  return (
+                    <a
+                      key={`top-social-${block.id}`}
+                      href={blockData?.url ? `/go/${block.id}` : "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={getSocialLabel(block)}
+                      className="flex h-11 w-11 items-center justify-center rounded-full border transition-all hover:-translate-y-0.5 hover:opacity-90 md:h-12 md:w-12"
+                      style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder, boxShadow: themeConfig.shadow }}
+                    >
+                      <SocialIcon platform={String(blockData?.platform || "")} size={22} color={getSocialColor(block)} />
+                    </a>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -442,13 +625,14 @@ export default function PublicBioPage() {
 
             if (blockType === "heading") {
               const headingText = String(blockData?.text || "Baslik");
+              const blockTextColor = String(blockData?.textColor || resolvedTextColor);
               return (
                 <h2
                   key={block.id}
-                  className="py-1 text-center text-lg font-bold md:text-[1.3rem]"
-                  style={{ color: resolvedTextColor, textTransform: blockData?.uppercase ? "uppercase" : "none" }}
+                  className={`line-clamp-2 max-w-full overflow-hidden break-words py-1 text-lg [overflow-wrap:anywhere] md:text-[1.3rem] ${getTextAlignClass(blockData?.align)}`}
+                  style={{ color: blockTextColor, textTransform: blockData?.uppercase ? "uppercase" : "none", ...getTextStyleInline(blockData?.textStyle) }}
                 >
-                  {blockData?.uppercase ? headingText.toUpperCase() : headingText}
+                  <RichText text={blockData?.uppercase ? headingText.toUpperCase() : headingText} data={blockData} linkColor={blockTextColor} />
                 </h2>
               );
             }
@@ -462,10 +646,37 @@ export default function PublicBioPage() {
             }
 
             if (blockType === "description" || blockType === "text") {
+              const blockTextColor = String(blockData?.textColor || resolvedTextColor);
               return (
-                <p key={block.id} className="px-2 text-center text-sm leading-relaxed md:text-[15px]" style={{ color: resolvedTextColor }}>
-                  {blockData?.text || ""}
+                <p key={block.id} className={`line-clamp-3 max-w-full overflow-hidden break-words px-2 text-sm leading-relaxed [overflow-wrap:anywhere] md:text-[15px] ${getTextAlignClass(blockData?.align)}`} style={{ color: blockTextColor, ...getTextStyleInline(blockData?.textStyle) }}>
+                  <RichText text={String(blockData?.text || "")} data={blockData} linkColor={blockTextColor} />
                 </p>
+              );
+            }
+
+            if (blockType === "social" && getSocialPlacement(blockData) !== "top") {
+              const accounts = getInlineSocialAccounts(blockData).filter((account) => account.isEnabled !== false && account.platform);
+              if (accounts.length === 0) return null;
+
+              return (
+                <div key={block.id} className="flex flex-wrap justify-center gap-3 py-2 md:gap-3.5">
+                  {accounts.map((account) => {
+                    const platform = SOCIAL_PLATFORMS.find((item) => item.id === account.platform);
+                    return (
+                      <a
+                        key={account.id}
+                        href={account.url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={platform?.label || "Sosyal hesap"}
+                        className="flex h-11 w-11 items-center justify-center rounded-full border transition-all hover:-translate-y-0.5 hover:opacity-90 md:h-12 md:w-12"
+                        style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder, boxShadow: themeConfig.shadow }}
+                      >
+                        <SocialIcon platform={account.platform} size={22} color={platform?.color || accent} />
+                      </a>
+                    );
+                  })}
+                </div>
               );
             }
 
@@ -473,6 +684,15 @@ export default function PublicBioPage() {
               const align = getLinkAlignment(blockData);
               const logo = renderLinkLogo(blockData, 30);
               const secondaryLogo = renderSecondaryLinkLogo(blockData, 16);
+              const linkStyle = {
+                ...buttonStyle,
+                color: String(blockData?.textColor || resolvedTextColor),
+                background: String(blockData?.bgColor || (buttonStyle.background as string)),
+                borderColor: String(blockData?.borderColor || (buttonStyle.borderColor as string)),
+                borderWidth: `${Number(blockData?.borderWidth ?? 1)}px`,
+                borderRadius: getRadiusValue(blockData?.radiusPreset),
+              } as React.CSSProperties;
+              const fontPresetClass = getFontPresetClass(blockData?.fontPreset);
 
               return (
                 <a
@@ -481,7 +701,7 @@ export default function PublicBioPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="link-card link-button mx-auto grid min-h-[4.35rem] w-full max-w-[20rem] content-center place-items-center overflow-visible rounded-[14px] border px-4 py-3.5 transition-all hover:opacity-90 active:scale-[0.98] md:min-h-[5.1rem] md:max-w-none md:rounded-[1.2rem] md:px-7"
-                  style={buttonStyle}
+                  style={linkStyle}
                 >
                   <div className="relative grid h-full w-full place-items-center self-stretch">
                     <div className="absolute left-0 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full md:h-9 md:w-9">
@@ -498,10 +718,10 @@ export default function PublicBioPage() {
                         <span className="h-8 w-8 rounded-full md:h-9 md:w-9" />
                       )}
                     </div>
-                    <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-visible truncate px-10 text-center text-sm font-bold md:px-12 md:text-base ${align === "left" ? "sm:justify-start sm:text-left" : ""}`} style={{ color: resolvedTextColor }}>
+                    <span className={`link-title flex min-h-full w-full min-w-0 items-center justify-center overflow-hidden truncate px-10 text-center text-sm md:px-12 md:text-base ${fontPresetClass} ${align === "left" ? "sm:justify-start sm:text-left" : ""}`} style={{ color: String(blockData?.textColor || resolvedTextColor) }}>
                       {blockData?.title || "Link"}
                     </span>
-                    <ExternalLink className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60 md:h-[18px] md:w-[18px]" style={{ color: resolvedTextColor }} />
+                    <ExternalLink className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60 md:h-[18px] md:w-[18px]" style={{ color: String(blockData?.textColor || resolvedTextColor) }} />
                   </div>
                 </a>
               );
@@ -519,27 +739,6 @@ export default function PublicBioPage() {
           })}
         </div>
 
-        {socialBlocks.length > 0 && (
-          <div className="mt-5 flex flex-wrap justify-center gap-3 md:mt-9 md:gap-3.5">
-            {socialBlocks.map(block => {
-              const blockData = block.data as Record<string, string | boolean | number> | null;
-              return (
-                <a
-                  key={block.id}
-                  href={blockData?.url ? `/go/${block.id}` : "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={getSocialLabel(block)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border transition-all hover:-translate-y-0.5 hover:opacity-90 md:h-12 md:w-12"
-                  style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder, boxShadow: themeConfig.shadow }}
-                >
-                  <SocialIcon platform={String(blockData?.platform || "")} size={22} color={getSocialColor(block)} />
-                </a>
-              );
-            })}
-          </div>
-        )}
-
         <div className="mt-10 flex items-center justify-center gap-2 md:mt-12" style={{ color: resolvedTextColor }}>
           <Zap className="h-3.5 w-3.5" />
           <Link href="/" className="text-xs font-medium hover:opacity-70 transition-opacity">
@@ -547,6 +746,8 @@ export default function PublicBioPage() {
           </Link>
         </div>
       </main>
+
+      <MondiadNativeAd compact className="mt-6" />
 
       <button
         type="button"

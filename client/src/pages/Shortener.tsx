@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MondiadNativeAd from "@/components/MondiadNativeAd";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
@@ -313,6 +314,7 @@ export default function Shortener() {
         </div>
       </div>
 
+      <MondiadNativeAd className="pb-10" />
       <Footer />
     </div>
   );

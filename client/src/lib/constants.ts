@@ -76,7 +76,7 @@ export const LOCATION_LINK_PRESETS = [
     platform: "google_maps",
     label: "Google Maps Konumu",
     color: "#4285F4",
-    logoUrl: "https://www.google.com/s2/favicons?domain_url=https://www.google.com/maps&sz=128",
+    logoUrl: "https://www.gstatic.com/images/branding/product/2x/maps_96dp.png",
     placeholder: "https://maps.google.com/?q=Istanbul+Kadikoy",
   },
   {
@@ -84,7 +84,7 @@ export const LOCATION_LINK_PRESETS = [
     platform: "yandex_maps",
     label: "Yandex Maps Konumu",
     color: "#FC3F1D",
-    logoUrl: "https://www.google.com/s2/favicons?domain_url=https://yandex.com/maps&sz=128",
+    logoUrl: "https://yastatic.net/s3/home-static/_/7/7jGqM0nD1u4M2XyX8X3yqZ7N0.svg",
     placeholder: "https://yandex.com/maps/?text=Istanbul+Kadikoy",
   },
   {
@@ -92,7 +92,7 @@ export const LOCATION_LINK_PRESETS = [
     platform: "apple_maps",
     label: "Apple Maps Konumu",
     color: "#111827",
-    logoUrl: "https://www.google.com/s2/favicons?domain_url=https://www.apple.com&sz=128",
+    logoUrl: "https://www.apple.com/favicon.ico",
     placeholder: "https://maps.apple.com/?q=Istanbul+Kadikoy",
   },
 ] as const;

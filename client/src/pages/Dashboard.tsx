@@ -11,11 +11,12 @@ import { trpc } from "@/lib/trpc";
 import { getBioBackgroundStyle, getBioTheme, safeAccentColor } from "@/lib/constants";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PageAnalyticsDialog } from "@/components/dashboard/PageAnalyticsDialog";
 import { toast } from "sonner";
 import {
   Plus, Edit2, Trash2, Eye, ExternalLink,
   Globe, Loader2, LayoutDashboard, Link2, QrCode,
-  MousePointerClick, PauseCircle, PlayCircle, UserRound, Trophy
+  MousePointerClick, PauseCircle, PlayCircle, UserRound, Trophy, BarChart3
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -27,6 +28,7 @@ export default function Dashboard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [analyticsPageId, setAnalyticsPageId] = useState<number | null>(null);
   const [newSlug, setNewSlug] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [displayName, setDisplayName] = useState(user?.name ?? "");
@@ -34,6 +36,9 @@ export default function Dashboard() {
 
   const { data: pages, isLoading } = trpc.bioPages.list.useQuery(undefined, {
     enabled: isAuthenticated,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
   });
   const pageCount = pages?.length ?? 0;
   const totalViews = pages?.reduce((sum, page) => sum + (page.views ?? 0), 0) ?? 0;
@@ -41,8 +46,11 @@ export default function Dashboard() {
   const todayClicks = pages?.reduce((sum, page) => sum + (page.todayClicks ?? 0), 0) ?? 0;
   const todayViews = pages?.reduce((sum, page) => sum + (page.todayViews ?? 0), 0) ?? 0;
   const bestPage = pages?.slice().sort((a, b) => (b.totalClicks ?? 0) - (a.totalClicks ?? 0))[0];
-  const chartValues = [32, 46, 38, 58, 48, 72, Math.max(28, Math.min(92, todayClicks + 28))];
+  const chartValues = todayClicks === 0
+    ? Array.from({ length: 7 }, () => 6)
+    : [32, 46, 38, 58, 48, 72, Math.max(28, Math.min(92, todayClicks + 28))];
   const reachedPageLimit = pageCount >= MAX_BIO_PAGES;
+  const analyticsPage = pages?.find((page) => page.id === analyticsPageId) ?? null;
 
   const { data: slugCheck } = trpc.bioPages.checkSlug.useQuery(
     { slug: newSlug },
@@ -285,6 +293,9 @@ export default function Dashboard() {
               {pages.map((page) => {
                 const theme = getBioTheme(page.theme);
                 const accent = safeAccentColor(page.accentColor, theme.accent);
+                const pageBars = (page.todayClicks ?? 0) === 0 && (page.todayViews ?? 0) === 0
+                  ? Array.from({ length: 7 }, () => 16)
+                  : [18, 24, 21, 32, 28, 36, Math.min(86, 22 + (page.todayClicks ?? 0) * 6 + (page.todayViews ?? 0) * 2)];
 
                 return (
                 <div key={page.id} className="panel-strong group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_0_34px_rgba(214,255,0,0.08)]">
@@ -312,7 +323,16 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="mb-4 flex h-12 items-end gap-1.5 rounded-xl border border-border/30 bg-background/35 px-3 py-2">{chartValues.slice(0, 7).map((value, index) => (<span key={index} className="mini-chart-bar flex-1 rounded-t bg-primary/75" style={{ height: `${Math.max(24, value - index * 3)}%`, animationDelay: `${index * 60}ms` }} />))}</div><div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="mb-4 flex h-12 items-end gap-1.5 rounded-xl border border-border/30 bg-background/35 px-3 py-2">
+                    {pageBars.map((value, index) => (
+                      <span
+                        key={index}
+                        className="mini-chart-bar flex-1 rounded-t bg-primary/75"
+                        style={{ height: `${value}%`, animationDelay: `${index * 60}ms` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
                     <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                         <Eye className="h-3.5 w-3.5" />
@@ -337,6 +357,15 @@ export default function Dashboard() {
                         Düzenle
                       </Button>
                     </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-border/50 text-xs"
+                      onClick={() => setAnalyticsPageId(page.id)}
+                    >
+                      <BarChart3 className="h-3 w-3 mr-1.5" />
+                      Analiz
+                    </Button>
                     <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer">
                       <Button variant="outline" size="sm" className="border-border/50 text-xs">
                         <Eye className="h-3 w-3" />
@@ -370,6 +399,19 @@ export default function Dashboard() {
       </div>
 
       <Footer />
+
+      <PageAnalyticsDialog
+        open={analyticsPageId !== null}
+        onOpenChange={(open) => {
+          if (!open) setAnalyticsPageId(null);
+        }}
+        pageId={analyticsPage?.id ?? null}
+        pageTitle={analyticsPage?.title ?? "Bio sayfasi"}
+        totalViews={analyticsPage?.views ?? 0}
+        totalClicks={analyticsPage?.totalClicks ?? 0}
+        todayViews={analyticsPage?.todayViews ?? 0}
+        todayClicks={analyticsPage?.todayClicks ?? 0}
+      />
 
       {/* Create Dialog */}
       <Dialog open={profileOpen} onOpenChange={setProfileOpen}>

@@ -1,40 +1,73 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MondiadNativeAd from "@/components/MondiadNativeAd";
+
+const sections = [
+  {
+    title: "Toplanan Bilgiler",
+    text: "llinktr, hizmeti sunmak için gerekli olan sınırlı bilgileri işler. Bu bilgiler; kullanıcı adı, e-posta adresi, hesap ayarları, bio sayfası içerikleri, kısa bağlantılar, QR kod verileri ve temel kullanım kayıtlarını içerebilir.",
+  },
+  {
+    title: "Bilgilerin Kullanım Amaçları",
+    text: "Bilgileriniz hesap oluşturma, oturum yönetimi, bio sayfası yayınlama, kısa link ve QR kod hizmetlerini çalıştırma, güvenliği sağlama, destek taleplerini yanıtlama ve hizmet kalitesini iyileştirme amaçlarıyla kullanılır.",
+  },
+  {
+    title: "Hesap ve Profil Bilgileri",
+    text: "Profil adı, açıklama, görseller ve hesabınıza bağlı ayarlar sizin tarafınızdan yönetilir. Bu bilgiler bio sayfanız yayındaysa ziyaretçiler tarafından görüntülenebilir.",
+  },
+  {
+    title: "Link, QR Kod ve Kısa URL Verileri",
+    text: "Eklediğiniz bağlantılar, oluşturduğunuz kısa URL'ler ve QR kodlar hizmetin çalışması için saklanır. Kullanıcı, kendi eklediği bağlantı ve içeriklerin doğruluğundan ve hukuka uygunluğundan sorumludur.",
+  },
+  {
+    title: "Çerezler ve Analitik",
+    text: "Oturumun güvenli şekilde yürütülmesi, tercihlerin hatırlanması ve hizmet performansının anlaşılması için çerezler kullanılabilir. Çerez ayarlarınızı tarayıcınız üzerinden yönetebilirsiniz.",
+  },
+  {
+    title: "Verilerin Güvenliği",
+    text: "Kişisel verilerin güvenliği için makul teknik ve idari önlemler uygulanır. Ancak internet üzerinden veri aktarımının tamamen risksiz olmadığı unutulmamalıdır.",
+  },
+  {
+    title: "Üçüncü Taraf Bağlantılar",
+    text: "Bio sayfalarınızda veya kısa linklerinizde üçüncü taraf sitelere yönlendirme bulunabilir. Bu sitelerin gizlilik uygulamalarından llinktr sorumlu değildir.",
+  },
+  {
+    title: "Kullanıcı Hakları",
+    text: "Kullanıcılar kişisel verilerine erişme, düzeltme, silme, işlemeye itiraz etme ve mevzuat kapsamındaki diğer haklarını kullanma talebinde bulunabilir.",
+  },
+  {
+    title: "Veri Saklama Süresi",
+    text: "Veriler, hizmetin sağlanması için gerekli süre boyunca ve yasal yükümlülüklerin gerektirdiği ölçüde saklanır. Hesap silme taleplerinde ilgili veriler süreç tamamlandıktan sonra uygun şekilde işleme alınır.",
+  },
+  {
+    title: "İletişim",
+    text: "Gizlilik politikası veya kişisel verilerinizle ilgili sorularınız için iletişim sayfası üzerinden bizimle bağlantıya geçebilirsiniz.",
+  },
+];
 
 export default function Privacy() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
-      <div className="flex-1 container py-12 max-w-3xl">
-        <h1 className="text-3xl font-bold mb-2">Gizlilik Politikası</h1>
-        <p className="text-muted-foreground mb-8">Son güncelleme: Nisan 2026</p>
-        <div className="prose prose-invert max-w-none space-y-6 text-muted-foreground">
-          <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">1. Toplanan Bilgiler</h2>
-            <p>llinktr, hizmetlerimizi sağlamak amacıyla yalnızca gerekli bilgileri toplar. Bu bilgiler; hesap oluşturma sırasında sağladığınız ad ve e-posta adresi, oluşturduğunuz bio sayfaları ve içerikleri, kısalttığınız linkler ve oluşturduğunuz QR kodlara ilişkin verileri kapsar.</p>
-          </section>
-          <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">2. Bilgilerin Kullanımı</h2>
-            <p>Topladığımız bilgileri; hizmetlerimizi sunmak ve geliştirmek, hesabınızı yönetmek, teknik destek sağlamak ve güvenliği korumak amacıyla kullanırız. Kişisel verilerinizi üçüncü taraflarla satmaz veya kiralamayız.</p>
-          </section>
-          <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">3. Veri Güvenliği</h2>
-            <p>Verilerinizin güvenliğini sağlamak için endüstri standardı şifreleme ve güvenlik protokolleri kullanıyoruz. Tüm veriler güvenli sunucularda saklanmaktadır.</p>
-          </section>
-          <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">4. Çerezler</h2>
-            <p>Oturum yönetimi ve kullanıcı deneyimini iyileştirmek için çerezler kullanıyoruz. Tarayıcı ayarlarınızdan çerezleri devre dışı bırakabilirsiniz, ancak bu bazı özelliklerin çalışmamasına neden olabilir.</p>
-          </section>
-          <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">5. Haklarınız</h2>
-            <p>KVKK kapsamında; verilerinize erişme, düzeltme, silme ve taşıma haklarına sahipsiniz. Bu haklarınızı kullanmak için bizimle iletişime geçebilirsiniz.</p>
-          </section>
-          <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">6. İletişim</h2>
-            <p>Gizlilik politikamız hakkında sorularınız için <a href="/contact" className="text-primary hover:underline">iletişim sayfamızı</a> ziyaret edebilirsiniz.</p>
-          </section>
+      <main className="container max-w-4xl flex-1 py-12">
+        <h1 className="mb-2 text-3xl font-bold md:text-5xl">Gizlilik Politikası</h1>
+        <p className="mb-8 text-sm text-muted-foreground">Son güncelleme: Nisan 2026</p>
+        <div className="mb-8 rounded-2xl border border-border/50 bg-card p-6 text-muted-foreground">
+          <p className="leading-relaxed">
+            llinktr, kullanıcılarının gizliliğine önem verir ve yalnızca hizmeti sunmak için gerekli bilgileri işler. Kişisel veriler üçüncü taraflara satılmaz. Kullanıcılar, platforma ekledikleri içeriklerden ve bağlantılardan kendileri sorumludur.
+          </p>
         </div>
-      </div>
+        <div className="space-y-5">
+          {sections.map((section, index) => (
+            <section key={section.title} className="rounded-2xl border border-border/50 bg-card p-6">
+              <h2 className="mb-3 text-xl font-semibold">{index + 1}. {section.title}</h2>
+              <p className="leading-relaxed text-muted-foreground">{section.text}</p>
+            </section>
+          ))}
+        </div>
+        <p className="mt-8 text-xs text-muted-foreground">Bu ücretsiz araç Silahşör Ağı tarafından sunulmaktadır.</p>
+      </main>
+      <MondiadNativeAd className="pb-10" />
       <Footer />
     </div>
   );
