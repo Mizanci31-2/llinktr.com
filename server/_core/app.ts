@@ -20,6 +20,44 @@ export function createApp() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
+  app.get("/api/resolve-map-url", async (req, res) => {
+    const rawUrl = String(req.query.url || "").trim();
+    let url: URL;
+
+    try {
+      url = new URL(rawUrl);
+    } catch {
+      res.status(400).json({ message: "Gecersiz konum linki" });
+      return;
+    }
+
+    const allowedHosts = new Set([
+      "maps.app.goo.gl",
+      "goo.gl",
+      "www.google.com",
+      "google.com",
+      "maps.google.com",
+      "maps.apple.com",
+    ]);
+
+    if (!allowedHosts.has(url.hostname.toLowerCase())) {
+      res.status(400).json({ message: "Desteklenmeyen konum linki" });
+      return;
+    }
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        redirect: "follow",
+      });
+
+      res.json({ url: response.url || url.toString() });
+    } catch (err) {
+      console.error("[MapResolve] Error:", err);
+      res.status(502).json({ message: "Konum linki cozumlenemedi" });
+    }
+  });
+
   app.get("/r/:code", async (req, res) => {
     const { code } = req.params;
     try {

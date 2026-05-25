@@ -2117,6 +2117,38 @@ function createApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  app.get("/api/resolve-map-url", async (req, res) => {
+    const rawUrl = String(req.query.url || "").trim();
+    let url;
+    try {
+      url = new URL(rawUrl);
+    } catch {
+      res.status(400).json({ message: "Gecersiz konum linki" });
+      return;
+    }
+    const allowedHosts = /* @__PURE__ */ new Set([
+      "maps.app.goo.gl",
+      "goo.gl",
+      "www.google.com",
+      "google.com",
+      "maps.google.com",
+      "maps.apple.com"
+    ]);
+    if (!allowedHosts.has(url.hostname.toLowerCase())) {
+      res.status(400).json({ message: "Desteklenmeyen konum linki" });
+      return;
+    }
+    try {
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        redirect: "follow"
+      });
+      res.json({ url: response.url || url.toString() });
+    } catch (err) {
+      console.error("[MapResolve] Error:", err);
+      res.status(502).json({ message: "Konum linki cozumlenemedi" });
+    }
+  });
   app.post("/api/contact-messages", async (req, res) => {
     try {
       const name = sanitizeContactText(req.body?.name, 80);
@@ -2187,7 +2219,7 @@ function createApp() {
     }
     try {
       const block = await getBioBlockById(blockId);
-      if (!block || !block.isEnabled || !["link", "social"].includes(block.type)) {
+      if (!block || !block.isEnabled || !["link", "social", "location"].includes(block.type)) {
         res.status(404).send("Link bulunamadi");
         return;
       }

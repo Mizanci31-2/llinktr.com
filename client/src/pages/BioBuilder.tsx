@@ -8,6 +8,16 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -408,6 +418,11 @@ function detectMapProvider(rawUrl: string) {
   return "auto_maps";
 }
 
+function isShortGoogleMapUrl(rawUrl: string) {
+  const value = rawUrl.toLowerCase();
+  return value.includes("maps.app.goo.gl") || value.includes("goo.gl/maps");
+}
+
 function parseCoordinatePair(value: string) {
   const match = value.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
   if (!match) return null;
@@ -421,12 +436,13 @@ function parseCoordinatePair(value: string) {
 function extractCoordinatesFromMapUrl(rawUrl: string) {
   const value = rawUrl.trim();
   if (!value) return null;
-  let decoded = value;
+  let decoded = value.replace(/\+/g, " ");
   try {
-    decoded = decodeURIComponent(value);
+    decoded = decodeURIComponent(decoded);
   } catch {
     decoded = value;
   }
+
   const patterns = [
     /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
     /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
@@ -444,8 +460,21 @@ function extractCoordinatesFromMapUrl(rawUrl: string) {
   return parseCoordinatePair(decoded);
 }
 
+async function resolveMapUrl(rawUrl: string) {
+  if (!isShortGoogleMapUrl(rawUrl)) return rawUrl;
+
+  try {
+    const response = await fetch(`/api/resolve-map-url?url=${encodeURIComponent(rawUrl)}`);
+    if (!response.ok) return rawUrl;
+    const payload = (await response.json()) as { url?: string };
+    return payload.url || rawUrl;
+  } catch {
+    return rawUrl;
+  }
+}
+
 function getValidCoordinates(data: Record<string, string | boolean | number> | null | undefined) {
-  if (!data) return "";
+  if (!data) return null;
   const lat = String(data.lat || "").trim();
   const lng = String(data.lng || "").trim();
   if (!lat || !lng) return null;
@@ -673,6 +702,7 @@ function BlockEditor({
   const locationProvider = block.type === "location" && block.data.provider === "auto_maps" && locationUrl ? detectMapProvider(locationUrl) : String(block.data.provider || "auto_maps");
   const locationUsesLink = block.type === "location" && Boolean(locationUrl) && block.data.addressMode !== "address";
   const locationValidationMessage = block.type === "location" ? getCoordinateValidationMessage(block.data) : "";
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
 
   const handleImageUpload = (file?: File) => {
     if (!file) return;
@@ -794,32 +824,35 @@ function BlockEditor({
     onChange(withInlineSocialAccounts(block.data, accounts));
   };
 
-  const findLocationFromUrl = () => {
+  const findLocationFromUrl = async () => {
     const rawUrl = String(block.data.url || "").trim();
     if (!rawUrl) {
       toast.error("Once konum linki girin.");
       return;
     }
 
-    const detectedProvider = detectMapProvider(rawUrl);
-    const coordinates = extractCoordinatesFromMapUrl(rawUrl);
-    if (!coordinates) {
-      if (rawUrl.toLowerCase().includes("maps.app.goo.gl")) {
-        toast.error("Kisaltilmis Google Maps linkinden koordinat okunamadi. Lutfen tam Google Maps linki girin.");
+    setIsResolvingLocation(true);
+    try {
+      const resolvedUrl = await resolveMapUrl(rawUrl);
+      const detectedProvider = detectMapProvider(resolvedUrl);
+      const coordinates = extractCoordinatesFromMapUrl(resolvedUrl);
+      if (!coordinates) {
+        toast.error("Konum linkinden koordinat bulunamadi. Lutfen adres veya koordinat girin.");
         return;
       }
-      toast.error("Konum linkinden koordinat bulunamadi. Lutfen adres veya koordinat girin.");
-      return;
-    }
 
-    onChange({
-      ...block.data,
-      lat: coordinates.lat,
-      lng: coordinates.lng,
-      provider: detectedProvider === "auto_maps" ? block.data.provider || "auto_maps" : detectedProvider,
-      addressMode: "link",
-    });
-    toast.success("Konum bulundu.");
+      onChange({
+        ...block.data,
+        url: resolvedUrl,
+        lat: coordinates.lat,
+        lng: coordinates.lng,
+        provider: detectedProvider === "auto_maps" ? block.data.provider || "auto_maps" : detectedProvider,
+        addressMode: "link",
+      });
+      toast.success("Konum bulundu.");
+    } finally {
+      setIsResolvingLocation(false);
+    }
   };
 
   const addInlineSocialAccount = () => {
@@ -1353,8 +1386,8 @@ function BlockEditor({
                         placeholder={selectedLocationPreset?.placeholder || "https://maps.google.com/?q=..."}
                         className="bg-input border-border/60 text-sm"
                       />
-                      <Button type="button" onClick={findLocationFromUrl} className="shrink-0 bg-primary text-primary-foreground">
-                        Bul
+                      <Button type="button" onClick={findLocationFromUrl} disabled={isResolvingLocation} className="shrink-0 bg-primary text-primary-foreground">
+                        {isResolvingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : "Bul"}
                       </Button>
                     </div>
                     <p className="text-[11px] text-muted-foreground">Google Maps veya Apple Maps linki yapistirin, sonra Bul butonuna basin.</p>
@@ -2155,6 +2188,8 @@ export default function BioBuilder() {
   const [activeThemeCategory, setActiveThemeCategory] = useState<(typeof THEME_CATEGORY_TABS)[number]["id"]>("all");
   const [isPublished, setIsPublished] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
+  const [pendingExitPath, setPendingExitPath] = useState<string | null>(null);
+  const [isUnsavedExitOpen, setIsUnsavedExitOpen] = useState(false);
   const [isAddBlockDialogOpen, setIsAddBlockDialogOpen] = useState(false);
   const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
   const [isProfileMediaModalOpen, setIsProfileMediaModalOpen] = useState(false);
@@ -2219,6 +2254,17 @@ export default function BioBuilder() {
     hydratedPageIdRef.current = pageId;
     setIsDirty(false);
   }, [pageData, isDirty, pageId]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   const updatePageMutation = trpc.bioPages.update.useMutation({
     onSuccess: () => undefined,
@@ -2373,6 +2419,24 @@ export default function BioBuilder() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Kayit sirasinda bir hata olustu. Lutfen tekrar deneyin.");
     }
+  };
+
+  const requestExit = (path = "/dashboard") => {
+    if (!isDirty) {
+      navigate(path);
+      return;
+    }
+
+    setPendingExitPath(path);
+    setIsUnsavedExitOpen(true);
+  };
+
+  const confirmExitWithoutSaving = () => {
+    const targetPath = pendingExitPath || "/dashboard";
+    setIsDirty(false);
+    setIsUnsavedExitOpen(false);
+    setPendingExitPath(null);
+    navigate(targetPath);
   };
 
   const addBlock = (type: BlockType, initialData?: Record<string, string | boolean | number>) => {
@@ -2696,7 +2760,7 @@ export default function BioBuilder() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Sayfa bulunamadi</p>
-          <Button onClick={() => navigate("/dashboard")}>Panele Don</Button>
+          <Button onClick={() => requestExit("/dashboard")}>Panele Don</Button>
         </div>
       </div>
     );
@@ -2712,7 +2776,7 @@ export default function BioBuilder() {
         isPublished={isPublished}
         isSaving={isSaving}
         isDirty={isDirty}
-        onBack={() => navigate("/dashboard")}
+        onBack={() => requestExit("/dashboard")}
         onSave={handleSave}
         onTogglePublished={(checked) => {
           setIsPublished(checked);
@@ -3068,6 +3132,24 @@ export default function BioBuilder() {
               </div>
             </div>
           )}
+          <AlertDialog open={isUnsavedExitOpen} onOpenChange={setIsUnsavedExitOpen}>
+            <AlertDialogContent className="border-border/60 bg-[#111418]">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Kayıt etmeden çıkmak istiyor musunuz?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Kaydedilmemiş değişiklikler var. Evet derseniz değişiklikler kaydedilmeden panel sayfasına dönersiniz.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setPendingExitPath(null)} className="border-border/60">
+                  Hayır, sayfada kal
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={confirmExitWithoutSaving} className="bg-primary text-primary-foreground">
+                  Evet, çık
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
