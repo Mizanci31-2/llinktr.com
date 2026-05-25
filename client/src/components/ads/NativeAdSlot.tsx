@@ -1,7 +1,7 @@
 type NativeAdSlotProps = {
   className?: string;
   compact?: boolean;
-  placement?: "top" | "home-middle";
+  placement?: "footer" | "home-middle" | "dashboard" | "public-link-bottom";
 };
 
 const BLOCKED_AD_ROUTE_PATTERN = /(payment|checkout|billing|odeme|\u00f6deme|plan|subscription|subscribe|success|failed|cancel)/i;
@@ -11,7 +11,7 @@ export function isAdBlockedRoute(pathname?: string) {
   return BLOCKED_AD_ROUTE_PATTERN.test(pathname ?? window.location.pathname);
 }
 
-export default function NativeAdSlot({ className = "", compact = false, placement = "home-middle" }: NativeAdSlotProps) {
+export default function NativeAdSlot({ className = "", compact = false, placement = "footer" }: NativeAdSlotProps) {
   if (isAdBlockedRoute()) return null;
 
   return (
