@@ -16,13 +16,13 @@ export default function NativeAdSlot({ className = "", compact = false, placemen
 
   return (
     <div
-      className={`mx-auto w-full ${compact ? "max-w-[420px]" : "container"} ${className}`}
+      className={`relative z-[1] mx-auto min-h-px w-full overflow-visible ${compact ? "max-w-[420px]" : "container"} ${className}`}
       data-ad-placement={placement}
       aria-label="Reklam alani"
     >
       <div
         data-mndazid="827ce39b-7d7a-4349-8fbc-3d3f12c791c9"
-        className="mx-auto block min-h-0 w-full max-w-full overflow-visible"
+        className="mx-auto block min-h-px w-full max-w-full overflow-visible"
       />
     </div>
   );
