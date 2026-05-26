@@ -9,7 +9,7 @@ import type { BlockType } from "./types";
 interface BlockLibraryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddBlock: (type: BlockType) => void;
+  onAddBlock: (type: BlockType, initialData?: Record<string, string | boolean | number>) => void;
   onAddCommerce: (presetId: string) => void;
   onAddLocation: (presetId: string) => void;
   disabled?: boolean;
@@ -116,10 +116,10 @@ export function BlockLibraryDialog({
                     const Icon = blockIcons[blockType.type] || Sparkles;
                     return (
                       <button
-                        key={blockType.type}
+                        key={`${blockType.type}-${blockType.label}`}
                         type="button"
                         disabled={disabled}
-                        onClick={() => onAddBlock(blockType.type as BlockType)}
+                        onClick={() => onAddBlock(blockType.type as BlockType, "initialData" in blockType ? blockType.initialData : undefined)}
                         className="group flex min-h-[68px] items-start gap-3 rounded-xl border border-border/50 bg-card/80 p-3 text-left transition hover:border-primary/55 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background/70 text-primary transition group-hover:border-primary/45">

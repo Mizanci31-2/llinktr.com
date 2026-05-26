@@ -858,6 +858,13 @@ export default function PublicBioPage() {
             }
 
             if (blockType === "profile_image" && blockData?.url) {
+              if (blockData.kind !== "image") {
+                return (
+                  <div key={block.id} className="flex justify-center py-2">
+                    <img src={String(blockData.url)} alt="Logo" className="h-28 w-28 rounded-full object-cover border" style={{ borderColor: themeConfig.cardBorder }} />
+                  </div>
+                );
+              }
               const aspect = String(blockData.aspect || "1/1");
               const align = String(blockData.align || "center") as "left" | "center" | "right";
               const caption = (blockData.title || blockData.description) ? (

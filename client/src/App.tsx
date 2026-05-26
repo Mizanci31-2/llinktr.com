@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
+import AdcashScripts from "@/components/AdcashScripts";
 import EzoicAd from "@/components/EzoicAd";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -76,6 +77,7 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
+          <AdcashScripts />
           <Suspense fallback={<AppLoading />}>
             <Router />
             <EzoicAd id={EZOIC_PLACEMENTS.footerBottom} className="ezoic-footer-ad" />

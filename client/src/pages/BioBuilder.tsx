@@ -411,7 +411,7 @@ function getBlockSummary(block: LocalBlock) {
   }
 
   if (block.type === "profile_image") {
-    return "Logo veya gorsel blogu";
+    return block.data.kind === "image" ? "Gorsel / fotograf blogu" : "Logo blogu";
   }
 
   return "Bolumler arasina ayirici cizgi ekler";
@@ -1712,6 +1712,32 @@ function BlockEditor({
 
           {block.type === "profile_image" && (
             <div className="space-y-3">
+              {block.data.kind !== "image" ? (
+                <>
+                  {block.data.url && (
+                    <div className="flex justify-center">
+                      <img src={String(block.data.url)} alt="Logo" className="h-24 w-24 rounded-full object-cover border border-border/50" />
+                    </div>
+                  )}
+                  <Input value={String(block.data.url || "")} onChange={(event) => onChange({ ...block.data, url: event.target.value, kind: "logo" })} placeholder="Logo URL'si" className="bg-input border-border/50 text-sm" />
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) => {
+                      handleImageUpload(event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                    className="bg-input border-border/50 text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">JPG, PNG veya WebP. Maksimum dosya: 7 MB.</p>
+                  {block.data.url && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => onChange({ kind: "logo" })} className="w-full border-border/60">
+                      Logo sil
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
               {block.data.url && (
                 <div className="flex justify-center">
                   <img src={String(block.data.url)} alt="Profil resmi" className="h-24 w-24 rounded-2xl object-cover border border-border/50" />
@@ -1773,6 +1799,8 @@ function BlockEditor({
                 <Button type="button" variant="outline" size="sm" onClick={() => onChange({ ...block.data, url: "" })} className="w-full border-border/60">
                   Foto sil
                 </Button>
+              )}
+                </>
               )}
             </div>
           )}
@@ -1976,6 +2004,20 @@ function PreviewCardContents({
     }
 
     if (block.type === "profile_image" && block.data.url) {
+      if (block.data.kind !== "image") {
+        return (
+          <div key={block.tempId} className={isDesktop ? "py-3" : "py-2"}>
+            <div className="flex justify-center">
+              <img
+                src={String(block.data.url)}
+                alt="Logo"
+                className={isDesktop ? "h-28 w-28 rounded-full" : "h-24 w-24 rounded-full"}
+                style={{ objectFit: "cover", border: `2px solid ${themeConfig.cardBorder}`, background: themeConfig.cardBg }}
+              />
+            </div>
+          </div>
+        );
+      }
       const aspect = String(block.data.aspect || "1/1");
       const align = String(block.data.align || "center") as "left" | "center" | "right";
       const image = (
@@ -2558,8 +2600,8 @@ export default function BioBuilder() {
       isEnabled: true,
       clicks: 0,
       data:
-        type === "profile_image" && profileImageUrl
-          ? { url: profileImageUrl }
+        type === "profile_image"
+          ? (initialData || (profileImageUrl ? { url: profileImageUrl, kind: "logo" } : { kind: "logo" }))
           : type === "social"
             ? {
                 placement: "inline",
