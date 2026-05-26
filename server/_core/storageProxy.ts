@@ -33,7 +33,7 @@ export function registerStorageProxy(app: Express) {
     }
 
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(503).json({ message: "Görsel doğrudan tarayıcıda hazırlanacak. Lütfen sayfayı yenileyip tekrar deneyin." });
+      res.status(503).json({ message: "Storage bağlantısı hazır değil. Lütfen Supabase Storage ayarlarını kontrol edin." });
       return;
     }
 

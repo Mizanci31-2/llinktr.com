@@ -1592,7 +1592,7 @@ function registerStorageProxy(app) {
       return;
     }
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(503).json({ message: "G\xF6rsel do\u011Frudan taray\u0131c\u0131da haz\u0131rlanacak. L\xFCtfen sayfay\u0131 yenileyip tekrar deneyin." });
+      res.status(503).json({ message: "Storage ba\u011Flant\u0131s\u0131 haz\u0131r de\u011Fil. L\xFCtfen Supabase Storage ayarlar\u0131n\u0131 kontrol edin." });
       return;
     }
     try {

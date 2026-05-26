@@ -27,29 +27,36 @@ type ContactMessage = {
   createdAt: string;
 };
 
-async function uploadAdminImage(file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase() || "webp";
-  const presignResponse = await fetch("/api/storage/presign-put", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fileName: `admin-home-${Date.now()}.${extension}`,
-      contentType: file.type || "application/octet-stream",
-      size: file.size,
-    }),
-  });
-  const presignData = await presignResponse.json().catch(() => ({}));
-  if (!presignResponse.ok || !presignData.uploadUrl || !presignData.url) {
-    throw new Error(presignData?.message || "Fotoğraf yükleme adresi alınamadı");
+async function uploadAdminImageToSupabase(file: File) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const bucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || import.meta.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "uploads";
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Supabase Storage ayarları eksik. VITE_SUPABASE_URL ve VITE_SUPABASE_ANON_KEY gerekli.");
   }
 
-  const uploadResponse = await fetch(presignData.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type || "application/octet-stream" },
+  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "webp";
+  const storagePath = `admin/home/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+  const baseUrl = String(supabaseUrl).replace(/\/+$/, "");
+  const uploadUrl = `${baseUrl}/storage/v1/object/${bucket}/${storagePath}`;
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      "Content-Type": file.type || "application/octet-stream",
+      "x-upsert": "false",
+    },
     body: file,
   });
-  if (!uploadResponse.ok) throw new Error("Fotoğraf yüklenemedi");
-  return String(presignData.url);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.message || "Fotoğraf Supabase Storage'a yüklenemedi");
+  }
+
+  return `${baseUrl}/storage/v1/object/public/${bucket}/${storagePath}`;
 }
 
 export default function AdminPage() {
@@ -139,7 +146,7 @@ export default function AdminPage() {
 
     setImageUploading(true);
     try {
-      const url = await uploadAdminImage(file);
+      const url = await uploadAdminImageToSupabase(file);
       update({ heroImage: url });
       toast.success("Fotoğraf yüklendi, kaydetmeyi unutma");
     } catch (error) {
