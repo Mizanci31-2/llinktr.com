@@ -401,6 +401,24 @@
     transform-origin: bottom;
     animation: llinktr-rise 700ms ease-out both;
   }
+
+  .mondiad-footer-ad {
+    width: 100%;
+    max-width: 900px;
+    margin: 24px auto 0;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  .mondiad-footer-ad {
+    max-width: 100%;
+    margin-top: 18px;
+    padding: 6px 8px;
+  }
 }
 
 @keyframes llinktr-rise {

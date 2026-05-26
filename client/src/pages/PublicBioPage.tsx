@@ -17,7 +17,6 @@ import {
 import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import { SocialIcon } from "@/components/SocialIcon";
-import NativeAdSlot from "@/components/NativeAdSlot";
 
 type BlockType = "heading" | "description" | "text" | "link" | "social" | "location" | "divider" | "profile_image";
 
@@ -877,8 +876,6 @@ export default function PublicBioPage() {
       >
         <Share2 className="h-5 w-5" />
       </button>
-
-      <NativeAdSlot className="mt-8 border-t border-white/10" />
 
       {shareOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">

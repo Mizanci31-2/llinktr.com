@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import NativeAdSlot from "@/components/NativeAdSlot";
 import { SocialIcon } from "@/components/SocialIcon";
 import { fetchHomeAdminSettings, readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
 import {
@@ -290,12 +289,6 @@ export default function Home() {
                 </Reveal>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="border-b border-white/8 bg-black py-8">
-          <div className="container">
-            <NativeAdSlot className="rounded-[18px] border border-white/10 bg-[#080808]" />
           </div>
         </section>
 
