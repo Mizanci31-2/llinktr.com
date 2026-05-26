@@ -35,6 +35,7 @@ async function uploadAdminImage(file: File) {
     body: JSON.stringify({
       fileName: `admin-home-${Date.now()}.${extension}`,
       contentType: file.type || "application/octet-stream",
+      size: file.size,
     }),
   });
   const presignData = await presignResponse.json().catch(() => ({}));
