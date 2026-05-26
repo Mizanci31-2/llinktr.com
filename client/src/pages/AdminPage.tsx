@@ -6,8 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { ImagePlus, Inbox, Lock, RefreshCw, Save, RotateCcw, Trash2 } from "lucide-react";
-import { HOME_ADMIN_SETTINGS_KEY, defaultHomeAdminSettings, readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
+import { ImagePlus, Inbox, Lock, RefreshCw, RotateCcw, Save, Trash2 } from "lucide-react";
+import {
+  HOME_ADMIN_SETTINGS_KEY,
+  defaultHomeAdminSettings,
+  fetchHomeAdminSettings,
+  readHomeAdminSettings,
+  saveHomeAdminSettings,
+  type HomeAdminSettings,
+} from "@/lib/homeSettings";
+
+const ADMIN_PASSWORD = "247398";
 
 type ContactMessage = {
   id: number;
@@ -18,13 +27,28 @@ type ContactMessage = {
   createdAt: string;
 };
 
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => (typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Dosya okunamadı")));
-    reader.onerror = () => reject(new Error("Dosya okunamadı"));
-    reader.readAsDataURL(file);
+async function uploadAdminImage(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() || "webp";
+  const presignResponse = await fetch("/api/storage/presign-put", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: `admin-home-${Date.now()}.${extension}`,
+      contentType: file.type || "application/octet-stream",
+    }),
   });
+  const presignData = await presignResponse.json().catch(() => ({}));
+  if (!presignResponse.ok || !presignData.uploadUrl || !presignData.url) {
+    throw new Error(presignData?.message || "Fotoğraf yükleme adresi alınamadı");
+  }
+
+  const uploadResponse = await fetch(presignData.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!uploadResponse.ok) throw new Error("Fotoğraf yüklenemedi");
+  return String(presignData.url);
 }
 
 export default function AdminPage() {
@@ -33,6 +57,8 @@ export default function AdminPage() {
   const [settings, setSettings] = useState<HomeAdminSettings>(() => readHomeAdminSettings());
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   useEffect(() => {
     if (unlocked) window.sessionStorage.setItem("llinktr.admin", "1");
@@ -42,7 +68,7 @@ export default function AdminPage() {
     setMessagesLoading(true);
     try {
       const response = await fetch("/api/contact-messages", {
-        headers: { "x-admin-password": "247398" },
+        headers: { "x-admin-password": ADMIN_PASSWORD },
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data?.message || "Mesajlar alınamadı");
@@ -55,22 +81,48 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (unlocked) void loadMessages();
+    if (!unlocked) return;
+
+    void loadMessages();
+    void fetchHomeAdminSettings()
+      .then((nextSettings) => {
+        setSettings(nextSettings);
+        window.localStorage.setItem(HOME_ADMIN_SETTINGS_KEY, JSON.stringify(nextSettings));
+        window.dispatchEvent(new Event("llinktr-home-settings"));
+      })
+      .catch((error) => toast.error(error instanceof Error ? error.message : "Ana sayfa ayarları alınamadı"));
   }, [unlocked]);
 
   const update = (patch: Partial<HomeAdminSettings>) => setSettings((current) => ({ ...current, ...patch }));
 
-  const save = () => {
-    window.localStorage.setItem(HOME_ADMIN_SETTINGS_KEY, JSON.stringify(settings));
-    window.dispatchEvent(new Event("llinktr-home-settings"));
-    toast.success("Ana sayfa ayarları kaydedildi");
+  const save = async () => {
+    setSettingsSaving(true);
+    try {
+      const nextSettings = await saveHomeAdminSettings(settings, ADMIN_PASSWORD);
+      setSettings(nextSettings);
+      window.localStorage.setItem(HOME_ADMIN_SETTINGS_KEY, JSON.stringify(nextSettings));
+      window.dispatchEvent(new Event("llinktr-home-settings"));
+      toast.success("Ana sayfa ayarları kaydedildi");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ana sayfa ayarları kaydedilemedi");
+    } finally {
+      setSettingsSaving(false);
+    }
   };
 
-  const reset = () => {
-    setSettings(defaultHomeAdminSettings);
-    window.localStorage.removeItem(HOME_ADMIN_SETTINGS_KEY);
-    window.dispatchEvent(new Event("llinktr-home-settings"));
-    toast.success("Ana sayfa varsayılana döndü");
+  const reset = async () => {
+    setSettingsSaving(true);
+    try {
+      const nextSettings = await saveHomeAdminSettings(defaultHomeAdminSettings, ADMIN_PASSWORD);
+      setSettings(nextSettings);
+      window.localStorage.setItem(HOME_ADMIN_SETTINGS_KEY, JSON.stringify(nextSettings));
+      window.dispatchEvent(new Event("llinktr-home-settings"));
+      toast.success("Ana sayfa varsayılana döndü");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ayarlar sıfırlanamadı");
+    } finally {
+      setSettingsSaving(false);
+    }
   };
 
   const handleImage = async (file?: File) => {
@@ -79,19 +131,28 @@ export default function AdminPage() {
       toast.error("Lütfen görsel dosyası seçin");
       return;
     }
-    if (file.size > 1_500_000) {
-      toast.error("Hız için görsel en fazla 1.5 MB olmalı");
+    if (file.size > 7_000_000) {
+      toast.error("Görsel en fazla 7 MB olmalı");
       return;
     }
-    update({ heroImage: await fileToDataUrl(file) });
-    toast.success("Görsel eklendi, kaydetmeyi unutma");
+
+    setImageUploading(true);
+    try {
+      const url = await uploadAdminImage(file);
+      update({ heroImage: url });
+      toast.success("Fotoğraf yüklendi, kaydetmeyi unutma");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Fotoğraf yüklenemedi");
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const deleteMessage = async (id: number) => {
     try {
       const response = await fetch(`/api/contact-messages/${id}`, {
         method: "DELETE",
-        headers: { "x-admin-password": "247398" },
+        headers: { "x-admin-password": ADMIN_PASSWORD },
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data?.message || "Mesaj silinemedi");
@@ -110,7 +171,7 @@ export default function AdminPage() {
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              if (password === "247398") setUnlocked(true);
+              if (password === ADMIN_PASSWORD) setUnlocked(true);
               else toast.error("Admin şifresi hatalı");
             }}
             className="w-full max-w-md rounded-[18px] border border-white/10 bg-card p-6 shadow-2xl"
@@ -139,13 +200,13 @@ export default function AdminPage() {
             <p className="mt-1 text-sm text-muted-foreground">Ana sayfa sağ görseli ve hero metinleri.</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={reset}>
+            <Button variant="outline" onClick={() => void reset()} disabled={settingsSaving || imageUploading}>
               <RotateCcw className="h-4 w-4" />
               Sıfırla
             </Button>
-            <Button onClick={save} className="bg-primary font-bold text-primary-foreground">
+            <Button onClick={() => void save()} disabled={settingsSaving || imageUploading} className="bg-primary font-bold text-primary-foreground">
               <Save className="h-4 w-4" />
-              Kaydet
+              {settingsSaving ? "Kaydediliyor" : "Kaydet"}
             </Button>
           </div>
         </div>
@@ -170,9 +231,9 @@ export default function AdminPage() {
                 <Label>Sağ taraf fotoğrafı</Label>
                 <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-background/55 p-5 text-center transition-colors hover:border-primary/45">
                   <ImagePlus className="mb-2 h-6 w-6 text-primary" />
-                  <span className="text-sm font-semibold">Fotoğraf ekle veya değiştir</span>
-                  <span className="mt-1 text-xs text-muted-foreground">PNG, JPG veya WebP. Hız için 1.5 MB altı.</span>
-                  <input type="file" accept="image/*" className="sr-only" onChange={(event) => void handleImage(event.target.files?.[0])} />
+                  <span className="text-sm font-semibold">{imageUploading ? "Fotoğraf yükleniyor..." : "Fotoğraf ekle veya değiştir"}</span>
+                  <span className="mt-1 text-xs text-muted-foreground">PNG, JPG veya WebP. Maksimum 7 MB.</span>
+                  <input disabled={imageUploading} type="file" accept="image/*" className="sr-only" onChange={(event) => void handleImage(event.target.files?.[0])} />
                 </label>
               </div>
             </div>
@@ -216,7 +277,10 @@ export default function AdminPage() {
                     <div className="min-w-0">
                       <h3 className="truncate font-semibold">{item.subject || "Konu belirtilmedi"}</h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {item.name} • <a href={`mailto:${item.email}`} className="text-primary hover:underline">{item.email}</a>
+                        {item.name} •{" "}
+                        <a href={`mailto:${item.email}`} className="text-primary hover:underline">
+                          {item.email}
+                        </a>
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground/80">{new Date(item.createdAt).toLocaleString("tr-TR")}</p>
                     </div>

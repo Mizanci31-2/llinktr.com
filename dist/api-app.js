@@ -113,6 +113,7 @@ var memory = {
   nextBlockId: 1,
   nextShortLinkId: 1,
   nextContactMessageId: 1,
+  homeSettings: null,
   users: [],
   pages: [],
   blocks: [],
@@ -203,6 +204,7 @@ function applyMemorySnapshot(parsed) {
     ...item,
     createdAt: item?.createdAt ? new Date(item.createdAt) : now()
   })) : [];
+  memory.homeSettings = parsed.homeSettings && typeof parsed.homeSettings === "object" ? normalizeHomeSettings(parsed.homeSettings) : memory.homeSettings;
 }
 function hydrateMemorySnapshot() {
   try {
@@ -273,7 +275,6 @@ async function persistMemorySnapshotNow() {
     console.warn("[Database] Remote snapshot save failed:", error);
   }
 }
-hydrateMemorySnapshot();
 function usingMemoryDb() {
   if (!warnedAboutMemoryDb) {
     console.warn("[Database] DATABASE_URL not configured. Using in-memory local demo data.");
@@ -286,6 +287,32 @@ function sanitizeContactText(value, maxLength) {
 function isValidContactEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
+var defaultHomeSettings = {
+  heroTitle: "Tüm linklerini tek sayfada topla",
+  heroSubtitle: "Takipçini müşteriye çevir. Bio sayfanı saniyeler içinde oluştur.",
+  heroProof: "+150 kullanıcı • 250+ link • büyüyor",
+  heroImage: "/images/hero-preview-1.png"
+};
+function normalizeHomeSettings(input) {
+  const value = input && typeof input === "object" ? input : {};
+  return {
+    heroTitle: sanitizeContactText(value.heroTitle, 120) || defaultHomeSettings.heroTitle,
+    heroSubtitle: sanitizeContactText(value.heroSubtitle, 240) || defaultHomeSettings.heroSubtitle,
+    heroProof: sanitizeContactText(value.heroProof, 120) || defaultHomeSettings.heroProof,
+    heroImage: sanitizeContactText(value.heroImage, 2e3) || defaultHomeSettings.heroImage
+  };
+}
+async function getHomeSettings() {
+  await ensureRemoteSnapshotHydrated();
+  return normalizeHomeSettings(memory.homeSettings);
+}
+async function saveHomeSettings(input) {
+  await ensureRemoteSnapshotHydrated();
+  memory.homeSettings = normalizeHomeSettings(input);
+  await persistMemorySnapshotNow();
+  return memory.homeSettings;
+}
+hydrateMemorySnapshot();
 async function createContactMessage(input) {
   usingMemoryDb();
   await ensureRemoteSnapshotHydrated();
@@ -2167,6 +2194,28 @@ function createApp() {
     } catch (err) {
       console.error("[MapResolve] Error:", err);
       res.status(502).json({ message: "Konum linki cozumlenemedi" });
+    }
+  });
+  app.get("/api/home-settings", async (_req, res) => {
+    try {
+      const settings = await getHomeSettings();
+      res.json({ settings });
+    } catch (err) {
+      console.error("[HomeSettings] Read failed:", err);
+      res.status(500).json({ message: "Ana sayfa ayarları alınamadı." });
+    }
+  });
+  app.put("/api/home-settings", async (req, res) => {
+    if (req.headers["x-admin-password"] !== "247398") {
+      res.status(401).json({ message: "Yetkisiz işlem" });
+      return;
+    }
+    try {
+      const settings = await saveHomeSettings(req.body?.settings ?? req.body);
+      res.json({ settings });
+    } catch (err) {
+      console.error("[HomeSettings] Save failed:", err);
+      res.status(500).json({ message: "Ana sayfa ayarları kaydedilemedi." });
     }
   });
   app.post("/api/contact-messages", async (req, res) => {

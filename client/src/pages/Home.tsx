@@ -6,7 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SocialIcon } from "@/components/SocialIcon";
-import { readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
+import { fetchHomeAdminSettings, readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
 import {
   ArrowRight,
   Check,
@@ -155,7 +155,13 @@ export default function Home() {
   const targetHref = isAuthenticated ? "/dashboard" : "/register";
 
   useEffect(() => {
-    const refresh = () => setAdminSettings(readHomeAdminSettings());
+    const refresh = () => {
+      setAdminSettings(readHomeAdminSettings());
+      void fetchHomeAdminSettings()
+        .then((nextSettings) => setAdminSettings(nextSettings))
+        .catch(() => {});
+    };
+    refresh();
     window.addEventListener("storage", refresh);
     window.addEventListener("llinktr-home-settings", refresh);
     return () => {
