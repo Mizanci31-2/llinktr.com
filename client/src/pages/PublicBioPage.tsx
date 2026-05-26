@@ -17,7 +17,6 @@ import {
 import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import { SocialIcon } from "@/components/SocialIcon";
-import NativeAdSlot from "@/components/ads/NativeAdSlot";
 
 type BlockType = "heading" | "description" | "text" | "link" | "social" | "location" | "divider" | "profile_image";
 
@@ -866,7 +865,6 @@ export default function PublicBioPage() {
             llinktr ile sen de paylaş
           </Link>
         </div>
-        <NativeAdSlot placement="public-link-bottom" compact className="mt-6 px-1" />
       </main>
 
       <button

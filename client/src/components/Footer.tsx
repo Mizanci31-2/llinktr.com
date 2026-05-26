@@ -1,11 +1,8 @@
 import { Link } from "wouter";
 import { Instagram, Link2, Mail } from "lucide-react";
-import NativeAdSlot from "@/components/ads/NativeAdSlot";
 
 export default function Footer() {
   return (
-    <>
-    <NativeAdSlot placement="footer" compact className="my-6" />
     <footer className="border-t border-white/10 bg-black">
       <div className="container py-10">
         <div className="grid gap-8 md:grid-cols-[1.25fr_0.8fr_0.8fr_0.8fr]">
@@ -64,6 +61,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-    </>
   );
 }

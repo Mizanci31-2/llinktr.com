@@ -11,7 +11,6 @@ import { trpc } from "@/lib/trpc";
 import { getBioBackgroundStyle, getBioTheme, safeAccentColor } from "@/lib/constants";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import NativeAdSlot from "@/components/ads/NativeAdSlot";
 import { PageAnalyticsDialog } from "@/components/dashboard/PageAnalyticsDialog";
 import { toast } from "sonner";
 import {
@@ -271,8 +270,6 @@ export default function Dashboard() {
             </div>
           </Link>
         </div>
-
-        <NativeAdSlot placement="dashboard" compact className="mb-8 rounded-2xl border border-white/10 bg-card/35 px-4 py-3" />
 
         {/* Bio Pages */}
         <div>
