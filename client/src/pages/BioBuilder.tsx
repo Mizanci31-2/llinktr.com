@@ -245,6 +245,33 @@ function serializeBlocksForSave(blocks: Array<{ id?: number | null; type: string
 }
 
 async function uploadImageFile(file: File) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const bucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || import.meta.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "uploads";
+
+  if (supabaseUrl && supabaseAnonKey) {
+    const extension = file.name.split(".").pop()?.toLowerCase() || "webp";
+    const storagePath = `bio/photos/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+    const baseUrl = String(supabaseUrl).replace(/\/+$/, "");
+    const response = await fetch(`${baseUrl}/storage/v1/object/${bucket}/${storagePath}`, {
+      method: "POST",
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        "Content-Type": file.type || "application/octet-stream",
+        "x-upsert": "false",
+      },
+      body: file,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData?.message || "Foto Supabase Storage'a yuklenemedi");
+    }
+
+    return `${baseUrl}/storage/v1/object/public/${bucket}/${storagePath}`;
+  }
+
   const presignResponse = await fetch("/api/storage/presign-put", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -331,8 +358,9 @@ async function compressImageFile(file: File, label: string) {
 }
 
 function readImageFile(file: File, onLoaded: (url: string) => void, label = "Gorsel") {
-  if (!file.type.startsWith("image/")) {
-    toast.error("Lutfen gecerli bir gorsel dosyasi secin");
+  const allowedTypes = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
+  if (!allowedTypes.has(file.type)) {
+    toast.error("Sadece JPG, PNG veya WebP gorsel yukleyebilirsiniz");
     return;
   }
 
@@ -1683,28 +1711,69 @@ function BlockEditor({
           )}
 
           {block.type === "profile_image" && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {block.data.url && (
                 <div className="flex justify-center">
-                  <img src={String(block.data.url)} alt="Profil resmi" className="h-20 w-20 rounded-full object-cover border border-border/50" />
+                  <img src={String(block.data.url)} alt="Profil resmi" className="h-24 w-24 rounded-2xl object-cover border border-border/50" />
                 </div>
               )}
               <Input
                 value={String(block.data.url || "")}
                 onChange={(event) => onChange({ ...block.data, url: event.target.value })}
-                placeholder="Profil resmi URL'si"
+                placeholder="Foto URL'si"
                 className="bg-input border-border/50 text-sm"
               />
               <Input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={(event) => {
                   handleImageUpload(event.currentTarget.files?.[0]);
                   event.currentTarget.value = "";
                 }}
                 className="bg-input border-border/50 text-sm"
               />
-              <p className="text-xs text-muted-foreground">JPG, PNG veya WebP yukleyebilirsiniz. Ust sinir 5 MB.</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input value={String(block.data.title || "")} onChange={(event) => onChange({ ...block.data, title: event.target.value })} placeholder="Baslik (opsiyonel)" className="bg-input border-border/50 text-sm" />
+                <Select value={String(block.data.textPosition || "below")} onValueChange={(value) => onChange({ ...block.data, textPosition: value })}>
+                  <SelectTrigger className="bg-input border-border/50 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="above">Yazi ustte</SelectItem>
+                    <SelectItem value="below">Yazi altta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Textarea value={String(block.data.description || "")} onChange={(event) => onChange({ ...block.data, description: event.target.value })} placeholder="Aciklama (opsiyonel)" rows={2} className="bg-input border-border/50 text-sm" />
+              <div className="grid gap-2 sm:grid-cols-3">
+                <Select value={String(block.data.aspect || "1/1")} onValueChange={(value) => onChange({ ...block.data, aspect: value })}>
+                  <SelectTrigger className="bg-input border-border/50 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1/1">1:1 kare</SelectItem>
+                    <SelectItem value="4/3">4:3 klasik</SelectItem>
+                    <SelectItem value="16/9">16:9 genis</SelectItem>
+                    <SelectItem value="3/4">3:4 dikey</SelectItem>
+                    <SelectItem value="auto">Orijinal oran</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input type="color" value={String(block.data.titleColor || "#ffffff")} onChange={(event) => onChange({ ...block.data, titleColor: event.target.value })} className="h-10 bg-input p-1" title="Baslik rengi" />
+                <Input type="color" value={String(block.data.descriptionColor || "#d1d5db")} onChange={(event) => onChange({ ...block.data, descriptionColor: event.target.value })} className="h-10 bg-input p-1" title="Aciklama rengi" />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <ToggleGroup type="single" value={String(block.data.align || "center")} onValueChange={(value) => value && onChange({ ...block.data, align: value })} className="grid w-full grid-cols-3">
+                  <ToggleGroupItem value="left" className="text-[10px]">Sol</ToggleGroupItem>
+                  <ToggleGroupItem value="center" className="text-[10px]">Orta</ToggleGroupItem>
+                  <ToggleGroupItem value="right" className="text-[10px]">Sag</ToggleGroupItem>
+                </ToggleGroup>
+                <label className="flex items-center justify-between rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-xs">
+                  Acilir pencere
+                  <Switch checked={Boolean(block.data.openInModal)} onCheckedChange={(checked) => onChange({ ...block.data, openInModal: checked })} />
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">Onerilen: 1:1 800x800, 4:3 1200x900, 16:9 1280x720, 3:4 900x1200. Maksimum dosya: 7 MB.</p>
+              {block.data.url && (
+                <Button type="button" variant="outline" size="sm" onClick={() => onChange({ ...block.data, url: "" })} className="w-full border-border/60">
+                  Foto sil
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -1907,20 +1976,32 @@ function PreviewCardContents({
     }
 
     if (block.type === "profile_image" && block.data.url) {
+      const aspect = String(block.data.aspect || "1/1");
+      const align = String(block.data.align || "center") as "left" | "center" | "right";
+      const image = (
+        <img
+          src={String(block.data.url)}
+          alt={String(block.data.title || "Foto")}
+          className="w-full rounded-2xl border object-cover"
+          style={{
+            aspectRatio: aspect === "auto" ? "auto" : aspect,
+            borderColor: themeConfig.cardBorder,
+            background: themeConfig.cardBg,
+          }}
+        />
+      );
+      const caption = (block.data.title || block.data.description) ? (
+        <div className="space-y-1" style={{ textAlign: align }}>
+          {block.data.title && <h3 className="text-sm font-bold" style={{ color: String(block.data.titleColor || resolvedTextColor) }}>{block.data.title}</h3>}
+          {block.data.description && <p className="text-xs leading-relaxed" style={{ color: String(block.data.descriptionColor || resolvedTextColor) }}>{block.data.description}</p>}
+        </div>
+      ) : null;
       return (
         <div key={block.tempId} className={isDesktop ? "py-3" : "py-2"}>
-          <div className="flex justify-center">
-            <img
-              src={String(block.data.url)}
-              alt="Logo"
-              className={isDesktop ? "h-28 w-28" : "h-24 w-24"}
-              style={{
-                objectFit: "cover",
-                borderRadius: "9999px",
-                border: `2px solid ${themeConfig.cardBorder}`,
-                background: themeConfig.cardBg,
-              }}
-            />
+          <div className={`mx-auto max-w-full space-y-2 ${isDesktop ? "w-[82%]" : "w-full"}`}>
+            {block.data.textPosition === "above" && caption}
+            {image}
+            {block.data.textPosition !== "above" && caption}
           </div>
         </div>
       );

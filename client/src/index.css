@@ -414,7 +414,9 @@
   }
 
   .ezoic-footer-ad {
-    margin: 24px auto 0;
+    margin: 0 auto;
+    padding-bottom: 8px;
+    min-height: 0;
   }
 
   .ezoic-homepage-middle-ad {

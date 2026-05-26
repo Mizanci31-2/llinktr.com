@@ -247,6 +247,7 @@ export default function PublicBioPage() {
   );
   const pageUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/${slug}` : "";
   const [shareOpen, setShareOpen] = useState(false);
+  const [photoModal, setPhotoModal] = useState<{ url: string; title?: string; description?: string } | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -465,6 +466,15 @@ export default function PublicBioPage() {
       isMounted = false;
     };
   }, [shareOpen, pageUrl]);
+
+  useEffect(() => {
+    if (!photoModal) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPhotoModal(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [photoModal]);
 
   const copyShareLink = async () => {
     if (!pageUrl) return;
@@ -848,9 +858,37 @@ export default function PublicBioPage() {
             }
 
             if (blockType === "profile_image" && blockData?.url) {
+              const aspect = String(blockData.aspect || "1/1");
+              const align = String(blockData.align || "center") as "left" | "center" | "right";
+              const caption = (blockData.title || blockData.description) ? (
+                <div className="space-y-1" style={{ textAlign: align }}>
+                  {blockData.title && <h3 className="text-sm font-bold md:text-base" style={{ color: String(blockData.titleColor || resolvedTextColor) }}>{blockData.title}</h3>}
+                  {blockData.description && <p className="text-xs leading-relaxed md:text-sm" style={{ color: String(blockData.descriptionColor || resolvedTextColor) }}>{blockData.description}</p>}
+                </div>
+              ) : null;
+              const image = (
+                <img
+                  src={String(blockData.url)}
+                  alt={String(blockData.title || "Foto")}
+                  className="w-full rounded-2xl object-cover border"
+                  style={{ aspectRatio: aspect === "auto" ? "auto" : aspect, borderColor: themeConfig.cardBorder }}
+                />
+              );
               return (
-                <div key={block.id} className="flex justify-center py-2">
-                  <img src={String(blockData.url)} alt="Profil resmi" className="w-28 h-28 rounded-full object-cover border" style={{ borderColor: themeConfig.cardBorder }} />
+                <div key={block.id} className="py-2">
+                  <div className="mx-auto w-full max-w-md space-y-2">
+                    {blockData.textPosition === "above" && caption}
+                    {blockData.openInModal ? (
+                      <button
+                        type="button"
+                        className="block w-full overflow-hidden rounded-2xl transition hover:scale-[1.01] active:scale-[0.99]"
+                        onClick={() => setPhotoModal({ url: String(blockData.url), title: String(blockData.title || ""), description: String(blockData.description || "") })}
+                      >
+                        {image}
+                      </button>
+                    ) : image}
+                    {blockData.textPosition !== "above" && caption}
+                  </div>
                 </div>
               );
             }
@@ -945,6 +983,28 @@ export default function PublicBioPage() {
             <Link href="/" className="mt-4 block text-center text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900">
               llinktr ile sen de paylaş
             </Link>
+          </div>
+        </div>
+      )}
+
+      {photoModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-3 py-4 backdrop-blur-sm" onClick={() => setPhotoModal(null)}>
+          <div className="relative w-full max-w-4xl" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setPhotoModal(null)}
+              className="absolute right-3 top-3 z-10 rounded-full border border-white/15 bg-black/70 p-2 text-white"
+              aria-label="Kapat"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img src={photoModal.url} alt={photoModal.title || "Foto"} className="max-h-[82svh] w-full rounded-2xl object-contain" />
+            {(photoModal.title || photoModal.description) && (
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/65 p-4 text-white">
+                {photoModal.title && <h3 className="font-bold">{photoModal.title}</h3>}
+                {photoModal.description && <p className="mt-1 text-sm text-white/75">{photoModal.description}</p>}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import {
   Plus, Edit2, Trash2, Eye, ExternalLink,
   Globe, Loader2, LayoutDashboard, Link2, QrCode,
-  MousePointerClick, PauseCircle, PlayCircle, UserRound, Trophy, BarChart3
+  MousePointerClick, PauseCircle, PlayCircle, UserRound, Trophy, BarChart3, Search, Users, TrendingUp, FileText
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -46,11 +46,44 @@ export default function Dashboard() {
   const todayClicks = pages?.reduce((sum, page) => sum + (page.todayClicks ?? 0), 0) ?? 0;
   const todayViews = pages?.reduce((sum, page) => sum + (page.todayViews ?? 0), 0) ?? 0;
   const bestPage = pages?.slice().sort((a, b) => (b.totalClicks ?? 0) - (a.totalClicks ?? 0))[0];
+  const activePages = pages?.filter((page) => page.isPublished).length ?? 0;
+  const dailyChange = totalViews > 0 ? Math.round(((todayViews + todayClicks) / Math.max(totalViews + totalClicks, 1)) * 100) : 0;
   const chartValues = todayClicks === 0
     ? Array.from({ length: 7 }, () => 6)
     : [32, 46, 38, 58, 48, 72, Math.max(28, Math.min(92, todayClicks + 28))];
   const reachedPageLimit = pageCount >= MAX_BIO_PAGES;
   const analyticsPage = pages?.find((page) => page.id === analyticsPageId) ?? null;
+  const [pageSearch, setPageSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
+  const [sortBy, setSortBy] = useState<"created" | "views" | "clicks" | "title">("created");
+  const [tablePage, setTablePage] = useState(1);
+  const pageSize = 6;
+  const metricCards = [
+    { label: "Bugun tiklama", value: todayClicks, icon: MousePointerClick, note: "Son 24 saatlik tiklama", bars: chartValues },
+    { label: "Bugun goruntuleme", value: todayViews, icon: Eye, note: "Bugun alinan ziyaret", bars: [18, 30, 24, 42, 38, 52, Math.max(16, Math.min(88, todayViews + 20))] },
+    { label: "Toplam goruntulenme", value: totalViews, icon: Eye, note: "Tum sayfalar", bars: [24, 32, 38, 46, 54, 62, 72] },
+    { label: "En iyi link", value: bestPage?.title || "Yok", icon: Trophy, note: bestPage ? `${bestPage.totalClicks ?? 0} tiklama` : "Ilk sayfani olustur", bars: [20, 28, 36, 48, 62, 78, 92] },
+    { label: "Toplam link sayfasi", value: pageCount, icon: FileText, note: `${MAX_BIO_PAGES} sayfa limitinden`, bars: [12, 18, 24, 36, 48, 58, 66] },
+    { label: "Aktif kullanici", value: activePages, icon: Users, note: "Yayindaki sayfalar", bars: [14, 22, 34, 38, 46, 54, 64] },
+    { label: "Gunluk degisim", value: `%${dailyChange}`, icon: TrendingUp, note: "Bugun / toplam oran", bars: [18, 20, 26, 34, 44, 52, Math.max(18, Math.min(92, dailyChange + 18))] },
+  ];
+  const filteredPages = useMemo(() => {
+    const query = pageSearch.trim().toLocaleLowerCase("tr-TR");
+    return [...(pages ?? [])]
+      .filter((page) => {
+        const matchesStatus = statusFilter === "all" || (statusFilter === "published" ? page.isPublished : !page.isPublished);
+        const matchesQuery = !query || `${page.title} ${page.slug}`.toLocaleLowerCase("tr-TR").includes(query);
+        return matchesStatus && matchesQuery;
+      })
+      .sort((a, b) => {
+        if (sortBy === "views") return (b.views ?? 0) - (a.views ?? 0);
+        if (sortBy === "clicks") return (b.totalClicks ?? 0) - (a.totalClicks ?? 0);
+        if (sortBy === "title") return String(a.title).localeCompare(String(b.title), "tr");
+        return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+      });
+  }, [pageSearch, pages, sortBy, statusFilter]);
+  const totalTablePages = Math.max(1, Math.ceil(filteredPages.length / pageSize));
+  const visibleTablePages = filteredPages.slice((tablePage - 1) * pageSize, tablePage * pageSize);
 
   const { data: slugCheck } = trpc.bioPages.checkSlug.useQuery(
     { slug: newSlug },
@@ -202,7 +235,30 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {metricCards.map((card, cardIndex) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.label} className="panel-strong rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(18,24,32,0.98),rgba(12,14,16,0.96))] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="min-w-0 text-sm text-muted-foreground">{card.label}</p>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
+                    <Icon className="h-4 w-4 text-primary" />
+                  </span>
+                </div>
+                <p className="truncate text-3xl font-black tracking-tight sm:text-4xl">{card.value}</p>
+                <p className="mt-2 truncate text-xs text-muted-foreground">{card.note}</p>
+                <div className="mt-5 flex h-10 items-end gap-1.5">
+                  {card.bars.map((value, index) => (
+                    <span key={`${card.label}-${index}`} className="mini-chart-bar flex-1 rounded-t bg-primary/80" style={{ height: `${value}%`, animationDelay: `${(index + cardIndex) * 45}ms` }} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="hidden">
           <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Bugün tıklama</p>
@@ -270,6 +326,104 @@ export default function Dashboard() {
             </div>
           </Link>
         </div>
+
+        <section className="mb-8 rounded-2xl border border-white/10 bg-card/95 p-4 panel-strong sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Sayfa performansi</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Link sayfalarini ara, filtrele ve hizli karsilastir.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_150px_150px]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={pageSearch} onChange={(event) => { setPageSearch(event.target.value); setTablePage(1); }} placeholder="Sayfa ara" className="h-10 bg-input pl-9" />
+              </div>
+              <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as typeof statusFilter); setTablePage(1); }} className="h-10 rounded-md border border-border bg-input px-3 text-sm">
+                <option value="all">Tum durumlar</option>
+                <option value="published">Yayinda</option>
+                <option value="draft">Taslak</option>
+              </select>
+              <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="h-10 rounded-md border border-border bg-input px-3 text-sm">
+                <option value="created">Tarihe gore</option>
+                <option value="views">Goruntulenme</option>
+                <option value="clicks">Tiklama</option>
+                <option value="title">Ada gore</option>
+              </select>
+            </div>
+          </div>
+
+          {filteredPages.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border/60 bg-background/45 py-10 text-center">
+              <Globe className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+              <p className="font-semibold">Bu filtreyle sayfa bulunamadi</p>
+              <p className="mt-1 text-sm text-muted-foreground">Aramayi veya filtreyi degistirin.</p>
+            </div>
+          ) : (
+            <>
+              <div className="hidden overflow-hidden rounded-2xl border border-border/60 md:block">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3">Link adi</th>
+                      <th className="px-4 py-3">Goruntuleme</th>
+                      <th className="px-4 py-3">Tiklama</th>
+                      <th className="px-4 py-3">Tarih</th>
+                      <th className="px-4 py-3">Durum</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {visibleTablePages.map((page) => (
+                      <tr key={page.id} className="bg-background/30 transition-colors hover:bg-primary/5">
+                        <td className="px-4 py-3">
+                          <p className="font-semibold">{page.title}</p>
+                          <p className="text-xs text-muted-foreground">llinktr.com/{page.slug}</p>
+                        </td>
+                        <td className="px-4 py-3 font-semibold">{page.views ?? 0}</td>
+                        <td className="px-4 py-3 font-semibold">{page.totalClicks ?? 0}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{new Date(page.createdAt ?? Date.now()).toLocaleDateString("tr-TR")}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${page.isPublished ? "bg-primary/10 text-primary" : "bg-white/10 text-muted-foreground"}`}>
+                            {page.isPublished ? "Yayinda" : "Taslak"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid gap-3 md:hidden">
+                {visibleTablePages.map((page) => (
+                  <article key={page.id} className="rounded-2xl border border-border/60 bg-background/40 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold">{page.title}</h3>
+                        <p className="truncate text-xs text-muted-foreground">llinktr.com/{page.slug}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${page.isPublished ? "bg-primary/10 text-primary" : "bg-white/10 text-muted-foreground"}`}>
+                        {page.isPublished ? "Yayinda" : "Taslak"}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="rounded-xl bg-white/[0.04] p-2"><b className="block text-base">{page.views ?? 0}</b>Gor.</div>
+                      <div className="rounded-xl bg-white/[0.04] p-2"><b className="block text-base">{page.totalClicks ?? 0}</b>Tik.</div>
+                      <div className="rounded-xl bg-white/[0.04] p-2"><b className="block text-base">{new Date(page.createdAt ?? Date.now()).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" })}</b>Tarih</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">{filteredPages.length} kayit icinden {visibleTablePages.length} gosteriliyor.</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={tablePage <= 1} onClick={() => setTablePage((current) => Math.max(1, current - 1))}>Onceki</Button>
+                  <span className="flex min-w-16 items-center justify-center rounded-md border border-border px-3 text-xs">{tablePage}/{totalTablePages}</span>
+                  <Button variant="outline" size="sm" disabled={tablePage >= totalTablePages} onClick={() => setTablePage((current) => Math.min(totalTablePages, current + 1))}>Sonraki</Button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
 
         {/* Bio Pages */}
         <div>

@@ -2160,10 +2160,56 @@ function buildLocationRedirectUrl(blockData) {
 }
 function createApp() {
   const app = express();
+  const adminPassword = process.env.ADMIN_PANEL_PASSWORD || "247398";
+  const isAdminRequest = (req) => req.headers["x-admin-password"] === adminPassword;
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  app.post("/api/admin-login", (req, res) => {
+    if (String(req.body?.password || "") !== adminPassword) {
+      res.status(401).json({ message: "Admin sifresi hatali" });
+      return;
+    }
+    res.json({ success: true });
+  });
+  app.get("/api/admin-analytics", async (req, res) => {
+    if (!isAdminRequest(req)) {
+      res.status(401).json({ message: "Yetkisiz islem" });
+      return;
+    }
+    try {
+      await ensureRemoteSnapshotHydrated();
+      const pages = Array.isArray(memory.pages) ? memory.pages : [];
+      const blocks = Array.isArray(memory.blocks) ? memory.blocks : [];
+      const users2 = Array.isArray(memory.users) ? memory.users : [];
+      const todayKey = getTodayKey();
+      const todayPages = pages.filter((page) => page.statsDate === todayKey);
+      const linkBlocks = blocks.filter((block) => ["link", "social", "location"].includes(block.type));
+      const topViewedPage = [...pages].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0] || null;
+      const topClickedBlock = [...linkBlocks].sort((a, b) => (b.clicks ?? 0) - (a.clicks ?? 0))[0] || null;
+      res.json({
+        analytics: {
+          liveVisitors: 0,
+          todayVisitors: 0,
+          todayViews: todayPages.reduce((sum, page) => sum + (page.todayViews ?? 0), 0),
+          todayClicks: todayPages.reduce((sum, page) => sum + (page.todayClicks ?? 0), 0),
+          totalUsers: users2.length,
+          totalPages: pages.length,
+          totalLinks: linkBlocks.length,
+          usersWithPages: new Set(pages.map((page) => page.userId)).size,
+          topViewedPage: topViewedPage?.title || topViewedPage?.slug || null,
+          topClickedLink: topClickedBlock?.data?.title || topClickedBlock?.data?.platform || null,
+          recentUsers: users2.slice(-6).reverse().map((item) => ({ id: item.id, name: item.name, email: item.email, createdAt: item.createdAt })),
+          recentPages: pages.slice(-6).reverse().map((item) => ({ id: item.id, title: item.title, slug: item.slug, createdAt: item.createdAt })),
+          locations: []
+        }
+      });
+    } catch (err) {
+      console.error("[AdminAnalytics] Failed:", err);
+      res.json({ analytics: { liveVisitors: 0, todayVisitors: 0, todayViews: 0, todayClicks: 0, totalUsers: 0, totalPages: 0, totalLinks: 0, usersWithPages: 0, topViewedPage: null, topClickedLink: null, recentUsers: [], recentPages: [], locations: [] } });
+    }
+  });
   app.get("/api/resolve-map-url", async (req, res) => {
     const rawUrl = String(req.query.url || "").trim();
     let url;
@@ -2206,7 +2252,7 @@ function createApp() {
     }
   });
   app.put("/api/home-settings", async (req, res) => {
-    if (req.headers["x-admin-password"] !== "247398") {
+    if (!isAdminRequest(req)) {
       res.status(401).json({ message: "Yetkisiz işlem" });
       return;
     }
@@ -2240,7 +2286,7 @@ function createApp() {
     }
   });
   app.get("/api/contact-messages", async (req, res) => {
-    if (req.headers["x-admin-password"] !== "247398") {
+    if (!isAdminRequest(req)) {
       res.status(401).json({ message: "Yetkisiz işlem" });
       return;
     }
@@ -2253,7 +2299,7 @@ function createApp() {
     }
   });
   app.delete("/api/contact-messages/:id", async (req, res) => {
-    if (req.headers["x-admin-password"] !== "247398") {
+    if (!isAdminRequest(req)) {
       res.status(401).json({ message: "Yetkisiz işlem" });
       return;
     }

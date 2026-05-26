@@ -37,11 +37,45 @@ function buildLocationRedirectUrl(blockData: Record<string, string> | null | und
 
 export function createApp() {
   const app = express();
+  const adminPassword = process.env.ADMIN_PANEL_PASSWORD || "247398";
+  const isAdminRequest = (req: express.Request) => req.headers["x-admin-password"] === adminPassword;
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+
+  app.post("/api/admin-login", (req, res) => {
+    if (String(req.body?.password || "") !== adminPassword) {
+      res.status(401).json({ message: "Admin sifresi hatali" });
+      return;
+    }
+    res.json({ success: true });
+  });
+
+  app.get("/api/admin-analytics", (req, res) => {
+    if (!isAdminRequest(req)) {
+      res.status(401).json({ message: "Yetkisiz islem" });
+      return;
+    }
+    res.json({
+      analytics: {
+        liveVisitors: 0,
+        todayVisitors: 0,
+        todayViews: 0,
+        todayClicks: 0,
+        totalUsers: 0,
+        totalPages: 0,
+        totalLinks: 0,
+        usersWithPages: 0,
+        topViewedPage: null,
+        topClickedLink: null,
+        recentUsers: [],
+        recentPages: [],
+        locations: [],
+      },
+    });
+  });
 
   app.get("/api/resolve-map-url", async (req, res) => {
     const rawUrl = String(req.query.url || "").trim();
