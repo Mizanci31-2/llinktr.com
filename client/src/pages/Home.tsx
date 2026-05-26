@@ -255,6 +255,7 @@ export default function Home() {
           </div>
         </section>
 
+        {/* The current ad provider gives one fixed container id. A second homepage-middle-ad needs a separate ad container id from the provider. */}
         <section className="py-16 md:py-24">
           <div className="container">
             <SectionTitle eyebrow="Nasıl çalışır?" title="Üç adımda yayına çık" desc="Karmaşık ayarlar yok. Kullanıcı adını al, linklerini ekle, paylaşmaya başla." />

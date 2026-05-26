@@ -60,8 +60,8 @@ export default function Footer() {
           </p>
         </div>
 
-        <div className="mondiad-footer-ad">
-          <div data-mndazid="827ce39b-7d7a-4349-8fbc-3d3f12c791c9"></div>
+        <div className="site-bottom-ad">
+          <div id="container-07bb46412fafa1364a635fe7124defe7"></div>
         </div>
       </div>
     </footer>

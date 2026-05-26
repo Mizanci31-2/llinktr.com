@@ -402,11 +402,21 @@
     animation: llinktr-rise 700ms ease-out both;
   }
 
-  .mondiad-footer-ad {
+  .site-bottom-ad {
     width: 100%;
     max-width: 900px;
     margin: 24px auto 0;
-    padding: 8px 12px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .homepage-middle-ad {
+    width: 100%;
+    max-width: 900px;
+    margin: 32px auto;
+    padding: 10px 12px;
     display: flex;
     justify-content: center;
     overflow: hidden;
@@ -414,10 +424,16 @@
 }
 
 @media (max-width: 768px) {
-  .mondiad-footer-ad {
+  .site-bottom-ad {
     max-width: 100%;
     margin-top: 18px;
-    padding: 6px 8px;
+    padding: 8px;
+  }
+
+  .homepage-middle-ad {
+    max-width: 100%;
+    margin: 24px auto;
+    padding: 8px;
   }
 }
 
