@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
+import EzoicAd from "@/components/EzoicAd";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SocialIcon } from "@/components/SocialIcon";
 import { fetchHomeAdminSettings, readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
+import { EZOIC_PLACEMENTS } from "@/lib/ezoic";
 import {
   ArrowRight,
   Check,
@@ -255,7 +257,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* The current ad provider gives one fixed container id. A second homepage-middle-ad needs a separate ad container id from the provider. */}
         <section className="py-16 md:py-24">
           <div className="container">
             <SectionTitle eyebrow="Nasıl çalışır?" title="Üç adımda yayına çık" desc="Karmaşık ayarlar yok. Kullanıcı adını al, linklerini ekle, paylaşmaya başla." />
@@ -275,6 +276,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <EzoicAd id={EZOIC_PLACEMENTS.homepageMiddle} className="ezoic-homepage-middle-ad" />
 
         <section className="border-y border-white/8 bg-[#0d0d0d] py-16 md:py-24">
           <div className="container">

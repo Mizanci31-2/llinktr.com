@@ -60,9 +60,6 @@ export default function Footer() {
           </p>
         </div>
 
-        <div className="site-bottom-ad">
-          <div id="container-07bb46412fafa1364a635fe7124defe7"></div>
-        </div>
       </div>
     </footer>
   );

@@ -402,35 +402,34 @@
     animation: llinktr-rise 700ms ease-out both;
   }
 
-  .site-bottom-ad {
+  .ezoic-ad-container,
+  .ezoic-footer-ad,
+  .ezoic-homepage-middle-ad {
     width: 100%;
     max-width: 900px;
-    margin: 24px auto 0;
     padding: 10px 12px;
     display: flex;
     justify-content: center;
     overflow: hidden;
   }
 
-  .homepage-middle-ad {
-    width: 100%;
-    max-width: 900px;
+  .ezoic-footer-ad {
+    margin: 24px auto 0;
+  }
+
+  .ezoic-homepage-middle-ad {
     margin: 32px auto;
-    padding: 10px 12px;
-    display: flex;
-    justify-content: center;
-    overflow: hidden;
   }
 }
 
 @media (max-width: 768px) {
-  .site-bottom-ad {
+  .ezoic-footer-ad {
     max-width: 100%;
     margin-top: 18px;
     padding: 8px;
   }
 
-  .homepage-middle-ad {
+  .ezoic-homepage-middle-ad {
     max-width: 100%;
     margin: 24px auto;
     padding: 8px;
