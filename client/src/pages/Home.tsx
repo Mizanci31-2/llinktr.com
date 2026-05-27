@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
+import AdcashBanner from "@/components/AdcashBanner";
 import EzoicAd from "@/components/EzoicAd";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -278,6 +279,7 @@ export default function Home() {
         </section>
 
         <EzoicAd id={EZOIC_PLACEMENTS.homepageMiddle} className="ezoic-homepage-middle-ad" />
+        <AdcashBanner placement="home-middle" className="adcash-homepage-middle-ad" />
 
         <section className="border-y border-white/8 bg-[#0d0d0d] py-16 md:py-24">
           <div className="container">

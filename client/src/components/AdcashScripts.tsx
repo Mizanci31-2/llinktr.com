@@ -7,6 +7,7 @@ declare global {
     aclib?: {
       runAutoTag?: (config: { zoneId: string }) => void;
       runInterstitial?: (config: { zoneId: string }) => void;
+      runBanner?: (config: { zoneId: string }) => void;
     };
     __llinktrAdcashStarted?: boolean;
   }

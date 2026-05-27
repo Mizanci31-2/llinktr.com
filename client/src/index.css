@@ -422,6 +422,39 @@
   .ezoic-homepage-middle-ad {
     margin: 32px auto;
   }
+
+  .adcash-banner-shell {
+    width: 100%;
+    max-width: 900px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .adcash-footer-ad {
+    margin: 8px auto 0;
+    min-height: 270px;
+  }
+
+  .adcash-homepage-middle-ad {
+    margin: 24px auto 32px;
+    min-height: 270px;
+  }
+
+  .adcash-banner {
+    width: min(100%, 300px);
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .adcash-banner-300x250 {
+    min-height: 250px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -435,6 +468,19 @@
     max-width: 100%;
     margin: 24px auto;
     padding: 8px;
+  }
+
+  .adcash-banner-shell {
+    max-width: 100%;
+    padding: 8px;
+  }
+
+  .adcash-footer-ad {
+    margin-top: 6px;
+  }
+
+  .adcash-homepage-middle-ad {
+    margin: 20px auto 28px;
   }
 }
 

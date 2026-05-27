@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
+import AdcashBanner from "@/components/AdcashBanner";
 import AdcashScripts from "@/components/AdcashScripts";
 import EzoicAd from "@/components/EzoicAd";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -81,6 +82,7 @@ function App() {
           <Suspense fallback={<AppLoading />}>
             <Router />
             <EzoicAd id={EZOIC_PLACEMENTS.footerBottom} className="ezoic-footer-ad" />
+            <AdcashBanner placement="footer" className="adcash-footer-ad" />
           </Suspense>
         </TooltipProvider>
       </ThemeProvider>

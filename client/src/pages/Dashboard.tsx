@@ -14,11 +14,57 @@ import Footer from "@/components/Footer";
 import { PageAnalyticsDialog } from "@/components/dashboard/PageAnalyticsDialog";
 import { toast } from "sonner";
 import {
-  Plus, Edit2, Trash2, Eye, ExternalLink,
+  Activity, Plus, Edit2, Trash2, Eye, ExternalLink,
   Globe, Loader2, LayoutDashboard, Link2, QrCode,
-  MousePointerClick, PauseCircle, PlayCircle, UserRound, Trophy, BarChart3, Search, Users, TrendingUp, FileText
+  Clock3, MousePointerClick, PauseCircle, PlayCircle, UserRound, Trophy, BarChart3, Search, Users, TrendingUp, FileText
 } from "lucide-react";
 
+
+type DashboardActivityItem = {
+  label: string;
+  value: string;
+  icon: typeof Activity;
+};
+
+function DashboardActivityCard({ items }: { items: DashboardActivityItem[] }) {
+  const hasActivity = items.some((item) => item.value !== "Veri yok" && item.value !== "0");
+
+  return (
+    <aside className="panel-strong rounded-3xl border border-primary/20 bg-[linear-gradient(145deg,rgba(214,255,0,0.08),rgba(18,24,32,0.96))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-base font-bold">
+            <Activity className="h-4 w-4 text-primary" />
+            Canli durum
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">Sayfalarindan gelen son sinyaller.</p>
+        </div>
+        <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_18px_rgba(214,255,0,0.65)]" />
+      </div>
+
+      {!hasActivity ? (
+        <div className="rounded-2xl border border-dashed border-border/60 bg-background/35 p-4 text-sm text-muted-foreground">Henuz aktivite yok</div>
+      ) : (
+        <div className="grid gap-2">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">{item.label}</p>
+                  <p className="truncate text-sm font-semibold">{item.value}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </aside>
+  );
+}
 export default function Dashboard() {
   const MAX_BIO_PAGES = 5;
   const [, navigate] = useLocation();
@@ -84,6 +130,15 @@ export default function Dashboard() {
   }, [pageSearch, pages, sortBy, statusFilter]);
   const totalTablePages = Math.max(1, Math.ceil(filteredPages.length / pageSize));
   const visibleTablePages = filteredPages.slice((tablePage - 1) * pageSize, tablePage * pageSize);
+  const latestPage = pages?.slice().sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())[0];
+  const activityItems: DashboardActivityItem[] = [
+    { label: "Bugunku goruntuleme", value: String(todayViews), icon: Eye },
+    { label: "Bugunku tiklama", value: String(todayClicks), icon: MousePointerClick },
+    { label: "Son olusturulan bio", value: latestPage?.title || "Veri yok", icon: Link2 },
+    { label: "En iyi sayfa", value: bestPage?.title || "Veri yok", icon: Trophy },
+    { label: "Yayindaki sayfa", value: String(activePages), icon: Users },
+    { label: "Son guncelleme", value: latestPage?.createdAt ? new Date(latestPage.createdAt).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Veri yok", icon: Clock3 },
+  ];
 
   const { data: slugCheck } = trpc.bioPages.checkSlug.useQuery(
     { slug: newSlug },
@@ -200,41 +255,47 @@ export default function Dashboard() {
 
       <div className="flex-1 container py-8">
         {/* Header */}
-        <div className="mb-8 rounded-3xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] px-4 py-5 panel-strong sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-            <h1 className="text-3xl font-bold">Hoş geldin, {user?.name || "kullanıcı"}</h1>
-            <p className="text-muted-foreground mt-1">Bugünün özeti hazır. En hızlı aksiyon: bio sayfanı düzenle ve paylaş.</p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <span className="rounded-full border border-primary/45 bg-primary/10 px-2.5 py-1 font-semibold text-primary">%100 ücretsiz</span>
-              <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-1">{pageCount}/{MAX_BIO_PAGES} sayfa</span>
-              <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-1">Kredi kartı gerekmez</span>
+        <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="rounded-3xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] px-4 py-5 panel-strong sm:px-6">
+            <div className="flex h-full flex-col justify-between gap-5">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  Panel ozeti
+                </div>
+                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Hos geldin, {user?.name || "kullanici"}</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">Bugunun ozeti hazir. En hizli aksiyon: bio sayfani duzenle, yayina al ve performansi takip et.</p>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span className="rounded-full border border-primary/45 bg-primary/10 px-2.5 py-1 font-semibold text-primary">%100 ucretsiz</span>
+                  <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-1">{pageCount}/{MAX_BIO_PAGES} sayfa</span>
+                  <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-1">Kredi karti gerekmez</span>
+                </div>
+              </div>
+              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 md:max-w-md">
+                <Button
+                  onClick={() => setCreateOpen(true)}
+                  disabled={reachedPageLimit}
+                  className="h-11 w-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {reachedPageLimit ? "Limit Doldu" : "Yeni Sayfa"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDisplayName(user?.name ?? "");
+                    setProfileOpen(true);
+                  }}
+                  className="h-11 w-full border-border/60"
+                >
+                  <UserRound className="h-4 w-4 mr-2" />
+                  Kullanici Adi
+                </Button>
+              </div>
             </div>
-            </div>
-            <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 sm:gap-3">
-              <Button
-                onClick={() => setCreateOpen(true)}
-                disabled={reachedPageLimit}
-                className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)] sm:w-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {reachedPageLimit ? "Limit Doldu" : "Yeni Sayfa"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDisplayName(user?.name ?? "");
-                  setProfileOpen(true);
-                }}
-                className="h-10 w-full border-border/60 sm:w-auto"
-              >
-                <UserRound className="h-4 w-4 mr-2" />
-                Kullanıcı Adı
-              </Button>
-            </div>
-          </div>
+          </section>
+          <DashboardActivityCard items={activityItems} />
         </div>
-
         <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {metricCards.map((card, cardIndex) => {
             const Icon = card.icon;

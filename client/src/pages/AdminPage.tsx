@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { BarChart3, Eye, ImagePlus, Inbox, Link2, Lock, LogOut, MapPin, MousePointerClick, RefreshCw, RotateCcw, Save, Trash2, Users } from "lucide-react";
+import { Activity, BarChart3, Clock3, Eye, ImagePlus, Inbox, Link2, Lock, LogOut, MapPin, MousePointerClick, Radio, RefreshCw, RotateCcw, Save, Trash2, Users } from "lucide-react";
 import {
   HOME_ADMIN_SETTINGS_KEY,
   defaultHomeAdminSettings,
@@ -40,6 +40,80 @@ type AdminAnalytics = {
   recentPages: Array<{ id: string | number; title?: string | null; slug?: string | null; createdAt?: string | Date | null }>;
   locations: Array<{ city?: string | null; country?: string | null; latitude?: number | null; longitude?: number | null }>;
 };
+
+
+function formatAdminDate(value?: string | Date | null) {
+  if (!value) return "Zaman verisi yok";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Zaman verisi yok";
+  return date.toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function buildAdminActivity(analytics: AdminAnalytics | null) {
+  const lastUser = analytics?.recentUsers?.[0];
+  const lastPage = analytics?.recentPages?.[0];
+  const userTime = lastUser?.createdAt ? new Date(lastUser.createdAt).getTime() : 0;
+  const pageTime = lastPage?.createdAt ? new Date(lastPage.createdAt).getTime() : 0;
+  const latestTime = userTime > pageTime ? lastUser?.createdAt : lastPage?.createdAt;
+
+  return {
+    hasActivity: Boolean((analytics?.liveVisitors ?? 0) > 0 || analytics?.topViewedPage || analytics?.topClickedLink || lastUser || lastPage),
+    liveVisitors: analytics?.liveVisitors ?? 0,
+    lastViewedPage: analytics?.topViewedPage || lastPage?.title || lastPage?.slug || "Veri yok",
+    lastClickedLink: analytics?.topClickedLink || "Veri yok",
+    lastUser: lastUser?.name || lastUser?.email || "Veri yok",
+    lastBioPage: lastPage?.title || lastPage?.slug || "Veri yok",
+    time: formatAdminDate(latestTime),
+  };
+}
+
+function AdminLiveActivityCard({ analytics }: { analytics: AdminAnalytics | null }) {
+  const activity = buildAdminActivity(analytics);
+  const items = [
+    { label: "Anlik ziyaretci", value: String(activity.liveVisitors), icon: Radio },
+    { label: "Son goruntulenen sayfa", value: activity.lastViewedPage, icon: Eye },
+    { label: "Son tiklanan link", value: activity.lastClickedLink, icon: MousePointerClick },
+    { label: "Son kayit olan kullanici", value: activity.lastUser, icon: Users },
+    { label: "Son olusturulan bio", value: activity.lastBioPage, icon: Link2 },
+    { label: "Zaman", value: activity.time, icon: Clock3 },
+  ];
+
+  return (
+    <div className="rounded-[18px] border border-primary/20 bg-[linear-gradient(145deg,rgba(214,255,0,0.08),rgba(255,255,255,0.035))] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.24)]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="flex items-center gap-2 font-semibold">
+            <Activity className="h-4 w-4 text-primary" />
+            Canli Aktivite
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">Realtime yoksa son kayitlardan guvenli ozet gosterilir.</p>
+        </div>
+        <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_18px_rgba(214,255,0,0.65)]" />
+      </div>
+
+      {!activity.hasActivity ? (
+        <div className="rounded-2xl border border-dashed border-border/60 bg-background/35 p-5 text-sm text-muted-foreground">Henuz canli aktivite yok</div>
+      ) : (
+        <div className="grid gap-2">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-white/10 bg-black/22 px-3 py-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">{item.label}</p>
+                  <p className="truncate text-sm font-semibold">{item.value}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 async function uploadAdminImageToSupabase(file: File) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -411,23 +485,30 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="min-h-[360px] rounded-[18px] border border-white/10 bg-[radial-gradient(circle_at_50%_38%,rgba(214,255,0,0.15),transparent_30%),linear-gradient(145deg,#081016,#050505)] p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold">Canli harita</h3>
+                <aside className="space-y-4">
+                  <AdminLiveActivityCard analytics={analytics} />
+
+                  <div className="rounded-[18px] border border-white/10 bg-[radial-gradient(circle_at_50%_38%,rgba(214,255,0,0.13),transparent_30%),linear-gradient(145deg,#081016,#050505)] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold">Canli harita</h3>
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-[11px] text-muted-foreground">Kompakt</span>
+                    </div>
+                    <div className="relative h-[250px] overflow-hidden rounded-2xl border border-white/10 bg-black/35 sm:h-[285px]">
+                      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:42px_42px]" />
+                      {(analytics?.locations ?? []).length === 0 ? (
+                        <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">Konum verisi yok</div>
+                      ) : (
+                        analytics!.locations.slice(0, 12).map((loc, index) => (
+                          <span key={`${loc.city}-${index}`} className="absolute rounded-full bg-primary shadow-[0_0_20px_rgba(214,255,0,0.4)]" style={{ left: `${18 + (index * 17) % 68}%`, top: `${22 + (index * 23) % 56}%`, width: 10, height: 10 }} title={`${loc.city || ""} ${loc.country || ""}`} />
+                        ))
+                      )}
+                      <span className="absolute bottom-3 left-3 rounded-full border border-white/10 bg-black/55 px-3 py-1 text-xs text-muted-foreground">Turkiye merkezli gorunum</span>
+                    </div>
                   </div>
-                  <div className="relative h-[320px] overflow-hidden rounded-2xl border border-white/10 bg-black/35">
-                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:42px_42px]" />
-                    {(analytics?.locations ?? []).length === 0 ? (
-                      <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">Konum verisi yok</div>
-                    ) : (
-                      analytics!.locations.slice(0, 12).map((loc, index) => (
-                        <span key={`${loc.city}-${index}`} className="absolute rounded-full bg-primary shadow-[0_0_20px_rgba(214,255,0,0.4)]" style={{ left: `${18 + (index * 17) % 68}%`, top: `${22 + (index * 23) % 56}%`, width: 10, height: 10 }} title={`${loc.city || ""} ${loc.country || ""}`} />
-                      ))
-                    )}
-                    <span className="absolute bottom-3 left-3 rounded-full border border-white/10 bg-black/55 px-3 py-1 text-xs text-muted-foreground">Turkiye merkezli gorunum</span>
-                  </div>
-                </div>
+                </aside>
               </div>
             )}
           </section>
