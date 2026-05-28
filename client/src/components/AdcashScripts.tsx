@@ -8,6 +8,7 @@ declare global {
       runAutoTag?: (config: { zoneId: string }) => void;
       runInterstitial?: (config: { zoneId: string }) => void;
       runBanner?: (config: { zoneId: string }) => void;
+      runInPagePush?: (config: { zoneId: string; maxAds?: number }) => void;
     };
     __llinktrAdcashStarted?: boolean;
   }
