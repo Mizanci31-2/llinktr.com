@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import AdcashBanner from "@/components/AdcashBanner";
-import EzoicAd from "@/components/EzoicAd";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SocialIcon } from "@/components/SocialIcon";
 import { fetchHomeAdminSettings, readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
-import { EZOIC_PLACEMENTS } from "@/lib/ezoic";
 import {
   ArrowRight,
   Check,
@@ -277,10 +274,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        <EzoicAd id={EZOIC_PLACEMENTS.homepageMiddle} className="ezoic-homepage-middle-ad" />
-        <AdcashBanner placement="home-middle" className="adcash-homepage-middle-ad" />
-
         <section className="border-y border-white/8 bg-[#0d0d0d] py-16 md:py-24">
           <div className="container">
             <SectionTitle eyebrow="Neden llinktr?" title="Bio link aracı değil, sade bir satış paneli" desc="Hızlı, ücretsiz, mobil uyumlu ve modern. Kullanıcı sayfayı düşünmeden kullanır." />

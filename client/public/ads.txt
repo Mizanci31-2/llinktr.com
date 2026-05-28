@@ -1,2 +1,0 @@
-# Ezoic ads.txt entries will be managed from the Ezoic dashboard or Adstxtmanager.
-# Add the lines provided by Ezoic here before production ad review.

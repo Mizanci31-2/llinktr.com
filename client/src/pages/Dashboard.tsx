@@ -32,14 +32,14 @@ function DashboardActivityCard({ items }: { items: DashboardActivityItem[] }) {
   const detailItems = items.slice(2);
 
   return (
-    <aside className="panel-strong rounded-3xl border border-primary/20 bg-[linear-gradient(145deg,rgba(214,255,0,0.08),rgba(18,24,32,0.96))] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.22)] sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <aside className="panel-strong rounded-2xl border border-primary/15 bg-[linear-gradient(145deg,rgba(214,255,0,0.055),rgba(18,24,32,0.94))] p-4 shadow-[0_14px_38px_rgba(0,0,0,0.18)]">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-bold">
             <Activity className="h-4 w-4 text-primary" />
             Canli durum
           </h2>
-          <p className="mt-1 text-xs text-muted-foreground">Bugunun verileri ve son sayfa sinyalleri.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Bugunun verileri ve son sinyaller.</p>
         </div>
         <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_18px_rgba(214,255,0,0.65)]" />
       </div>
@@ -47,17 +47,17 @@ function DashboardActivityCard({ items }: { items: DashboardActivityItem[] }) {
       {!hasActivity ? (
         <div className="rounded-2xl border border-dashed border-border/60 bg-background/35 p-4 text-sm text-muted-foreground">Henuz aktivite yok</div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <div className="grid grid-cols-2 gap-2">
             {primaryItems.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.label} className="rounded-2xl border border-primary/20 bg-primary/10 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
+                <div key={item.label} className="rounded-xl border border-primary/15 bg-primary/10 p-2.5">
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
                     <p className="truncate text-[11px] text-muted-foreground">{item.label}</p>
                     <Icon className="h-4 w-4 shrink-0 text-primary" />
                   </div>
-                  <p className="truncate text-2xl font-black text-primary">{item.value}</p>
+                  <p className="truncate text-xl font-black text-primary">{item.value}</p>
                 </div>
               );
             })}
@@ -66,8 +66,8 @@ function DashboardActivityCard({ items }: { items: DashboardActivityItem[] }) {
             {detailItems.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.label} className="grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div key={item.label} className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Icon className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
@@ -112,9 +112,6 @@ export default function Dashboard() {
   const bestPage = pages?.slice().sort((a, b) => (b.totalClicks ?? 0) - (a.totalClicks ?? 0))[0];
   const activePages = pages?.filter((page) => page.isPublished).length ?? 0;
   const dailyChange = totalViews > 0 ? Math.round(((todayViews + todayClicks) / Math.max(totalViews + totalClicks, 1)) * 100) : 0;
-  const chartValues = todayClicks === 0
-    ? Array.from({ length: 7 }, () => 6)
-    : [32, 46, 38, 58, 48, 72, Math.max(28, Math.min(92, todayClicks + 28))];
   const reachedPageLimit = pageCount >= MAX_BIO_PAGES;
   const analyticsPage = pages?.find((page) => page.id === analyticsPageId) ?? null;
   const [pageSearch, setPageSearch] = useState("");
@@ -269,19 +266,19 @@ export default function Dashboard() {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
 
-      <div className="flex-1 container py-8">
+      <div className="flex-1 container py-5 md:py-6">
         {/* Header */}
-        <div className="mb-6 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="rounded-3xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] px-4 py-5 panel-strong sm:px-6">
-            <div className="flex flex-col gap-5">
+        <div className="mb-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_330px]">
+          <section className="rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-4 py-4 panel-strong sm:px-5">
+            <div className="flex flex-col gap-4">
               <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   <LayoutDashboard className="h-3.5 w-3.5" />
                   Panel ozeti
                 </div>
-                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Hos geldin, {user?.name || "kullanici"}</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">Bugunun ozeti hazir. En hizli aksiyon: bio sayfani duzenle, yayina al ve performansi takip et.</p>
-                <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Hos geldin, {user?.name || "kullanici"}</h1>
+                <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">Bugunun ozeti hazir. En hizli aksiyon: bio sayfani duzenle, yayina al ve performansi takip et.</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
                   <span className="rounded-full border border-primary/45 bg-primary/10 px-2.5 py-1 font-semibold text-primary">%100 ucretsiz</span>
                   <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-1">{pageCount}/{MAX_BIO_PAGES} sayfa</span>
                   <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-1">Kredi karti gerekmez</span>
@@ -291,7 +288,7 @@ export default function Dashboard() {
                 <Button
                   onClick={() => setCreateOpen(true)}
                   disabled={reachedPageLimit}
-                  className="h-11 w-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]"
+                  className="h-10 w-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {reachedPageLimit ? "Limit Doldu" : "Yeni Sayfa"}
@@ -302,7 +299,7 @@ export default function Dashboard() {
                     setDisplayName(user?.name ?? "");
                     setProfileOpen(true);
                   }}
-                  className="h-11 w-full border-border/60"
+                  className="h-10 w-full border-border/60"
                 >
                   <UserRound className="h-4 w-4 mr-2" />
                   Kullanici Adi
@@ -312,20 +309,20 @@ export default function Dashboard() {
           </section>
           <DashboardActivityCard items={activityItems} />
         </div>
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {metricCards.map((card, cardIndex) => {
             const Icon = card.icon;
             return (
-              <div key={card.label} className="panel-strong rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(18,24,32,0.98),rgba(12,14,16,0.96))] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
-                <div className="mb-4 flex items-center justify-between gap-3">
+              <div key={card.label} className="panel-strong min-h-[150px] rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(18,24,32,0.96),rgba(12,14,16,0.94))] p-4 transition-all hover:-translate-y-0.5 hover:border-primary/25">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="min-w-0 text-sm text-muted-foreground">{card.label}</p>
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
                     <Icon className="h-4 w-4 text-primary" />
                   </span>
                 </div>
-                <p className="truncate text-3xl font-black tracking-tight sm:text-4xl">{card.value}</p>
+                <p className="truncate text-2xl font-black tracking-tight sm:text-3xl">{card.value}</p>
                 <p className="mt-2 truncate text-xs text-muted-foreground">{card.note}</p>
-                <div className="mt-5 flex h-10 items-end gap-1.5">
+                <div className="mt-4 flex h-8 items-end gap-1.5">
                   {card.bars.map((value, index) => (
                     <span key={`${card.label}-${index}`} className="mini-chart-bar flex-1 rounded-t bg-primary/80" style={{ height: `${value}%`, animationDelay: `${(index + cardIndex) * 45}ms` }} />
                   ))}
@@ -335,47 +332,8 @@ export default function Dashboard() {
           })}
         </div>
 
-        <div className="hidden">
-          <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Bugün tıklama</p>
-              <MousePointerClick className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-3xl font-bold">{todayClicks}</p>
-            <div className="mt-5 flex h-16 items-end gap-1.5">
-              {chartValues.map((value, index) => (
-                <span key={index} className="mini-chart-bar flex-1 rounded-t bg-primary/80" style={{ height: `${value}%`, animationDelay: `${index * 70}ms` }} />
-              ))}
-            </div>
-          </div>
-          <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Bugün görüntüleme</p>
-              <Eye className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-3xl font-bold">{todayViews}</p>
-            <p className="mt-5 text-sm text-muted-foreground">Bugün bio sayfalarının aldığı görüntüleme.</p>
-          </div>
-          <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Toplam görüntülenme</p>
-              <Eye className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-3xl font-bold">{totalViews}</p>
-            <p className="mt-5 text-sm text-muted-foreground">Tüm bio sayfalarının toplam görünürlüğü.</p>
-          </div>
-          <div className="panel-strong rounded-2xl border border-white/10 bg-[#121820] p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">En iyi link</p>
-              <Trophy className="h-5 w-5 text-primary" />
-            </div>
-            <p className="truncate text-xl font-bold">{bestPage?.title || "İlk sayfanı oluştur"}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{bestPage ? `${bestPage.totalClicks ?? 0} tıklama ile önde` : "Değer görmek için bio sayfanı yayına al."}</p>
-          </div>
-        </div>
-
         {/* Quick Tools */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           <Link href="/shortener">
             <div className="panel-strong group flex cursor-pointer items-center gap-4 rounded-xl border border-border/70 bg-card p-4 transition-all hover:border-primary/40">
               <div className="h-10 w-10 rounded-lg bg-blue-400/10 flex items-center justify-center">
@@ -404,7 +362,7 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        <section className="mb-8 rounded-2xl border border-white/10 bg-card/95 p-4 panel-strong sm:p-5">
+        <section className="mb-6 rounded-2xl border border-white/10 bg-card/95 p-4 panel-strong">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Sayfa performansi</h2>

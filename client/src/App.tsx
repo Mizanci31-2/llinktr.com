@@ -2,13 +2,8 @@ import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
-import AdcashBanner from "@/components/AdcashBanner";
-import AdcashInPagePush from "@/components/AdcashInPagePush";
-import AdcashScripts from "@/components/AdcashScripts";
-import EzoicAd from "@/components/EzoicAd";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { EZOIC_PLACEMENTS } from "./lib/ezoic";
 
 function AppLoading() {
   return (
@@ -78,14 +73,8 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Toaster />
-          <AdcashScripts />
-          <AdcashInPagePush />
-          <Suspense fallback={<AppLoading />}>
-            <Router />
-            <EzoicAd id={EZOIC_PLACEMENTS.footerBottom} className="ezoic-footer-ad" />
-            <AdcashBanner placement="footer" className="adcash-footer-ad" />
-          </Suspense>
+          <Toaster />          <Suspense fallback={<AppLoading />}>
+            <Router />          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
