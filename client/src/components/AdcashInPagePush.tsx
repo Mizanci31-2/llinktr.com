@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
+import { ensureAdcashLoaded } from "@/lib/adcashManager";
 
 const ADCASH_IN_PAGE_PUSH_ZONE_ID = "11365886";
 
@@ -26,7 +27,6 @@ const EXCLUDED_ROUTE_PARTS = [
 declare global {
   interface Window {
     __llinktrAdcashInPagePushStarted?: boolean;
-    __llinktrAdcashInPagePushTimer?: number;
   }
 }
 
@@ -42,43 +42,34 @@ function isExcludedPath(path: string) {
 
 export default function AdcashInPagePush() {
   const [location] = useLocation();
+  const hostRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (isExcludedPath(location)) return;
-    if (window.__llinktrAdcashInPagePushStarted) return;
+    let cancelled = false;
 
-    let attempts = 0;
+    const run = async () => {
+      if (isExcludedPath(location)) return;
+      if (window.__llinktrAdcashInPagePushStarted) return;
 
-    const run = () => {
-      attempts += 1;
+      const loaded = await ensureAdcashLoaded("In-page push");
+      if (cancelled || !loaded || !hostRef.current) return;
+      if (window.__llinktrAdcashInPagePushStarted) return;
 
-      if (!window.aclib?.runInPagePush) {
-        if (attempts < 20) {
-          window.__llinktrAdcashInPagePushTimer = window.setTimeout(run, 300);
-        }
-        return;
-      }
+      window.__llinktrAdcashInPagePushStarted = true;
+      hostRef.current.replaceChildren();
 
-      try {
-        window.aclib.runInPagePush({
-          zoneId: ADCASH_IN_PAGE_PUSH_ZONE_ID,
-          maxAds: 1,
-        });
-        window.__llinktrAdcashInPagePushStarted = true;
-      } catch {
-        window.__llinktrAdcashInPagePushStarted = false;
-      }
+      const script = document.createElement("script");
+      script.type = "text/javascript";
+      script.text = `aclib.runInPagePush({ zoneId: '${ADCASH_IN_PAGE_PUSH_ZONE_ID}', maxAds: 1 });`;
+      hostRef.current.appendChild(script);
     };
 
-    run();
+    void run();
 
     return () => {
-      if (window.__llinktrAdcashInPagePushTimer) {
-        window.clearTimeout(window.__llinktrAdcashInPagePushTimer);
-        window.__llinktrAdcashInPagePushTimer = undefined;
-      }
+      cancelled = true;
     };
   }, [location]);
 
-  return <div className="adcash-inpage-push-corner" aria-hidden="true" />;
+  return <div ref={hostRef} className="adcash-inpage-push-corner" aria-hidden="true" />;
 }

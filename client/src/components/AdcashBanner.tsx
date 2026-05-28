@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ensureAdcashLoaded } from "@/lib/adcashManager";
 
 const ADCASH_BANNER_ZONE_ID = "11364126";
 
@@ -19,25 +20,19 @@ export default function AdcashBanner({ placement, className = "" }: AdcashBanner
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const bannerKey = `${placement}:${ADCASH_BANNER_ZONE_ID}`;
     window.__llinktrAdcashBanners = window.__llinktrAdcashBanners ?? {};
 
     if (window.__llinktrAdcashBanners[bannerKey]) return;
 
-    let attempts = 0;
-    let timeoutId: number | undefined;
-
-    const runBanner = () => {
-      attempts += 1;
-
-      if (!containerRef.current) return;
-
-      if (!window.aclib?.runBanner) {
-        if (attempts < 20) timeoutId = window.setTimeout(runBanner, 300);
-        return;
-      }
+    const runBanner = async () => {
+      const loaded = await ensureAdcashLoaded(`Banner ${placement}`);
+      if (cancelled || !loaded || !containerRef.current) return;
+      if (window.__llinktrAdcashBanners?.[bannerKey]) return;
 
       window.__llinktrAdcashBanners![bannerKey] = true;
+      containerRef.current.replaceChildren();
 
       const script = document.createElement("script");
       script.type = "text/javascript";
@@ -45,10 +40,10 @@ export default function AdcashBanner({ placement, className = "" }: AdcashBanner
       containerRef.current.appendChild(script);
     };
 
-    runBanner();
+    void runBanner();
 
     return () => {
-      if (timeoutId) window.clearTimeout(timeoutId);
+      cancelled = true;
     };
   }, [placement]);
 
