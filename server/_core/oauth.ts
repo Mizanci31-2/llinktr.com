@@ -23,8 +23,8 @@ const localAccounts = new Map<string, LocalAccount>([
   [HIDDEN_DEMO_ACCOUNT.email.toLowerCase(), HIDDEN_DEMO_ACCOUNT],
 ]);
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY ?? "";
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
 const PUBLIC_SITE_URL = "https://www.llinktr.com";
 
 function getQueryParam(req: Request, key: string): string | undefined {
@@ -44,6 +44,22 @@ function normalizeEmail(value: unknown) {
 
 function normalizeName(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeUsername(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/1/g, "i")
+    .replace(//g, "g")
+    .replace(/�/g, "u")
+    .replace(/_/g, "s")
+    .replace(/�/g, "o")
+    .replace(/�/g, "c")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
 }
 
 function getAuthRequestOrigin(req: Request) {
@@ -79,6 +95,10 @@ function createLocalOpenId(email: string) {
 
 function isSupabaseConfigured() {
   return SUPABASE_URL.length > 0 && SUPABASE_ANON_KEY.length > 0;
+}
+
+function isSupabaseBackedAccount(account: LocalAccount | null) {
+  return Boolean(account?.openId.startsWith("supabase-"));
 }
 
 function isRateLimitMessage(rawMessage: string) {
@@ -153,6 +173,30 @@ async function supabaseRecoverPassword(email: string, redirectTo: string) {
   });
   const data = await response.json().catch(() => null);
   return { ok: response.ok, data };
+}
+
+async function supabaseUpdatePassword(accessToken: string, password: string) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ password }),
+  });
+  const data = await response.json().catch(() => null);
+  return { ok: response.ok, data };
+}
+
+async function supabaseLogoutAll(accessToken: string) {
+  await fetch(`${SUPABASE_URL}/auth/v1/logout?scope=global`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  }).catch(() => null);
 }
 
 async function isSupabaseGoogleEnabled() {
@@ -252,6 +296,32 @@ async function seedLocalDemoContent(openId: string) {
   }
 }
 
+async function ensureDefaultProfileForUser(userId: string, name: string, email: string) {
+  const existingProfile = await db.getProfileByUserId(userId);
+  if (existingProfile) return existingProfile;
+
+  const baseSource = name.trim() || email.split("@")[0] || "kullanici";
+  const baseUsername = normalizeUsername(baseSource) || "kullanici";
+  let username = baseUsername;
+
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const taken = await db.getProfileByUsername(username);
+    if (!taken) break;
+    username = `${baseUsername}${attempt + 2}`;
+  }
+
+  try {
+    return await db.createProfile({
+      userId,
+      username,
+      bio: "",
+    });
+  } catch (error) {
+    console.warn("[Auth] Failed to create default profile", error);
+    return undefined;
+  }
+}
+
 async function signInLocalAccount(req: Request, res: Response, account: LocalAccount, loginMethod: "local" | "google" = "local") {
   const existingUser = await db.getUserByOpenId(account.openId);
   const emailOwner = await db.getUserByEmail(account.email);
@@ -274,6 +344,11 @@ async function signInLocalAccount(req: Request, res: Response, account: LocalAcc
     loginMethod: effectiveLoginMethod,
     lastSignedIn: new Date(),
   });
+
+  const storedUser = await db.getUserByOpenId(canonicalOpenId);
+  if (storedUser?.id) {
+    await ensureDefaultProfileForUser(storedUser.id, effectiveName, effectiveEmail);
+  }
 
   localAccounts.set(account.email.toLowerCase(), {
     ...account,
@@ -378,13 +453,19 @@ export function registerOAuthRoutes(app: Express) {
     res.redirect(302, redirect);
   });
 
+  app.post("/api/dev-logout", (req: Request, res: Response) => {
+    const cookieOptions = getSessionCookieOptions(req);
+    res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    res.json({ success: true });
+  });
+
   app.post("/api/dev-login", async (req: Request, res: Response) => {
     const email = normalizeEmail(req.body?.email);
     const password = typeof req.body?.password === "string" ? req.body.password : "";
     const redirect = normalizeRedirectPath(typeof req.body?.redirect === "string" ? req.body.redirect : undefined);
 
     if (!email || !password) {
-      res.status(400).json({ success: false, message: "E-posta ve şifre gerekli" });
+      res.status(400).json({ success: false, message: "E-posta ve _ifre gerekli" });
       return;
     }
 
@@ -393,7 +474,7 @@ export function registerOAuthRoutes(app: Express) {
       if (ok && data?.user?.id && data?.user?.email) {
         await signInLocalAccount(req, res, {
           openId: `supabase-${data.user.id}`,
-          name: data.user.user_metadata?.name || data.user.email.split("@")[0] || "Kullanıcı",
+          name: data.user.user_metadata?.name || data.user.email.split("@")[0] || "Kullan1c1",
           email: data.user.email,
           password,
         });
@@ -402,6 +483,11 @@ export function registerOAuthRoutes(app: Express) {
       }
 
       const account = await getStoredAccountByEmail(email);
+      if (isSupabaseBackedAccount(account)) {
+        res.status(401).json({ success: false, message: "E-posta veya _ifre hatal1" });
+        return;
+      }
+
       if (account && account.password === password) {
         await signInLocalAccount(req, res, account);
         res.json({ success: true, redirect, source: "local_fallback_login" });
@@ -409,22 +495,22 @@ export function registerOAuthRoutes(app: Express) {
       }
 
       if (account && account.password !== password) {
-        res.status(401).json({ success: false, message: "Şifre hatalı" });
+        res.status(401).json({ success: false, message: "^ifre hatal1" });
         return;
       }
 
-      res.status(404).json({ success: false, message: "Bu e-posta ile kayıtlı kullanıcı bulunamadı veya şifre hatalı" });
+      res.status(404).json({ success: false, message: "Bu e-posta ile kay1tl1 kullan1c1 bulunamad1 veya _ifre hatal1" });
       return;
     }
 
     const account = await getStoredAccountByEmail(email);
     if (!account) {
-      res.status(404).json({ success: false, message: "Bu e-posta ile kayıtlı kullanıcı bulunamadı" });
+      res.status(404).json({ success: false, message: "Bu e-posta ile kay1tl1 kullan1c1 bulunamad1" });
       return;
     }
 
     if (account.password !== password) {
-      res.status(401).json({ success: false, message: "Şifre hatalı" });
+      res.status(401).json({ success: false, message: "^ifre hatal1" });
       return;
     }
 
@@ -556,7 +642,7 @@ export function registerOAuthRoutes(app: Express) {
       if (isRateLimitMessage(rawMessage)) {
         res.status(429).json({
           success: false,
-          message: "Cok sÄ±k deneme yaptÄ±nÄ±z. Lutfen 1 dakika bekleyip tekrar deneyin.",
+          message: "Cok s1k deneme yapt1n1z. Lutfen 1 dakika bekleyip tekrar deneyin.",
         });
         return;
       }
@@ -571,6 +657,46 @@ export function registerOAuthRoutes(app: Express) {
     });
   });
 
+  app.post("/api/dev-password-reset-update", async (req: Request, res: Response) => {
+    const accessToken = typeof req.body?.accessToken === "string" ? req.body.accessToken.trim() : "";
+    const password = typeof req.body?.password === "string" ? req.body.password.trim() : "";
+
+    if (!isSupabaseConfigured()) {
+      res.status(500).json({
+        success: false,
+        message: "^ifre yenileme ayarlar1 eksik. L�tfen destek ile ileti_ime ge�in.",
+      });
+      return;
+    }
+
+    if (!accessToken) {
+      res.status(400).json({
+        success: false,
+        message: "^ifre yenileme oturumu bulunamad1. E-postadaki balant1ya tekrar bas1n.",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      res.status(400).json({ success: false, message: "Yeni _ifre en az 6 karakter olmal1" });
+      return;
+    }
+
+    const { ok, data } = await supabaseUpdatePassword(accessToken, password);
+    if (!ok) {
+      res.status(400).json({
+        success: false,
+        message: data?.msg || data?.error_description || data?.error || "^ifre g�ncellenemedi",
+      });
+      return;
+    }
+
+    await supabaseLogoutAll(accessToken);
+    const cookieOptions = getSessionCookieOptions(req);
+    res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    res.json({ success: true, message: "^ifreniz g�ncellendi. Yeni _ifrenizle giri_ yapabilirsiniz." });
+  });
+
   app.post("/api/dev-social-auth", async (req: Request, res: Response) => {
     const provider = typeof req.body?.provider === "string" ? req.body.provider : "google";
     const redirect = normalizeRedirectPath(typeof req.body?.redirect === "string" ? req.body.redirect : undefined);
@@ -578,6 +704,11 @@ export function registerOAuthRoutes(app: Express) {
 
     if (provider !== "google") {
       res.status(400).json({ success: false, message: "Bu saglayici su anda desteklenmiyor" });
+      return;
+    }
+
+    if (process.env.GOOGLE_AUTH_ENABLED !== "true") {
+      res.status(403).json({ success: false, message: "Google ile giris ve kayit yakinda gelecek" });
       return;
     }
 
@@ -602,15 +733,6 @@ export function registerOAuthRoutes(app: Express) {
       res.status(400).json({
         success: false,
         message: "Google girisi icin Supabase ayarlari eksik",
-      });
-      return;
-    }
-
-    const googleEnabled = await isSupabaseGoogleEnabled();
-    if (!googleEnabled) {
-      res.status(400).json({
-        success: false,
-        message: "Google girisi yakinda aktif olacak.",
       });
       return;
     }
@@ -671,6 +793,15 @@ export function registerOAuthRoutes(app: Express) {
         loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
         lastSignedIn: new Date(),
       });
+
+      const storedUser = await db.getUserByOpenId(userInfo.openId);
+      if (storedUser?.id) {
+        await ensureDefaultProfileForUser(
+          storedUser.id,
+          userInfo.name || userInfo.email?.split("@")[0] || "Kullanici",
+          userInfo.email ?? "",
+        );
+      }
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",

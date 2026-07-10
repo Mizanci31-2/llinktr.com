@@ -38,6 +38,54 @@ export const SOCIAL_PLATFORMS = [
 
 export type SocialPlatformId = typeof SOCIAL_PLATFORMS[number]["id"];
 
+export function detectSocialPlatformFromUrl(rawUrl: string): SocialPlatformId | "" {
+  const value = rawUrl.trim().toLowerCase();
+  if (!value) return "";
+
+  if (value.startsWith("mailto:") || value.includes("@")) return "gmail";
+  if (value.startsWith("tel:") || /^\+?[0-9()[\]\s-]{7,}$/.test(value)) return "phone";
+
+  let parsed: URL | null = null;
+  try {
+    parsed = new URL(value.includes("://") ? value : `https://${value}`);
+  } catch {
+    return "";
+  }
+
+  const host = parsed.hostname.replace(/^www\./, "");
+  const pathname = parsed.pathname.toLowerCase();
+
+  if (host.includes("instagram.com")) return "instagram";
+  if (host.includes("tiktok.com")) return "tiktok";
+  if (host.includes("youtube.com") || host.includes("youtu.be")) return "youtube";
+  if (host === "x.com" || host === "twitter.com") return "x";
+  if (host.includes("facebook.com") || host === "fb.me") return "facebook";
+  if (host.includes("linkedin.com")) return "linkedin";
+  if (host.includes("t.me") || host.includes("telegram.me")) return "telegram";
+  if (host.includes("wa.me") || host.includes("whatsapp.com") || value.startsWith("whatsapp:")) return "whatsapp";
+  if (host.includes("discord.gg") || (host.includes("discord.com") && pathname.includes("/invite"))) return "discord";
+  if (host.includes("twitch.tv")) return "twitch";
+  if (host.includes("snapchat.com")) return "snapchat";
+  if (host.includes("pinterest.com")) return "pinterest";
+  if (host.includes("reddit.com")) return "reddit";
+  if (host.includes("github.com")) return "github";
+  if (host.includes("spotify.com")) return "spotify";
+  if (host.includes("threads.net")) return "threads";
+  if (host.includes("behance.net")) return "behance";
+  if (host.includes("dribbble.com")) return "dribbble";
+  if (host.includes("medium.com")) return "medium";
+  if (host.includes("kick.com")) return "kick";
+  if (host.includes("mastodon.") || host.includes("mstdn.")) return "mastodon";
+  if (host.includes("line.me")) return "line";
+  if (host.includes("wechat.com") || host.includes("weixin.qq.com")) return "wechat";
+  if (host === "vk.com") return "vk";
+  if (host.includes("tumblr.com")) return "tumblr";
+  if (host.includes("maps.google") || host.includes("google.com/maps") || host.includes("goo.gl/maps") || host.includes("maps.app.goo.gl")) return "google_maps";
+  if (host.includes("maps.apple.com")) return "apple_maps";
+
+  return "";
+}
+
 export const COMMERCE_LINK_PRESETS = [
   { id: "trendyol", label: "Trendyol", color: "#F27A1A", logoUrl: "https://www.google.com/s2/favicons?domain_url=https://www.trendyol.com&sz=128", placeholder: "https://www.trendyol.com/magaza/magaza-adi" },
   { id: "hepsiburada", label: "Hepsiburada", color: "#FF6000", logoUrl: "https://www.google.com/s2/favicons?domain_url=https://www.hepsiburada.com&sz=128", placeholder: "https://www.hepsiburada.com/magaza/magaza-adi" },
