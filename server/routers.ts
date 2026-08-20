@@ -54,7 +54,7 @@ function assertSafeUserContent(values: Array<string | null | undefined>) {
 
 
 const blockTypeSchema = z.enum(["heading", "description", "text", "link", "social", "location", "divider", "profile_image"]);
-const blockDataSchema = z.record(z.union([z.string(), z.boolean(), z.number()]));
+const blockDataSchema = z.record(z.string(), z.union([z.string(), z.boolean(), z.number()]));
 
 function normalizeSlug(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 100);
@@ -115,13 +115,11 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Veritabani baglantisi hazir degil");
         await db.delete(users).where(eq(users.id, ctx.user.id));
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+        ctx.resHeaders.append("Set-Cookie", `${COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
         return { success: true } as const;
       }),
     logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.resHeaders.append("Set-Cookie", `${COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
       return { success: true } as const;
     }),
   }),
@@ -389,7 +387,7 @@ export const appRouter = router({
       if (input.blocks.length === 0 && !input.allowEmpty) throw new Error("En az bir blok ekleyin");
       await db.delete(bioBlocks).where(eq(bioBlocks.pageId, input.pageId));
       if (input.blocks.length > 0) {
-        await db.insert(bioBlocks).values(input.blocks.map((block, index) => ({ pageId: input.pageId, type: block.type, sortOrder: index, isEnabled: block.isEnabled, data: block.data })));
+        await db.insert(bioBlocks).values(input.blocks.map((block, index) => ({ pageId: input.pageId, type: block.type, sortOrder: index, isEnabled: block.isEnabled, data: block.data as any })));
       }
       return db.select().from(bioBlocks).where(eq(bioBlocks.pageId, input.pageId)).orderBy(bioBlocks.sortOrder);
     }),
@@ -407,8 +405,9 @@ export const appRouter = router({
         code = makeShortCode(7);
       }
       const [link] = await db.insert(shortLinks).values({ userId: ctx.user?.id ?? null, originalUrl: input.url, code }).returning();
-      const host = typeof ctx.req.get === "function" ? ctx.req.get("host") : "llinktr.com";
-      const proto = ctx.req.protocol || "https";
+      const urlObj = new URL(ctx.req.url);
+      const host = urlObj.host || "llinktr.com";
+      const proto = urlObj.protocol.replace(":", "") || "https";
       return { ...link, shortUrl: proto + "://" + host + "/r/" + code };
     }),
   })

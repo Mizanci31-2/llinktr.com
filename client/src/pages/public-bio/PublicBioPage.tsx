@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import type { CSSProperties } from "react";
-import { useParams } from "wouter";
+import { usePathname, useRouter } from "next/navigation";
+import { useParams, useLocation } from "wouter";import type { CSSProperties } from "react";
+;
 import { trpc } from "@/lib/trpc";
 import {
   COMMERCE_LINK_PRESETS,
@@ -15,7 +16,8 @@ import {
   withCustomBackgroundImage,
 } from "@/lib/constants";
 import { Loader2, ExternalLink, UserRound, Zap, Share2, X, Copy, Check, PauseCircle, MapPin } from "lucide-react";
-import { Link } from "wouter";
+import Link from "next/link";
+;
 import { SocialIcon } from "@/components/SocialIcon";
 import { ProfileNotFound } from "@/components/ProfileNotFound";
 

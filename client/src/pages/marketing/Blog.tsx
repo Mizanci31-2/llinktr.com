@@ -3,7 +3,8 @@ import Footer from "@/components/Footer";
 import { BLOG_POSTS_EVENT, getAllBlogPosts } from "@/lib/blogAdminStore";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
+import Link from "next/link";
+;
 
 export default function Blog() {
   const [posts, setPosts] = useState(() => getAllBlogPosts());

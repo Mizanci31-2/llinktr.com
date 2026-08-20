@@ -253,9 +253,15 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  async authenticateRequest(req: Request): Promise<User> {
+  async authenticateRequest(req: Request | { headers: { cookie?: string } }): Promise<User> {
     // Regular authentication flow
-    const cookies = this.parseCookies(req.headers.cookie);
+    let cookieHeader = "";
+    if ("headers" in req && typeof (req.headers as any).get === "function") {
+       cookieHeader = (req.headers as Headers).get("cookie") || "";
+    } else if ("headers" in req && "cookie" in req.headers) {
+       cookieHeader = (req.headers as any).cookie || "";
+    }
+    const cookies = this.parseCookies(cookieHeader);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
 

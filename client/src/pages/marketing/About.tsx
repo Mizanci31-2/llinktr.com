@@ -1,7 +1,8 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { ArrowRight, BarChart3, Link2, Palette, QrCode, ShieldCheck, Sparkles, Zap } from "lucide-react";
-import { Link } from "wouter";
+import Link from "next/link";
+;
 
 const features = [
   { icon: Zap, title: "Bio Link", desc: "T�m �nemli balant1lar1n1z1 tek, h1zl1 ve mobil uyumlu sayfada toplay1n." },

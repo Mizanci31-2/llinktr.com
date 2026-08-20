@@ -1,9 +1,6 @@
-﻿import express from "express";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import express from "express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
 import {
   getBioBlockById,
   getBioPageByPublicId,
@@ -179,13 +176,7 @@ export function createApp() {
     }
   });
 
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    }),
-  );
+
 
   return app;
 }

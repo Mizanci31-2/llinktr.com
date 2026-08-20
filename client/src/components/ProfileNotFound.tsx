@@ -1,5 +1,6 @@
 import { AlertCircle, ArrowRight, Home, UserPlus } from "lucide-react";
-import { Link } from "wouter";
+import Link from "next/link";
+;
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 

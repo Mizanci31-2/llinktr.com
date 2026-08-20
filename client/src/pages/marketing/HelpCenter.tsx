@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Link } from "wouter";
+import Link from "next/link";
+;
 import { fetchHelpArticles, HELP_ARTICLES_EVENT, readAdminHelpArticles, type ManagedHelpArticle } from "@/lib/helpCenterAdminStore";
 import {
   HelpCircle,

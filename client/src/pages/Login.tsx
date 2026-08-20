@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useLocation } from "wouter";
+import { usePathname, useRouter } from "next/navigation";
+;
 import { ArrowRight, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,9 @@ const GOOGLE_ICON = (
 );
 
 export default function Login() {
-  const [, navigate] = useLocation();
+  const pathname = usePathname();
+  const router = useRouter();
+  const navigate = (path) => router.push(path);
   const { isAuthenticated, loading } = useAuth();
   const [mode, setMode] = useState<AuthMode>("signIn");
   const [name, setName] = useState("");
@@ -100,9 +103,9 @@ export default function Login() {
 
     const finishGoogleSignIn = async () => {
       try {
-        const profileRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+        const profileRes = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
           headers: {
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
             Authorization: `Bearer ${accessToken}`,
           },
         });
@@ -251,11 +254,11 @@ export default function Login() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
           Authorization: `Bearer ${resetAccessToken}`,
         },
         body: JSON.stringify({ password: newPassword.trim() }),

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { usePathname, useRouter } from "next/navigation";
+import { useLocation, useParams } from "wouter";
 import { blogPosts, landingPages } from "@/lib/marketingContent";
 
 const SITE_URL = "https://llinktr.com";

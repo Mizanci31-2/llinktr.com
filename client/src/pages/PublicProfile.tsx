@@ -1,4 +1,5 @@
-import { useRoute } from "wouter";
+import { useParams } from "next/navigation";
+;
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Loader2, ExternalLink } from "lucide-react";
@@ -6,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export default function PublicProfile() {
-  const [route, params] = useRoute("/:username");
+  const params = useParams();
+  const route = true; // migrated route match
   const [profileData, setProfileData] = useState<any>(null);
   const [links, setLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

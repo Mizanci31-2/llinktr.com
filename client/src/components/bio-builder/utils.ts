@@ -1,5 +1,5 @@
 export const DEFAULT_CANVA_PROFILE_URL =
-  import.meta.env.VITE_CANVA_PROFILE_URL || "https://www.canva.com/";
+  process.env.NEXT_PUBLIC_CANVA_PROFILE_URL || "https://www.canva.com/";
 
 export function isVideoMediaUrl(value?: string | null) {
   if (!value) return false;

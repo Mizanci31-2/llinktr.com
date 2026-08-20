@@ -4,8 +4,8 @@ export type AuthFlowMode = "signIn" | "signUp";
 export type AuthProvider = "google" | "email";
 
 export const getAuthUrl = (mode: AuthFlowMode = "signIn", provider?: AuthProvider) => {
-  const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
-  const appId = import.meta.env.VITE_APP_ID;
+  const oauthPortalUrl = process.env.NEXT_PUBLIC_OAUTH_PORTAL_URL;
+  const appId = process.env.NEXT_PUBLIC_APP_ID;
 
   if (!oauthPortalUrl || !appId) {
     return "/giris";

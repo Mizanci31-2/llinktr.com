@@ -1,8 +1,9 @@
 import { Loader2 } from "lucide-react";
+import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PublicProfile from "@/pages/public-profile/PublicProfile";
 import PublicBioPage from "@/pages/public-bio/PublicBioPage";
-import { useParams } from "wouter";
+;
 
 export default function LegacyPublicRoute() {
   const params = useParams<{ slug: string }>();

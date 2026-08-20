@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowRight, Home, Search, UserPlus } from "lucide-react";
 import { useEffect } from "react";
-import { Link } from "wouter";
+import Link from "next/link";
+;
 
 export default function NotFound() {
   useEffect(() => {

@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Link } from "wouter";
+import Link from "next/link";
+;
 
 type PolicyKind = "community" | "help" | "report";
 

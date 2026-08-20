@@ -1,4 +1,5 @@
-import { Link } from "wouter";
+import Link from "next/link";
+;
 import { ArrowRight, Check, Link2, QrCode, Sparkles, UserRound } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";

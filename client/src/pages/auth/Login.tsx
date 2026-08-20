@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, type FormEvent } from "react";
-import { useLocation } from "wouter";
+import { usePathname, useRouter } from "next/navigation";
+;
 import { ArrowRight, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,9 @@ function readUrlState() {
 }
 
 export default function Login() {
-  const [location, navigate] = useLocation();
+  const location = usePathname();
+  const router = useRouter();
+  const navigate = (path) => router.push(path);
   const { isAuthenticated, loading } = useAuth();
   const [mode, setMode] = useState<AuthMode>(() => (window.location.pathname.includes("kayitol") || window.location.pathname.includes("register") ? "signUp" : "signIn"));
   const [name, setName] = useState("");
@@ -92,9 +95,9 @@ export default function Login() {
 
     const finishGoogleSignIn = async () => {
       try {
-        const profileRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+        const profileRes = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
           headers: {
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
             Authorization: `Bearer ${accessToken}`,
           },
         });
@@ -228,8 +231,8 @@ export default function Login() {
 
   const submitNewPassword = async (event: FormEvent) => {
     event.preventDefault();
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (newPassword.trim().length < 6) {
       toast.error("Yeni şifre en az 6 karakter olmalı");
       return;

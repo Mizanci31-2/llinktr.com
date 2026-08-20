@@ -3,11 +3,14 @@ import Footer from "@/components/Footer";
 import { BLOG_POSTS_EVENT, getAllBlogPosts } from "@/lib/blogAdminStore";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useRoute } from "wouter";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+;
 import NotFound from "@/pages/system/NotFound";
 
 export default function BlogArticle() {
-  const [, params] = useRoute("/blog/:slug");
+  const params = useParams();
+  const match = true; // migrated route match
   const [posts, setPosts] = useState(() => getAllBlogPosts());
   const post = posts.find((item) => item.slug === params?.slug);
 

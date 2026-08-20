@@ -1,6 +1,7 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRef } from "react";
 import type { ElementType, RefObject } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1014,7 +1015,9 @@ function DesktopPreview({
 
 export default function BioBuilder() {
   const { id } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
+  const pathname = usePathname();
+  const router = useRouter();
+  const navigate = (path) => router.push(path);
   const { isAuthenticated, loading } = useAuth();
   const pageId = parseInt(id || "0");
 

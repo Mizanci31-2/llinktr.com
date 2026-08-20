@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ElementType } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -246,9 +247,9 @@ function serializeBlocksForSave(blocks: Array<{ id?: number | null; type: string
 }
 
 async function uploadImageFile(file: File) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const bucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || import.meta.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "uploads";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "uploads";
 
   if (supabaseUrl && supabaseAnonKey) {
     const extension = file.name.split(".").pop()?.toLowerCase() || "webp";
@@ -2719,8 +2720,10 @@ function DesktopPreview({
 }
 
 export default function BioBuilder() {
-  const { id } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
+  const { id } = useParams<{ id: string }>() || { id: "0" };
+  const pathname = usePathname();
+  const router = useRouter();
+  const navigate = (path: string) => router.push(path);
   const { isAuthenticated, loading } = useAuth();
   const pageId = parseInt(id || "0");
   const utils = trpc.useUtils();
@@ -2732,7 +2735,7 @@ export default function BioBuilder() {
       staleTime: 1000 * 60 * 2,
       gcTime: 1000 * 60 * 10,
       refetchOnWindowFocus: false,
-    },
+    }
   );
 
   const [blocks, setBlocks] = useState<LocalBlock[]>([]);

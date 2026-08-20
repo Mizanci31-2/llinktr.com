@@ -11,7 +11,8 @@ import {
   safeAccentColor,
 } from "@/lib/constants";
 import { Loader2, ExternalLink, Globe, UserRound, Zap, Share2, X, Copy, Check, PauseCircle } from "lucide-react";
-import { Link } from "wouter";
+import Link from "next/link";
+
 import { SocialIcon } from "@/components/SocialIcon";
 
 type BlockType = "heading" | "description" | "text" | "link" | "social" | "divider" | "profile_image";

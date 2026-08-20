@@ -1,5 +1,7 @@
-﻿import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+;
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +22,9 @@ import {
 
 export default function Dashboard() {
   const MAX_BIO_PAGES = 5;
-  const [, navigate] = useLocation();
+  const pathname = usePathname();
+  const router = useRouter();
+  const navigate = (path) => router.push(path);
   const { user, isAuthenticated, loading } = useAuth();
   const utils = trpc.useUtils();
 

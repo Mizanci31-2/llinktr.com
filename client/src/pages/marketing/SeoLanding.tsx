@@ -2,7 +2,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { buildLandingParagraphs, landingPages, type LandingKind } from "@/lib/marketingContent";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { Link } from "wouter";
+import Link from "next/link";
+;
 
 export default function SeoLanding({ kind }: { kind: LandingKind }) {
   const page = landingPages[kind];

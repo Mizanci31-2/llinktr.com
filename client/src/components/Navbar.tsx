@@ -1,4 +1,6 @@
-﻿import { Link, useLocation } from "wouter";
+﻿import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+;
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,7 +29,9 @@ const authMenuLinks = [
 ];
 
 export default function Navbar() {
-  const [location, setLocation] = useLocation();
+  const location = usePathname();
+  const router = useRouter();
+  const setLocation = (path) => router.push(path);
   const { isAuthenticated, user } = useAuth();
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
