@@ -8,7 +8,9 @@ export default function About() {
       <Navbar />
       <div className="container max-w-3xl flex-1 py-12">
         <div className="mb-12 text-center">
-          <img src="/site-logo.png" alt="llinktr" className="mx-auto mb-5 h-16 w-auto max-w-[260px] object-contain" />
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+            <Zap className="h-8 w-8 text-primary" />
+          </div>
           <h1 className="mb-3 text-3xl font-bold">llinktr Hakkinda</h1>
           <p className="mx-auto max-w-xl text-lg text-muted-foreground">
             Dijital varliginizi tek bir panelde yonetmenizi saglayan modern bio link platformu.

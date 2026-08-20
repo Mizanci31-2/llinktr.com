@@ -62,10 +62,10 @@ export default function DashboardLayout({
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
             <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Devam etmek için giriş yapın
+              Devam etmek i�in giri_ yap1n
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Panele erişmek için oturum açmanız gerekiyor.
+              Panele eri_mek i�in oturum a�man1z gerekiyor.
             </p>
           </div>
           <Button
@@ -75,7 +75,7 @@ export default function DashboardLayout({
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
-            Giriş Yap
+            Giri_ Yap
           </Button>
         </div>
       </div>
@@ -226,7 +226,7 @@ function DashboardLayoutContent({
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Çıkış Yap</span>
+                  <span>�1k1_ Yap</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

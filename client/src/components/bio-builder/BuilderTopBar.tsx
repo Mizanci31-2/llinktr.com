@@ -46,7 +46,7 @@ export function BuilderTopBar({
         <div className="flex w-full flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end">
           <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-background/50 px-3 py-1.5">
             <span className="text-xs text-muted-foreground">
-              {isPublished ? "Yayında" : "Durduruldu"}
+              {isPublished ? "Yay1nda" : "Durduruldu"}
             </span>
             <Switch checked={isPublished} onCheckedChange={onTogglePublished} className="scale-75" />
           </div>
@@ -54,7 +54,7 @@ export function BuilderTopBar({
           <a href={`/${slug}`} target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="h-9 border-border/50 px-3 text-xs">
               <Eye className="mr-1.5 h-3.5 w-3.5" />
-              Görüntüle
+              G�r�nt�le
             </Button>
           </a>
 

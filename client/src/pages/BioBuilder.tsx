@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
-import type { ElementType } from "react";
+﻿import { useEffect, useState } from "react";
+import { useRef } from "react";
+import type { ElementType, RefObject } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,16 +9,6 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -30,30 +21,15 @@ import {
   LOCATION_LINK_PRESETS,
   MAX_PROFILE_IMAGE_BYTES,
   SOCIAL_PLATFORMS,
-  THEME_CATEGORY_TABS,
-  getThemeCategory,
   getBioBackgroundStyle,
-  getBioBackgroundStyleStatic,
   getBioButtonStyle,
   getBioCardStyle,
   getBioTheme,
   getBioThemePreviewStyle,
   safeAccentColor,
   themeHasImageBackground,
-  withCustomBackgroundImage,
 } from "@/lib/constants";
 import { SocialIcon } from "@/components/SocialIcon";
-import { BlockLibraryDialog } from "@/components/bio-builder/BlockLibraryDialog";
-import { BlockListPanel } from "@/components/bio-builder/BlockListPanel";
-import { BuilderPreviewPanel } from "@/components/bio-builder/BuilderPreviewPanel";
-import { BuilderTopBar } from "@/components/bio-builder/BuilderTopBar";
-import { ProfileHeroCard } from "@/components/bio-builder/ProfileHeroCard";
-import { ProfileImageModal } from "@/components/bio-builder/ProfileImageModal";
-import { ProfileTextModal } from "@/components/bio-builder/ProfileTextModal";
-import { SocialLinksModal } from "@/components/bio-builder/SocialLinksModal";
-import { ThemePanelCard } from "@/components/bio-builder/ThemePanelCard";
-import type { BlockType, LocalBlock, SocialLinkDraft } from "@/components/bio-builder/types";
-import { formatCompactUrl, isVideoMediaUrl } from "@/components/bio-builder/utils";
 import {
   AlignLeft,
   AlignCenter,
@@ -61,9 +37,11 @@ import {
   ArrowLeft,
   ArrowUp,
   BarChart3,
-  Check,
+  BadgeCheck,
+  BatteryFull,
   ChevronDown,
   ChevronUp,
+  Download,
   ExternalLink,
   Eye,
   Globe,
@@ -76,19 +54,32 @@ import {
   Minus,
   Monitor,
   MousePointerClick,
-  MessageCircle,
   MapPin,
   Plus,
   Save,
   Share2,
+  Signal,
   Store,
   Smartphone,
   Trash2,
   Type,
   Upload,
   UserRound,
+  Wifi,
   X,
 } from "lucide-react";
+
+type BlockType = "heading" | "description" | "text" | "link" | "social" | "divider" | "profile_image";
+
+interface LocalBlock {
+  id?: number;
+  tempId: string;
+  type: BlockType;
+  sortOrder: number;
+  isEnabled: boolean;
+  clicks?: number;
+  data: Record<string, string | boolean | number>;
+}
 
 const BLOCK_ICONS: Record<BlockType, ElementType> = {
   heading: Heading1,
@@ -96,61 +87,19 @@ const BLOCK_ICONS: Record<BlockType, ElementType> = {
   text: Type,
   link: Link,
   social: Share2,
-  location: MapPin,
   divider: Minus,
   profile_image: Image,
 };
 
 const BLOCK_LABELS: Record<BlockType, string> = {
-  heading: "Baslik",
-  description: "Aciklama",
+  heading: "Başlık",
+  description: "Açıklama",
   text: "Metin",
   link: "Link",
   social: "Sosyal Hesap",
-  location: "Konum / Harita",
-  divider: "Ince Cizgi",
-  profile_image: "Logo / Gorsel",
+  divider: "İnce Çizgi",
+  profile_image: "Profil Resmi",
 };
-
-const QUICK_PALETTES = [
-  { label: "Neon", accent: "#D6FF00", text: "#F8FAFC" },
-  { label: "Buz", accent: "#7DD3FC", text: "#F8FAFC" },
-  { label: "Mint", accent: "#86EFAC", text: "#F8FAFC" },
-  { label: "Pembe", accent: "#F472B6", text: "#FFF7FB" },
-  { label: "Altin", accent: "#FBBF24", text: "#FFFBEB" },
-];
-
-const SMART_PRESETS = [
-  { kind: "influencer", label: "Influencer", desc: "Sosyal hesap + one cikan icerik", accent: "#D6FF00" },
-  { kind: "sales", label: "Satis", desc: "WhatsApp + urun/satis linki", accent: "#86EFAC" },
-  { kind: "freelancer", label: "Freelancer", desc: "Portfolyo + teklif al", accent: "#7DD3FC" },
-] as const;
-
-const LINK_STYLE_TEMPLATES = [
-  { id: "clean", label: "Temiz", patch: { bgColor: "", textColor: "", borderColor: "", borderWidth: 1, radiusPreset: "soft", fontPreset: "clean" } },
-  { id: "glass", label: "Cam", patch: { bgColor: "rgba(255,255,255,0.08)", textColor: "", borderColor: "rgba(255,255,255,0.16)", borderWidth: 1, radiusPreset: "soft", fontPreset: "clean" } },
-  { id: "solid", label: "Dolu", patch: { bgColor: "#1f2329", textColor: "#F8FAFC", borderColor: "#3b4048", borderWidth: 1, radiusPreset: "soft", fontPreset: "bold" } },
-  { id: "pill", label: "Pill", patch: { bgColor: "#181c21", textColor: "", borderColor: "", borderWidth: 1, radiusPreset: "pill", fontPreset: "bold" } },
-  { id: "spot", label: "Spot", patch: { bgColor: "#242a31", textColor: "#FFFFFF", borderColor: "#D6FF00", borderWidth: 2, radiusPreset: "square", fontPreset: "caps" } },
-] as const;
-
-function isTemplateActive(
-  data: Record<string, string | boolean | number>,
-  patch: Record<string, string | boolean | number>,
-) {
-  return Object.entries(patch).every(([key, value]) => {
-    const current = data[key];
-    if (value === "") {
-      return current === undefined || current === "";
-    }
-    return current === value;
-  });
-}
-
-function normalizeColorInput(value: string, fallback: string) {
-  const trimmed = value.trim();
-  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed) ? trimmed : fallback;
-}
 
 function generateTempId() {
   return `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -160,207 +109,9 @@ function normalizeBlocks(blocks: LocalBlock[]) {
   return blocks.map((block, index) => ({ ...block, sortOrder: index }));
 }
 
-function getSocialPlacement(data: Record<string, string | boolean | number> | null | undefined) {
-  return data?.placement === "top" ? "top" : "inline";
-}
-
-type SocialAccountData = {
-  id: string;
-  platform: string;
-  url: string;
-  isEnabled: boolean;
-};
-
-function makeSocialAccountId() {
-  return `social_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-}
-
-function getInlineSocialAccounts(data: Record<string, string | boolean | number> | null | undefined): SocialAccountData[] {
-  if (!data) return [];
-
-  if (typeof data.accounts === "string" && data.accounts.trim()) {
-    try {
-      const parsed = JSON.parse(data.accounts) as Array<Partial<SocialAccountData>>;
-      if (Array.isArray(parsed)) {
-        return parsed
-          .map((item, index) => ({
-            id: String(item.id || `legacy_${index}`),
-            platform: String(item.platform || ""),
-            url: String(item.url || ""),
-            isEnabled: item.isEnabled !== false,
-          }));
-      }
-    } catch {
-      // Legacy records may not have JSON accounts yet.
-    }
-  }
-
-  if (data.platform || data.url) {
-    return [
-      {
-        id: "legacy_0",
-        platform: String(data.platform || ""),
-        url: String(data.url || ""),
-        isEnabled: true,
-      },
-    ];
-  }
-
-  return [];
-}
-
-function withInlineSocialAccounts(
-  data: Record<string, string | boolean | number>,
-  accounts: SocialAccountData[],
-) {
-  const nextData: Record<string, string | boolean | number> = {
-    ...data,
-    placement: "inline",
-    accounts: JSON.stringify(accounts),
-  };
-  delete nextData.platform;
-  delete nextData.url;
-  return nextData;
-}
-
-function sanitizeBlockData(data: Record<string, string | boolean | number>) {
-  return Object.fromEntries(
-    Object.entries(data).filter((entry): entry is [string, string | boolean | number] => {
-      const value = entry[1];
-      return typeof value === "string" || typeof value === "boolean" || typeof value === "number";
-    }),
-  );
-}
-
-function serializeBlocksForSave(blocks: Array<{ id?: number | null; type: string; sortOrder: number; isEnabled: boolean; data: unknown }>) {
-  return JSON.stringify(
-    blocks.map((block, index) => ({
-      id: block.id ?? null,
-      type: block.type,
-      sortOrder: index,
-      isEnabled: block.isEnabled,
-      data: block.data ?? {},
-    })),
-  );
-}
-
-async function uploadImageFile(file: File) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const bucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || import.meta.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "uploads";
-
-  if (supabaseUrl && supabaseAnonKey) {
-    const extension = file.name.split(".").pop()?.toLowerCase() || "webp";
-    const storagePath = `bio/photos/${Date.now()}-${crypto.randomUUID()}.${extension}`;
-    const baseUrl = String(supabaseUrl).replace(/\/+$/, "");
-    const response = await fetch(`${baseUrl}/storage/v1/object/${bucket}/${storagePath}`, {
-      method: "POST",
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-        "Content-Type": file.type || "application/octet-stream",
-        "x-upsert": "false",
-      },
-      body: file,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData?.message || "Foto Supabase Storage'a yuklenemedi");
-    }
-
-    return `${baseUrl}/storage/v1/object/public/${bucket}/${storagePath}`;
-  }
-
-  const presignResponse = await fetch("/api/storage/presign-put", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ contentType: file.type, size: file.size }),
-  });
-  const presignData = await presignResponse.json().catch(() => null) as { uploadUrl?: string; url?: string; message?: string } | null;
-
-  if (!presignResponse.ok || !presignData?.uploadUrl || !presignData?.url) {
-    throw new Error(presignData?.message || "Gorsel yukleme baglantisi olusturulamadi");
-  }
-
-  const uploadResponse = await fetch(presignData.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
-  });
-
-  if (!uploadResponse.ok) {
-    throw new Error("Gorsel depolama alanina yuklenemedi");
-  }
-
-  return presignData.url;
-}
-
-function loadImageElement(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new window.Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Gorsel okunamadi"));
-    image.src = src;
-  });
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error("Gorsel okunamadi"));
-    };
-    reader.onerror = () => reject(new Error("Gorsel okunamadi"));
-    reader.readAsDataURL(file);
-  });
-}
-
-async function compressImageFile(file: File, label: string) {
-  if (file.type === "image/svg+xml") {
-    if (file.size <= 600 * 1024) return readFileAsDataUrl(file);
-    throw new Error(`${label} SVG olarak cok buyuk. Lutfen PNG/JPG/WebP yukleyin.`);
-  }
-
-  const originalDataUrl = await readFileAsDataUrl(file);
-  const image = await loadImageElement(originalDataUrl);
-  const lowerLabel = label.toLocaleLowerCase("tr");
-  const maxSide = lowerLabel.includes("profil")
-    ? 520
-    : lowerLabel.includes("arka plan")
-      ? 900
-      : 256;
-  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
-  const width = Math.max(1, Math.round(image.naturalWidth * scale));
-  const height = Math.max(1, Math.round(image.naturalHeight * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    throw new Error("Gorsel islenemedi");
-  }
-
-  context.drawImage(image, 0, 0, width, height);
-  const compressed = canvas.toDataURL("image/webp", 0.72);
-
-  if (compressed.length > 650_000) {
-    return canvas.toDataURL("image/jpeg", 0.64);
-  }
-
-  return compressed;
-}
-
-function readImageFile(file: File, onLoaded: (url: string) => void, label = "Gorsel") {
-  const allowedTypes = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
-  if (!allowedTypes.has(file.type)) {
-    toast.error("Sadece JPG, PNG veya WebP gorsel yukleyebilirsiniz");
+function readImageFile(file: File, onLoaded: (dataUrl: string) => void, label = "Görsel") {
+  if (!file.type.startsWith("image/")) {
+    toast.error("Lütfen geçerli bir görsel dosyası seçin");
     return;
   }
 
@@ -369,25 +120,23 @@ function readImageFile(file: File, onLoaded: (url: string) => void, label = "Gor
     return;
   }
 
-  const loadingToast = toast.loading(`${label} hazirlaniyor...`);
-  void uploadImageFile(file)
-    .catch(() => compressImageFile(file, label))
-    .then((url) => {
-      onLoaded(url);
-      toast.success(`${label} yuklendi`, { id: loadingToast });
-    })
-    .catch((error) => {
-      toast.error(error instanceof Error ? error.message : "Gorsel yuklenemedi", { id: loadingToast });
-    });
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === "string") {
+      onLoaded(reader.result);
+    }
+  };
+  reader.onerror = () => toast.error("Görsel okunamadı");
+  reader.readAsDataURL(file);
 }
 
 function getBlockSummary(block: LocalBlock) {
   if (block.type === "heading") {
-    return String(block.data.text || "Buyuk bir baslik ekleyin");
+    return String(block.data.text || "Büyük bir başlık ekleyin");
   }
 
   if (block.type === "description" || block.type === "text") {
-    return String(block.data.text || "Aciklama veya serbest metin alani");
+    return String(block.data.text || "Açıklama veya serbest metin alanı");
   }
 
   if (block.type === "link") {
@@ -396,25 +145,16 @@ function getBlockSummary(block: LocalBlock) {
     return `${title} - ${url}`;
   }
 
-  if (block.type === "location") {
-    return String(block.data.address || block.data.title || "Adres ve harita bilgisi ekleyin");
-  }
-
   if (block.type === "social") {
-    if (getSocialPlacement(block.data) !== "top") {
-      const accounts = getInlineSocialAccounts(block.data);
-      const enabledCount = accounts.filter((account) => account.isEnabled !== false && account.platform).length;
-      return enabledCount > 0 ? `${enabledCount} sosyal hesap` : "Sosyal hesaplar blogu";
-    }
     const platform = SOCIAL_PLATFORMS.find(item => item.id === block.data.platform);
-    return platform ? `${platform.label} hesabi` : "Platform secin";
+    return platform ? `${platform.label} hesabı` : "Platform seçin";
   }
 
   if (block.type === "profile_image") {
-    return block.data.kind === "image" ? "Gorsel / fotograf blogu" : "Logo blogu";
+    return "Profil resmi blok görünümü";
   }
 
-  return "Bolumler arasina ayirici cizgi ekler";
+  return "Bölümler arasına ayırıcı çizgi ekler";
 }
 
 function getLinkAlignment(data: Record<string, string | boolean | number>) {
@@ -427,143 +167,6 @@ function getCommercePreset(presetId?: string) {
 
 function getLocationPreset(presetId?: string) {
   return LOCATION_LINK_PRESETS.find(item => item.id === presetId);
-}
-
-function getLocationPresetByProvider(provider?: string | number | boolean) {
-  return LOCATION_LINK_PRESETS.find(item => item.platform === provider || item.id === provider);
-}
-
-function getLocationProviderLabel(provider?: string | number | boolean) {
-  if (provider === "google_maps") return "Google Maps";
-  if (provider === "apple_maps") return "Apple Maps";
-  return "Otomatik";
-}
-
-function detectMapProvider(rawUrl: string) {
-  const value = rawUrl.toLowerCase();
-  if (value.includes("maps.apple.com")) return "apple_maps";
-  if (value.includes("google.com/maps") || value.includes("maps.google.") || value.includes("maps.app.goo.gl") || value.includes("goo.gl/maps")) return "google_maps";
-  return "auto_maps";
-}
-
-function isShortGoogleMapUrl(rawUrl: string) {
-  const value = rawUrl.toLowerCase();
-  return value.includes("maps.app.goo.gl") || value.includes("goo.gl/maps");
-}
-
-function extractMapUrlFromInput(rawValue: string) {
-  const value = rawValue.trim();
-  if (!value) return "";
-
-  const srcMatch = value.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
-  if (srcMatch?.[1]) return srcMatch[1].trim();
-
-  const urlMatch = value.match(/https?:\/\/[^\s"'<>]+/i);
-  if (urlMatch?.[0]) return urlMatch[0].trim();
-
-  return value;
-}
-
-function parseCoordinatePair(value: string) {
-  const match = value.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
-  if (!match) return null;
-  const lat = Number(match[1]);
-  const lng = Number(match[2]);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-  return { lat: String(lat), lng: String(lng) };
-}
-
-function extractCoordinatesFromMapUrl(rawUrl: string) {
-  const value = extractMapUrlFromInput(rawUrl);
-  if (!value) return null;
-  let decoded = value.replace(/\+/g, " ");
-  try {
-    decoded = decodeURIComponent(decoded);
-  } catch {
-    decoded = value;
-  }
-
-  const patterns = [
-    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
-    /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
-    /[?&]ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
-    /[?&]center=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
-    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
-  ];
-  for (const pattern of patterns) {
-    const match = decoded.match(pattern);
-    if (match) {
-      const parsed = parseCoordinatePair(`${match[1]},${match[2]}`);
-      if (parsed) return parsed;
-    }
-  }
-  const embedMatch = decoded.match(/!2d(-?\d+(?:\.\d+)?)!3d(-?\d+(?:\.\d+)?)/);
-  if (embedMatch) {
-    const parsed = parseCoordinatePair(`${embedMatch[2]},${embedMatch[1]}`);
-    if (parsed) return parsed;
-  }
-  return parseCoordinatePair(decoded);
-}
-
-async function resolveMapUrl(rawUrl: string) {
-  const cleanUrl = extractMapUrlFromInput(rawUrl);
-  if (!isShortGoogleMapUrl(cleanUrl)) return cleanUrl;
-
-  try {
-    const response = await fetch(`/api/resolve-map-url?url=${encodeURIComponent(cleanUrl)}`);
-    if (!response.ok) return cleanUrl;
-    const payload = (await response.json()) as { url?: string };
-    return payload.url || cleanUrl;
-  } catch {
-    return cleanUrl;
-  }
-}
-
-function getValidCoordinates(data: Record<string, string | boolean | number> | null | undefined) {
-  if (!data) return null;
-  const lat = String(data.lat || "").trim();
-  const lng = String(data.lng || "").trim();
-  if (!lat || !lng) return null;
-  const latNumber = Number(lat);
-  const lngNumber = Number(lng);
-  if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return null;
-  if (latNumber < -90 || latNumber > 90 || lngNumber < -180 || lngNumber > 180) return null;
-  return { lat: latNumber, lng: lngNumber };
-}
-
-function getCoordinateValidationMessage(data: Record<string, string | boolean | number> | null | undefined) {
-  if (!data) return "";
-  const lat = String(data.lat || "").trim();
-  const lng = String(data.lng || "").trim();
-  if (lat) {
-    const latNumber = Number(lat);
-    if (!Number.isFinite(latNumber) || latNumber < -90 || latNumber > 90) return "Enlem degeri -90 ile 90 arasinda olmali.";
-  }
-  if (lng) {
-    const lngNumber = Number(lng);
-    if (!Number.isFinite(lngNumber) || lngNumber < -180 || lngNumber > 180) return "Boylam degeri -180 ile 180 arasinda olmali.";
-  }
-  return "";
-}
-
-function buildMapQuery(data: Record<string, string | boolean | number> | null | undefined) {
-  if (!data) return "";
-  const coordinates = getValidCoordinates(data);
-  if (coordinates) return `${coordinates.lat},${coordinates.lng}`;
-  if (data.url && detectMapProvider(String(data.url)) !== "apple_maps") return String(data.url);
-  return String(data.address || data.title || "").trim();
-}
-
-function buildMapEmbedUrl(data: Record<string, string | boolean | number> | null | undefined) {
-  const provider = data?.provider === "auto_maps" && data?.url ? detectMapProvider(String(data.url)) : String(data?.provider || "auto_maps");
-  if (provider === "apple_maps") return "";
-  const query = buildMapQuery(data) || "39.0,35.0";
-  return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
-}
-
-function getLogoPreset(presetId?: string) {
-  return getCommercePreset(presetId) || LOCATION_LINK_PRESETS.find(item => item.platform === presetId || item.id === presetId);
 }
 
 function normalizeSocialUrl(platformId: string | undefined, rawValue: string) {
@@ -601,7 +204,7 @@ function getBlockLabel(block: LocalBlock) {
   }
 
   if (block.type === "divider") {
-    return getDividerVariant(block.data) === "thick" ? "Kalin Cizgi" : "Ince Cizgi";
+    return getDividerVariant(block.data) === "thick" ? "Kalın Çizgi" : "İnce Çizgi";
   }
 
   return BLOCK_LABELS[block.type];
@@ -654,10 +257,10 @@ function getBlockTone(block: LocalBlock) {
       };
     default:
       return {
-        frame: "border-border/70 bg-[#171b20]",
-        header: "border-b border-border/50 bg-[#1d2228]",
+        frame: "border-border/70 bg-card",
+        header: "border-b border-border/40 bg-background/50",
         icon: "text-primary",
-        panel: "border-border/60 bg-[#1f242b]",
+        panel: "border-border/70 bg-background/55",
         badge: "bg-primary/10 text-primary",
       };
   }
@@ -673,7 +276,7 @@ function LinkLogo({
   fallbackColor: string;
 }) {
   if (data.logoPreset) {
-    const preset = getLogoPreset(String(data.logoPreset));
+    const preset = getCommercePreset(String(data.logoPreset));
     if (preset?.logoUrl) {
       return <img src={preset.logoUrl} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
     }
@@ -704,13 +307,24 @@ function ImageUploadHint({ text }: { text: string }) {
   );
 }
 
+function getProfileInitials(title: string) {
+  const words = title
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!words.length) return "ll";
+  return words
+    .slice(0, 2)
+    .map(word => word[0]?.toLocaleUpperCase("tr-TR"))
+    .join("");
+}
+
 function BlockEditor({
   block,
-  expanded,
   onChange,
   onDelete,
   onToggle,
-  onToggleExpanded,
   onMoveUp,
   onMoveDown,
   onTouchDragStart,
@@ -718,37 +332,23 @@ function BlockEditor({
   canMoveDown,
 }: {
   block: LocalBlock;
-  expanded: boolean;
   onChange: (data: Record<string, string | boolean | number>) => void;
   onDelete: () => void;
   onToggle: () => void;
-  onToggleExpanded: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onTouchDragStart: () => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
 }) {
+  const [expanded, setExpanded] = useState(true);
   const Icon = BLOCK_ICONS[block.type];
   const linkAlign = block.type === "link" ? getLinkAlignment(block.data) : "center";
   const selectedCommercePreset = block.type === "link" ? getCommercePreset(String(block.data.logoPreset || "")) : undefined;
-  const selectedLocationPreset = block.type === "location" ? getLocationPresetByProvider(block.data.provider || block.data.logoPreset) : undefined;
-  const inlineSocialAccounts = block.type === "social" && getSocialPlacement(block.data) !== "top" ? getInlineSocialAccounts(block.data) : [];
-  const firstInlineSocialAccount = inlineSocialAccounts.find((account) => account.platform) ?? inlineSocialAccounts[0];
-  const selectedSocialPlatform = block.type === "social"
-    ? SOCIAL_PLATFORMS.find(item => item.id === (firstInlineSocialAccount?.platform || block.data.platform))
-    : undefined;
+  const selectedSocialPlatform = block.type === "social" ? SOCIAL_PLATFORMS.find(item => item.id === block.data.platform) : undefined;
   const isCommerceLink = block.type === "link" && Boolean(selectedCommercePreset);
   const tone = getBlockTone(block);
   const blockLabel = getBlockLabel(block);
-  const showLinkVisual = block.type === "link" && Boolean(block.data.logoUrl || block.data.logoPreset || block.data.logoUrlSecondary);
-  const showSocialVisual = block.type === "social" && Boolean(firstInlineSocialAccount?.platform || block.data.platform);
-  const showLocationVisual = block.type === "location";
-  const locationUrl = String(block.data.url || "").trim();
-  const locationProvider = block.type === "location" && block.data.provider === "auto_maps" && locationUrl ? detectMapProvider(locationUrl) : String(block.data.provider || "auto_maps");
-  const locationUsesLink = block.type === "location" && Boolean(locationUrl) && block.data.addressMode !== "address";
-  const locationValidationMessage = block.type === "location" ? getCoordinateValidationMessage(block.data) : "";
-  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
 
   const handleImageUpload = (file?: File) => {
     if (!file) return;
@@ -768,301 +368,78 @@ function BlockEditor({
     onChange(nextData);
   };
 
-  const rememberTextSelection = (element: HTMLInputElement | HTMLTextAreaElement) => {
-    onChange({
-      ...block.data,
-      selectionStart: element.selectionStart ?? 0,
-      selectionEnd: element.selectionEnd ?? 0,
-    });
-  };
-
-  const applySelectedTextLink = () => {
-    const text = String(block.data.text || "");
-    const start = Number(block.data.selectionStart ?? 0);
-    const end = Number(block.data.selectionEnd ?? 0);
-    const url = String(block.data.pendingTextLinkUrl || "").trim();
-    if (!url || Number.isNaN(start) || Number.isNaN(end) || end <= start || end > text.length) {
-      toast.error("Once metinden bir bolum secip link URL'si girin");
-      return;
-    }
-    onChange({
-      ...block.data,
-      textLinkStart: start,
-      textLinkEnd: end,
-      textLinkUrl: url,
-      pendingTextLinkUrl: "",
-    });
-  };
-
-  const clearSelectedTextLink = () => {
-    const nextData = { ...block.data };
-    delete nextData.textLinkStart;
-    delete nextData.textLinkEnd;
-    delete nextData.textLinkUrl;
-    onChange(nextData);
-  };
-
-  const renderTextStyleControls = () => (
-    <div className="space-y-2">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Select value={String(block.data.textStyle || "normal")} onValueChange={(value) => onChange({ ...block.data, textStyle: value })}>
-          <SelectTrigger className="bg-input border-border/60 text-sm">
-            <SelectValue placeholder="Yazi stili" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="normal">Normal</SelectItem>
-            <SelectItem value="bold">Kalin</SelectItem>
-            <SelectItem value="light">Ince</SelectItem>
-            <SelectItem value="display">Buyuk baslik</SelectItem>
-            <SelectItem value="small">Kucuk metin</SelectItem>
-            <SelectItem value="accent">Vurgu metni</SelectItem>
-          </SelectContent>
-        </Select>
-        <ToggleGroup
-          type="single"
-          value={String(block.data.align || "center")}
-          onValueChange={(value) => value && onChange({ ...block.data, align: value })}
-          className="grid w-full grid-cols-3"
-        >
-          <ToggleGroupItem value="left" className="text-[10px]">Sol</ToggleGroupItem>
-          <ToggleGroupItem value="center" className="text-[10px]">Orta</ToggleGroupItem>
-          <ToggleGroupItem value="right" className="text-[10px]">Sag</ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-input px-2">
-          <input
-            type="color"
-            value={normalizeColorInput(String(block.data.textColor || ""), "#ffffff")}
-            onChange={(event) => onChange({ ...block.data, textColor: event.target.value })}
-            className="h-8 w-8 rounded border-0 bg-transparent p-0"
-          />
-          <Input
-            value={String(block.data.textColor || "")}
-            onChange={(event) => onChange({ ...block.data, textColor: event.target.value })}
-            placeholder="Yazi rengi #FFFFFF"
-            className="border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={String(block.data.pendingTextLinkUrl || "")}
-            onChange={(event) => onChange({ ...block.data, pendingTextLinkUrl: event.target.value })}
-            placeholder="Secili metin linki"
-            className="bg-input border-border/60 text-sm"
-          />
-          <Button type="button" variant="outline" onClick={applySelectedTextLink} className="shrink-0 border-border/60">
-            <Link className="mr-1.5 h-3.5 w-3.5" />
-            Link
-          </Button>
-        </div>
-      </div>
-      {block.data.textLinkUrl ? (
-        <Button type="button" variant="ghost" size="sm" onClick={clearSelectedTextLink} className="h-8 px-2 text-xs text-muted-foreground">
-          Metin linkini kaldir
-        </Button>
-      ) : null}
-    </div>
-  );
-
-  const updateInlineSocialAccounts = (accounts: SocialAccountData[]) => {
-    onChange(withInlineSocialAccounts(block.data, accounts));
-  };
-
-  const findLocationFromUrl = async () => {
-    const rawUrl = String(block.data.url || "").trim();
-    if (!rawUrl) {
-      toast.error("Once konum linki girin.");
-      return;
-    }
-
-    setIsResolvingLocation(true);
-    try {
-      const resolvedUrl = await resolveMapUrl(rawUrl);
-      const detectedProvider = detectMapProvider(resolvedUrl);
-      const coordinates = extractCoordinatesFromMapUrl(resolvedUrl);
-      if (!coordinates) {
-        toast.error("Konum linkinden koordinat bulunamadi. Lutfen adres veya koordinat girin.");
-        return;
-      }
-
-      onChange({
-        ...block.data,
-        url: resolvedUrl,
-        lat: coordinates.lat,
-        lng: coordinates.lng,
-        provider: detectedProvider === "auto_maps" ? block.data.provider || "auto_maps" : detectedProvider,
-        addressMode: "link",
-      });
-      toast.success("Konum bulundu.");
-    } finally {
-      setIsResolvingLocation(false);
-    }
-  };
-
-  const addInlineSocialAccount = () => {
-    updateInlineSocialAccounts([
-      ...inlineSocialAccounts,
-      {
-        id: makeSocialAccountId(),
-        platform: "",
-        url: "",
-        isEnabled: true,
-      },
-    ]);
-  };
-
-  const updateInlineSocialAccount = (id: string, patch: Partial<SocialAccountData>) => {
-    updateInlineSocialAccounts(
-      inlineSocialAccounts.map((account) =>
-        account.id === id
-          ? {
-              ...account,
-              ...patch,
-              url: patch.url !== undefined
-                ? normalizeSocialUrl(patch.platform ?? account.platform, patch.url)
-                : account.url,
-            }
-          : account,
-      ),
-    );
-  };
-
-  const removeInlineSocialAccount = (id: string) => {
-    updateInlineSocialAccounts(inlineSocialAccounts.filter((account) => account.id !== id));
-  };
-
   return (
-    <div className={`min-w-0 overflow-hidden rounded-[1.15rem] border shadow-sm transition-all ${block.isEnabled ? tone.frame : "border-border/40 bg-[#1a1e24] opacity-70"}`}>
-      <div onClick={onToggleExpanded} className={`flex cursor-pointer flex-wrap items-start gap-3 px-3 py-3 sm:flex-nowrap sm:items-center sm:px-3.5 sm:py-3.5 ${block.isEnabled ? tone.header : "border-b border-border/30 bg-[#181c21]"}`}>
+    <div className={`overflow-hidden rounded-[1.15rem] border shadow-sm transition-all ${block.isEnabled ? tone.frame : "border-border/40 bg-card/55 opacity-60"}`}>
+      <div className={`flex items-center gap-3 px-3.5 py-3.5 ${block.isEnabled ? tone.header : "border-b border-border/30 bg-background/45"}`}>
         <button
           type="button"
-          onClick={(event) => event.stopPropagation()}
           onTouchStart={(event) => {
             event.preventDefault();
             onTouchDragStart();
           }}
-          className="mt-0.5 rounded p-1 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-          aria-label="Surukleyerek sirala"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          aria-label="Sürükleyerek sırala"
         >
           <GripVertical className="h-4 w-4 cursor-grab flex-shrink-0" />
         </button>
         <div className="flex min-w-0 flex-1 items-start gap-2">
-          <div className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 ${block.isEnabled ? tone.badge : "bg-muted/40 text-muted-foreground"}`}>
-            {showLinkVisual ? (
-              <div className="relative h-7 w-7">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <LinkLogo data={block.data} size={28} fallbackColor={selectedCommercePreset?.color || "#FFFFFF"} />
-                </div>
-                <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-black/30 bg-[#111418]">
-                  <Link className="h-2.5 w-2.5 text-primary" />
-                </div>
-              </div>
-            ) : showSocialVisual ? (
-              <div className="relative h-7 w-7">
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/15">
-                  <SocialIcon platform={String(firstInlineSocialAccount?.platform || block.data.platform || "")} size={18} color={selectedSocialPlatform?.color || "#D6FF00"} />
-                </div>
-                <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-black/30 bg-[#111418]">
-                  <Share2 className="h-2.5 w-2.5 text-primary" />
-                </div>
-              </div>
-            ) : showLocationVisual ? (
-              <div className="relative h-7 w-7">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  {selectedLocationPreset?.logoUrl ? (
-                    <img src={selectedLocationPreset.logoUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
-                  ) : (
-                    <MapPin className="h-4 w-4 text-primary" />
-                  )}
-                </div>
-                <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-black/30 bg-[#111418]">
-                  <MapPin className="h-2.5 w-2.5 text-primary" />
-                </div>
-              </div>
-            ) : (
-              <Icon className={`h-4 w-4 ${block.isEnabled ? tone.icon : "text-muted-foreground"}`} />
-            )}
+          <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 ${block.isEnabled ? tone.badge : "bg-muted/40 text-muted-foreground"}`}>
+            <Icon className={`h-4 w-4 ${block.isEnabled ? tone.icon : "text-muted-foreground"}`} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <span className="min-w-0 truncate text-sm font-medium">{blockLabel}</span>
-              {(block.type === "link" || block.type === "social" || block.type === "location") && (
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground sm:text-[11px]">
-                  {block.clicks ?? 0} tiklama
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-medium">{blockLabel}</span>
+              {(block.type === "link" || block.type === "social") && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                  {block.clicks ?? 0} tıklama
                 </span>
               )}
             </div>
-            <p className="mt-0.5 line-clamp-2 break-all text-[11px] leading-snug text-muted-foreground sm:truncate">{getBlockSummary(block)}</p>
+            <p className="truncate text-[11px] text-muted-foreground">{getBlockSummary(block)}</p>
           </div>
         </div>
 
-        <div className="flex w-full flex-shrink-0 items-center justify-between gap-1 rounded-xl border border-border/40 bg-background/45 px-2 py-1.5 sm:w-auto sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onMoveUp();
-            }}
+            onClick={onMoveUp}
             disabled={!canMoveUp}
             className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30"
-            aria-label="Blogu yukari tasi"
+            aria-label="Bloğu yukarı taşı"
           >
             <ArrowUp className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onMoveDown();
-            }}
+            onClick={onMoveDown}
             disabled={!canMoveDown}
             className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30"
-            aria-label="Blogu asagi tasi"
+            aria-label="Bloğu aşağı taşı"
           >
             <ArrowDown className="h-3.5 w-3.5" />
           </button>
-          <div onClick={(event) => event.stopPropagation()}>
-            <Switch checked={block.isEnabled} onCheckedChange={onToggle} className="scale-75" />
-          </div>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleExpanded();
-            }}
-            className="p-1 rounded text-muted-foreground hover:text-foreground"
-          >
+          <Switch checked={block.isEnabled} onCheckedChange={onToggle} className="scale-75" />
+          <button type="button" onClick={() => setExpanded(!expanded)} className="p-1 rounded text-muted-foreground hover:text-foreground">
             {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </button>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDelete();
-            }}
-            className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
-          >
+          <button type="button" onClick={onDelete} className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
       {expanded && (
-        <div className="space-y-3 border-t border-border/40 px-3 pb-3 pt-3 sm:px-3.5 sm:pb-3.5 sm:pt-3.5">
+        <div className="space-y-3 border-t border-border/40 px-3.5 pb-3.5 pt-3.5">
           {block.type === "heading" && (
             <div className="space-y-2">
               <Input
                 value={String(block.data.text || "")}
                 onChange={(event) => onChange({ ...block.data, text: event.target.value })}
-                onSelect={(event) => rememberTextSelection(event.currentTarget)}
-                placeholder="Baslik metni..."
+                placeholder="Başlık metni..."
                 className="bg-input border-border/50 text-sm"
               />
-              {renderTextStyleControls()}
               <div className="flex items-center justify-between gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2.5">
-                <p className="text-xs text-muted-foreground">Basligi buyuk harf goster</p>
+                <p className="text-xs text-muted-foreground">Başlığı büyük harf göster</p>
                 <Switch
                   checked={Boolean(block.data.uppercase)}
                   onCheckedChange={(checked) => onChange({ ...block.data, uppercase: checked })}
@@ -1073,39 +450,31 @@ function BlockEditor({
           )}
 
           {block.type === "description" && (
-            <div className="space-y-2">
-              <Textarea
-                value={String(block.data.text || "")}
-                onChange={(event) => onChange({ ...block.data, text: event.target.value })}
-                onSelect={(event) => rememberTextSelection(event.currentTarget)}
-                placeholder="Aciklama metni..."
-                className="bg-input border-border/50 text-sm resize-none"
-                rows={2}
-              />
-              {renderTextStyleControls()}
-            </div>
+            <Textarea
+              value={String(block.data.text || "")}
+              onChange={(event) => onChange({ ...block.data, text: event.target.value })}
+              placeholder="Açıklama metni..."
+              className="bg-input border-border/50 text-sm resize-none"
+              rows={2}
+            />
           )}
 
           {block.type === "text" && (
-            <div className="space-y-2">
-              <Textarea
-                value={String(block.data.text || "")}
-                onChange={(event) => onChange({ ...block.data, text: event.target.value })}
-                onSelect={(event) => rememberTextSelection(event.currentTarget)}
-                placeholder="Metin icerigi..."
-                className="bg-input border-border/50 text-sm resize-none"
-                rows={3}
-              />
-              {renderTextStyleControls()}
-            </div>
+            <Textarea
+              value={String(block.data.text || "")}
+              onChange={(event) => onChange({ ...block.data, text: event.target.value })}
+              placeholder="Metin içeriği..."
+              className="bg-input border-border/50 text-sm resize-none"
+              rows={3}
+            />
           )}
 
           {block.type === "link" && (
             <div className="space-y-3">
               <div className={`rounded-xl border p-3 shadow-sm ${tone.panel}`}>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-xs font-medium">Yazi hizasi</p>
-                  <span className="text-[10px] text-muted-foreground">Varsayilan: ortali</span>
+                  <p className="text-xs font-medium">Yazı hizası</p>
+                  <span className="text-[10px] text-muted-foreground">Varsayılan: ortalı</span>
                 </div>
                 <ToggleGroup
                   type="single"
@@ -1115,11 +484,11 @@ function BlockEditor({
                     onChange({ ...block.data, align: value });
                   }}
                   variant="outline"
-                  className="grid w-full grid-cols-2"
+                  className="w-full"
                 >
                   <ToggleGroupItem value="center" className="gap-1.5 text-[10px] sm:text-[11px]">
                     <AlignCenter className="h-3.5 w-3.5" />
-                    Ortali
+                    Ortalı
                   </ToggleGroupItem>
                   <ToggleGroupItem value="left" className="gap-1.5 text-[10px] sm:text-[11px]">
                     <AlignLeft className="h-3.5 w-3.5" />
@@ -1132,7 +501,7 @@ function BlockEditor({
                 <div className={`space-y-2 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-medium">E-ticaret sitesi</p>
-                    <span className="text-[10px] text-muted-foreground">Isterseniz sonra degistirebilirsiniz</span>
+                    <span className="text-[10px] text-muted-foreground">İsterseniz sonra değiştirebilirsiniz</span>
                   </div>
                   <Select value={selectedCommercePreset?.id || ""} onValueChange={handleCommercePresetChange}>
                     <SelectTrigger className="h-11 bg-input border-border/70 text-sm">
@@ -1142,7 +511,7 @@ function BlockEditor({
                           <span className="truncate">{selectedCommercePreset.label}</span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">Magaza secin...</span>
+                        <span className="text-muted-foreground">Mağaza seçin...</span>
                       )}
                     </SelectTrigger>
                     <SelectContent className="bg-popover border-border/50">
@@ -1161,13 +530,13 @@ function BlockEditor({
 
               <div className={`space-y-2 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-medium">{isCommerceLink ? "Magaza bilgileri" : "Link icerigi"}</p>
-                  <span className="text-[10px] text-muted-foreground">Tek satir gorunur</span>
+                  <p className="text-xs font-medium">{isCommerceLink ? "Mağaza bilgileri" : "Link içeriği"}</p>
+                  <span className="text-[10px] text-muted-foreground">Tek satır görünür</span>
                 </div>
                 <Input
                   value={String(block.data.title || "")}
                   onChange={(event) => onChange({ ...block.data, title: event.target.value })}
-                  placeholder={isCommerceLink ? "Magaza adi" : "Baslik"}
+                  placeholder={isCommerceLink ? "Mağaza adı" : "Başlık"}
                   className={`bg-input border-border/60 text-sm ${linkAlign === "center" ? "text-center" : "text-left"}`}
                 />
                 <Input
@@ -1178,117 +547,13 @@ function BlockEditor({
                 />
               </div>
 
-              <div className={`space-y-3 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-medium">Kart gorunumu</p>
-                  <span className="text-[10px] text-muted-foreground">Onizleme aninda guncellenir</span>
-                </div>
-                <Select
-                  value={LINK_STYLE_TEMPLATES.find((template) => isTemplateActive(block.data, template.patch))?.id || "clean"}
-                  onValueChange={(value) => {
-                    const selectedTemplate = LINK_STYLE_TEMPLATES.find((template) => template.id === value);
-                    if (selectedTemplate) {
-                      onChange({ ...block.data, ...selectedTemplate.patch });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="bg-input border-border/60 text-sm">
-                    <SelectValue placeholder="Hazir kart stili" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LINK_STYLE_TEMPLATES.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-input px-2">
-                    <input
-                      type="color"
-                      value={normalizeColorInput(String(block.data.textColor || ""), "#ffffff")}
-                      onChange={(event) => onChange({ ...block.data, textColor: event.target.value })}
-                      className="h-8 w-8 rounded border-0 bg-transparent p-0"
-                    />
-                    <Input
-                      value={String(block.data.textColor || "")}
-                      onChange={(event) => onChange({ ...block.data, textColor: event.target.value })}
-                      placeholder="Metin rengi  #FFFFFF"
-                      className="border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-input px-2">
-                    <input
-                      type="color"
-                      value={normalizeColorInput(String(block.data.bgColor || ""), "#1f2329")}
-                      onChange={(event) => onChange({ ...block.data, bgColor: event.target.value })}
-                      className="h-8 w-8 rounded border-0 bg-transparent p-0"
-                    />
-                    <Input
-                      value={String(block.data.bgColor || "")}
-                      onChange={(event) => onChange({ ...block.data, bgColor: event.target.value })}
-                      placeholder="Arka plan rengi  #1F2329"
-                      className="border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-input px-2">
-                    <input
-                      type="color"
-                      value={normalizeColorInput(String(block.data.borderColor || ""), "#d6ff00")}
-                      onChange={(event) => onChange({ ...block.data, borderColor: event.target.value })}
-                      className="h-8 w-8 rounded border-0 bg-transparent p-0"
-                    />
-                    <Input
-                      value={String(block.data.borderColor || "")}
-                      onChange={(event) => onChange({ ...block.data, borderColor: event.target.value })}
-                      placeholder="Kenar rengi  #D6FF00"
-                      className="border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-                    />
-                  </div>
-                  <Select value={String(block.data.borderWidth || 1)} onValueChange={(value) => onChange({ ...block.data, borderWidth: Number(value) })}>
-                    <SelectTrigger className="bg-input border-border/60 text-sm">
-                      <SelectValue placeholder="Kenar kalinligi" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">Kenar yok</SelectItem>
-                      <SelectItem value="1">1 px</SelectItem>
-                      <SelectItem value="2">2 px</SelectItem>
-                      <SelectItem value="3">3 px</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <ToggleGroup
-                    type="single"
-                    value={String(block.data.radiusPreset || "soft")}
-                    onValueChange={(value) => value && onChange({ ...block.data, radiusPreset: value })}
-                    className="grid w-full grid-cols-3"
-                  >
-                    <ToggleGroupItem value="square" className="text-[10px]">Keskin</ToggleGroupItem>
-                    <ToggleGroupItem value="soft" className="text-[10px]">Yumusak</ToggleGroupItem>
-                    <ToggleGroupItem value="pill" className="text-[10px]">Tam</ToggleGroupItem>
-                  </ToggleGroup>
-                  <Select value={String(block.data.fontPreset || "clean")} onValueChange={(value) => onChange({ ...block.data, fontPreset: value })}>
-                    <SelectTrigger className="bg-input border-border/60 text-sm">
-                      <SelectValue placeholder="Yazi formati" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="clean">Temiz</SelectItem>
-                      <SelectItem value="bold">Kalin</SelectItem>
-                      <SelectItem value="caps">Buyuk harf</SelectItem>
-                      <SelectItem value="wide">Genis</SelectItem>
-                      <SelectItem value="compact">Kompakt</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               <div className={`space-y-2 rounded-xl border p-3 shadow-sm ${tone.panel}`}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div className="flex items-center gap-3">
                   {block.data.logoUrl || block.data.logoPreset || block.data.logoUrlSecondary ? (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border/50 bg-background/80">
-                      <div className="relative h-8 w-8">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border/50 bg-background/80">
+                      <div className="relative h-7 w-7">
                         <div className="absolute left-0 top-0">
-                          <LinkLogo data={block.data} size={32} fallbackColor={selectedCommercePreset?.color || "#FFFFFF"} />
+                          <LinkLogo data={block.data} size={28} fallbackColor={selectedCommercePreset?.color || "#FFFFFF"} />
                         </div>
                         {block.data.logoUrlSecondary && (
                           <div className="absolute -bottom-1 -right-1 rounded-full border border-border/70 bg-background/90 p-[1px]">
@@ -1298,236 +563,92 @@ function BlockEditor({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-dashed border-border/60">
+                    <div className="h-10 w-10 rounded-full border border-dashed border-border/60 flex items-center justify-center">
                       <Image className="h-4 w-4 text-muted-foreground" />
                     </div>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium">{isCommerceLink ? "Magaza logosu" : "Link logosu"}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium">{isCommerceLink ? "Mağaza logosu" : "Link logosu"}</p>
                     {isCommerceLink ? (
                       <p className="text-[11px] text-muted-foreground">
-                        Hazir e-ticaret seciminde logo otomatik gelir. Bu blokta ayrica logo degistirmeniz gerekmez.
+                        Hazır e-ticaret seçiminde logo otomatik gelir. Bu blokta ayrıca logo değiştirmeniz gerekmez.
                       </p>
                     ) : (
-                      <ImageUploadHint text="Link logosu icin onerilen boyut 512 x 512 px, oran 1:1 kare. Yuvarlak alana tam oturmasi icin PNG/JPG kullanin. Maksimum 7 MB." />
+                      <ImageUploadHint text="Link logosu için önerilen boyut 512 x 512 px, oran 1:1 kare. Yuvarlak alana tam oturması için PNG/JPG kullanın. Maksimum 7 MB." />
                     )}
                   </div>
                 </div>
-                <>
-                  {!isCommerceLink && (
-                    <>
-                      <Input
-                        value={String(block.data.logoUrl || "")}
-                        onChange={(event) => onChange({ ...block.data, logoUrl: event.target.value })}
-                        placeholder="Ana logo URL'si (opsiyonel)"
-                        className="bg-input border-border/60 text-sm"
-                      />
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => {
-                          const file = event.currentTarget.files?.[0];
-                          if (file) {
-                            readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrl: dataUrl }), "Logo");
-                          }
-                          event.currentTarget.value = "";
-                        }}
-                        className="bg-input border-border/60 text-sm"
-                      />
-                      {block.data.logoUrl && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const nextData = { ...block.data };
-                            delete nextData.logoUrl;
-                            onChange(nextData);
-                          }}
-                          className="h-8 px-2 text-xs text-muted-foreground"
-                        >
-                          <X className="h-3.5 w-3.5 mr-1" />
-                          Logoyu kaldir
-                        </Button>
-                      )}
-                    </>
-                  )}
-
-                  <Input
-                    value={String(block.data.logoUrlSecondary || "")}
-                    onChange={(event) => onChange({ ...block.data, logoUrlSecondary: event.target.value })}
-                    placeholder={isCommerceLink ? "Ek logo URL'si (marka logonuz) (opsiyonel)" : "Ek logo URL'si (opsiyonel)"}
-                    className="bg-input border-border/60 text-sm"
-                  />
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file = event.currentTarget.files?.[0];
-                      if (file) {
-                        readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrlSecondary: dataUrl }), "Ek logo");
-                      }
-                      event.currentTarget.value = "";
-                    }}
-                    className="bg-input border-border/60 text-sm"
-                  />
-                  {block.data.logoUrlSecondary && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const nextData = { ...block.data };
-                        delete nextData.logoUrlSecondary;
-                        onChange(nextData);
+                {!isCommerceLink && (
+                  <>
+                    <Input
+                      value={String(block.data.logoUrl || "")}
+                      onChange={(event) => onChange({ ...block.data, logoUrl: event.target.value })}
+                      placeholder="Ana logo URL'si (opsiyonel)"
+                      className="bg-input border-border/60 text-sm"
+                    />
+                    <Input
+                      value={String(block.data.logoUrlSecondary || "")}
+                      onChange={(event) => onChange({ ...block.data, logoUrlSecondary: event.target.value })}
+                      placeholder="Ek logo URL'si (opsiyonel)"
+                      className="bg-input border-border/60 text-sm"
+                    />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        if (file) {
+                          readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrl: dataUrl }), "Logo");
+                        }
+                        event.currentTarget.value = "";
                       }}
-                      className="h-8 px-2 text-xs text-muted-foreground"
-                    >
-                      <X className="h-3.5 w-3.5 mr-1" />
-                      Ek logoyu kaldir
-                    </Button>
-                  )}
-                </>
-              </div>
-            </div>
-          )}
-
-          {block.type === "location" && (
-            <div className="space-y-3">
-              <div className="rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-semibold">Konum / Harita bilgileri</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">Adres, harita linki ve yol tarifi butonunu buradan duzenleyin.</p>
-                  </div>
-                  <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
-                    {getLocationProviderLabel(locationProvider)}
-                  </span>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Input
-                    value={String(block.data.title || "")}
-                    onChange={(event) => onChange({ ...block.data, title: event.target.value })}
-                    placeholder="Baslik"
-                    className="bg-input border-border/60 text-sm"
-                  />
-                  <Input
-                    value={String(block.data.buttonText || "")}
-                    onChange={(event) => onChange({ ...block.data, buttonText: event.target.value })}
-                    placeholder="Yol Tarifi Al"
-                    className="bg-input border-border/60 text-sm"
-                  />
-                  <Textarea
-                    value={String(block.data.description || "")}
-                    onChange={(event) => onChange({ ...block.data, description: event.target.value })}
-                    placeholder="Kisa aciklama"
-                    className="bg-input border-border/60 text-sm resize-none sm:col-span-2"
-                    rows={2}
-                  />
-                  <div className="space-y-2 sm:col-span-2">
-                    <div className="flex gap-2">
-                      <Input
-                        value={String(block.data.url || "")}
-                        onChange={(event) => onChange({ ...block.data, url: event.target.value, addressMode: event.target.value.trim() ? "link" : "address" })}
-                        placeholder={selectedLocationPreset?.placeholder || "https://maps.google.com/?q=..."}
-                        className="bg-input border-border/60 text-sm"
-                      />
-                      <Button type="button" onClick={findLocationFromUrl} disabled={isResolvingLocation} className="shrink-0 bg-primary text-primary-foreground">
-                        {isResolvingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : "Bul"}
+                      className="bg-input border-border/60 text-sm"
+                    />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        if (file) {
+                          readImageFile(file, (dataUrl) => onChange({ ...block.data, logoUrlSecondary: dataUrl }), "Ek logo");
+                        }
+                        event.currentTarget.value = "";
+                      }}
+                      className="bg-input border-border/60 text-sm"
+                    />
+                    {block.data.logoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const nextData = { ...block.data };
+                          delete nextData.logoUrl;
+                          onChange(nextData);
+                        }}
+                        className="h-8 px-2 text-xs text-muted-foreground"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Logoyu kaldır
                       </Button>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">Google/Apple Maps linki ya da Google Harita HTML kodu yapistirin, sonra Bul butonuna basin.</p>
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Textarea
-                      value={String(block.data.address || "")}
-                      onChange={(event) => onChange({ ...block.data, address: event.target.value, addressMode: "address" })}
-                      placeholder="Adres"
-                      disabled={locationUsesLink}
-                      className="bg-input border-border/60 text-sm resize-none disabled:opacity-55"
-                      rows={2}
-                    />
-                    {locationUsesLink ? (
-                      <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-background/55 p-2 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-[11px] text-muted-foreground">Konum linki kullanildigi icin adres alani kapali.</p>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => onChange({ ...block.data, addressMode: "address" })} className="h-8 px-2 text-xs">
-                          Adresle duzenle
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.65fr)_minmax(0,0.65fr)]">
-                  <div>
-                    <Label className="text-xs">Harita saglayici</Label>
-                    <Select
-                      value={String(block.data.provider || "auto_maps")}
-                      onValueChange={(value) => onChange({ ...block.data, provider: value })}
-                    >
-                      <SelectTrigger className="mt-1 bg-input border-border/60 text-sm">
-                        <SelectValue placeholder="Otomatik" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="auto_maps">Otomatik</SelectItem>
-                        <SelectItem value="google_maps">Google Maps</SelectItem>
-                        <SelectItem value="apple_maps">Apple Maps</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Enlem</Label>
-                    <Input
-                      value={String(block.data.lat || "")}
-                      onChange={(event) => onChange({ ...block.data, lat: event.target.value })}
-                      placeholder="41.0082"
-                      className="mt-1 bg-input border-border/60 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Boylam</Label>
-                    <Input
-                      value={String(block.data.lng || "")}
-                      onChange={(event) => onChange({ ...block.data, lng: event.target.value })}
-                      placeholder="28.9784"
-                      className="mt-1 bg-input border-border/60 text-sm"
-                    />
-                  </div>
-                </div>
-                {locationValidationMessage ? (
-                  <p className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
-                    {locationValidationMessage}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-border/70 bg-card/70 shadow-sm">
-                {locationProvider === "apple_maps" ? (
-                  <div className="flex h-56 items-center justify-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.14),transparent_55%),linear-gradient(135deg,#151a20,#0b0d10)] sm:h-64">
-                    <div className="text-center">
-                      <MapPin className="mx-auto mb-2 h-7 w-7 text-primary" />
-                      <p className="text-sm font-semibold">Harita onizlemesi</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Apple Maps linki Yol Tarifi Al butonunda acilir.</p>
-                    </div>
-                  </div>
-                ) : buildMapEmbedUrl(block.data) && !locationValidationMessage ? (
-                  <iframe
-                    title="Harita onizlemesi"
-                    src={buildMapEmbedUrl(block.data)}
-                    loading="lazy"
-                    className="h-56 w-full border-0 sm:h-64"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                ) : (
-                  <div className="flex h-56 items-center justify-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.14),transparent_55%),linear-gradient(135deg,#151a20,#0b0d10)] sm:h-64">
-                    <div className="text-center">
-                      <MapPin className="mx-auto mb-2 h-6 w-6 text-primary" />
-                      <p className="text-sm font-semibold">Harita onizlemesi</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Adres veya enlem/boylam girince gorunur.</p>
-                    </div>
-                  </div>
+                    )}
+                    {block.data.logoUrlSecondary && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const nextData = { ...block.data };
+                          delete nextData.logoUrlSecondary;
+                          onChange(nextData);
+                        }}
+                        className="h-8 px-2 text-xs text-muted-foreground"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Ek logoyu kaldır
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1535,161 +656,54 @@ function BlockEditor({
 
           {block.type === "social" && (
             <div className="space-y-3">
-              {getSocialPlacement(block.data) === "top" ? (
-                <>
-                  <div className="rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
-                    <div className="mb-2">
-                      <p className="text-xs font-medium">Platform secimi</p>
-                      <p className="text-[11px] text-muted-foreground">Bu hesap ust profil sosyal ikon alaninda gorunur.</p>
-                    </div>
-                    <Select
-                      value={String(block.data.platform || "")}
-                      onValueChange={(value) => onChange({ ...block.data, placement: "top", platform: value, url: normalizeSocialUrl(value, String(block.data.url || "")) })}
-                    >
-                      <SelectTrigger className="h-11 bg-input border-border/70 text-sm">
-                        {selectedSocialPlatform ? (
-                          <div className="flex min-w-0 items-center gap-2">
-                            <SocialIcon platform={selectedSocialPlatform.id} size={18} color={selectedSocialPlatform.color} />
-                            <span className="truncate">{selectedSocialPlatform.label}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Platform secin...</span>
-                        )}
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border/50">
-                        {SOCIAL_PLATFORMS.map(platform => (
-                          <SelectItem key={platform.id} value={platform.id} className="text-sm">
-                            <div className="flex items-center gap-2">
-                              <SocialIcon platform={platform.id} size={18} color={platform.color} />
-                              <span>{platform.label}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2 rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
-                    <p className="text-xs font-medium">Baglanti</p>
-                    <Input
-                      value={String(block.data.url || "")}
-                      onChange={(event) => onChange({ ...block.data, placement: "top", url: normalizeSocialUrl(String(block.data.platform || ""), event.target.value) })}
-                      placeholder={SOCIAL_PLATFORMS.find(platform => platform.id === block.data.platform)?.placeholder || "https://..."}
-                      className="bg-input border-border/60 text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">Ust profil ikonlari sadece profil alaninda gorunur.</p>
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
-                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold">Sayfa ici sosyal medya blogu</p>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        Bu tek kartin icine istediginiz kadar sosyal hesap ekleyin. Blok listede tasindigi yerde gorunur.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        addInlineSocialAccount();
-                      }}
-                      className="h-9 bg-primary text-primary-foreground"
-                    >
-                      <Plus className="mr-1.5 h-3.5 w-3.5" />
-                      Yeni sosyal medya hesabi ekle
-                    </Button>
-                  </div>
-
-                  {inlineSocialAccounts.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border/60 bg-card/45 px-3 py-6 text-center">
-                      <p className="text-sm font-medium">Henuz hesap eklenmedi</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Butona basarak Instagram, TikTok, YouTube ve diger hesaplari ekleyin.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {inlineSocialAccounts.map((account, accountIndex) => {
-                        const accountPlatform = SOCIAL_PLATFORMS.find((platform) => platform.id === account.platform);
-                        return (
-                          <div key={account.id} className="rounded-xl border border-border/60 bg-card/70 p-3">
-                            <div className="mb-3 flex items-center justify-between gap-2">
-                              <div className="flex min-w-0 items-center gap-2">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/70">
-                                  <SocialIcon platform={account.platform} size={18} color={accountPlatform?.color || "#D6FF00"} />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium">{accountPlatform?.label || `Sosyal hesap ${accountIndex + 1}`}</p>
-                                  <p className="truncate text-[11px] text-muted-foreground">{account.url || "Baglanti bekleniyor"}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Switch
-                                  checked={account.isEnabled !== false}
-                                  onCheckedChange={(checked) => updateInlineSocialAccount(account.id, { isEnabled: checked })}
-                                  className="scale-75"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeInlineSocialAccount(account.id)}
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]">
-                              <Select
-                                value={account.platform}
-                                onValueChange={(value) => updateInlineSocialAccount(account.id, {
-                                  platform: value,
-                                  url: normalizeSocialUrl(value, account.url),
-                                })}
-                              >
-                                <SelectTrigger className="h-11 bg-input border-border/70 text-sm">
-                                  {accountPlatform ? (
-                                    <div className="flex min-w-0 items-center gap-2">
-                                      <SocialIcon platform={accountPlatform.id} size={18} color={accountPlatform.color} />
-                                      <span className="truncate">{accountPlatform.label}</span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-muted-foreground">Platform secin...</span>
-                                  )}
-                                </SelectTrigger>
-                                <SelectContent className="bg-popover border-border/50">
-                                  {SOCIAL_PLATFORMS.map(platform => (
-                                    <SelectItem key={platform.id} value={platform.id} className="text-sm">
-                                      <div className="flex items-center gap-2">
-                                        <SocialIcon platform={platform.id} size={18} color={platform.color} />
-                                        <span>{platform.label}</span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                value={account.url}
-                                onChange={(event) => updateInlineSocialAccount(account.id, { url: event.target.value })}
-                                placeholder={accountPlatform?.placeholder || "https://..."}
-                                className="bg-input border-border/60 text-sm"
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+              <div className="rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
+                <div className="mb-2">
+                  <p className="text-xs font-medium">Platform seçimi</p>
+                  <p className="text-[11px] text-muted-foreground">Butona basıp sosyal platformu seçin. Logolar listede görünür.</p>
                 </div>
-              )}
+                <Select
+                  value={String(block.data.platform || "")}
+                  onValueChange={(value) => onChange({ ...block.data, platform: value, url: normalizeSocialUrl(value, String(block.data.url || "")) })}
+                >
+                  <SelectTrigger className="h-11 bg-input border-border/70 text-sm">
+                    {selectedSocialPlatform ? (
+                      <div className="flex min-w-0 items-center gap-2">
+                        <SocialIcon platform={selectedSocialPlatform.id} size={18} color={selectedSocialPlatform.color} />
+                        <span className="truncate">{selectedSocialPlatform.label}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Platform seçin...</span>
+                    )}
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border/50">
+                    {SOCIAL_PLATFORMS.map(platform => (
+                      <SelectItem key={platform.id} value={platform.id} className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <SocialIcon platform={platform.id} size={18} color={platform.color} />
+                          <span>{platform.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
+                <p className="text-xs font-medium">Bağlantı</p>
+                <Input
+                  value={String(block.data.url || "")}
+                  onChange={(event) => onChange({ ...block.data, url: normalizeSocialUrl(String(block.data.platform || ""), event.target.value) })}
+                  placeholder={SOCIAL_PLATFORMS.find(platform => platform.id === block.data.platform)?.placeholder || "https://..."}
+                  className="bg-input border-border/60 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">Sosyal hesaplar bio sayfasının alt kısmında yuvarlak ikon olarak gösterilir. Ayrı başlık girmeniz gerekmez.</p>
+              </div>
             </div>
           )}
 
           {block.type === "divider" && (
             <div className="space-y-2 rounded-xl border border-border/70 bg-background/55 p-3 shadow-sm">
-              <p className="text-xs font-medium">Cizgi Kalinligi</p>
+              <p className="text-xs font-medium">Çizgi Kalınlığı</p>
               <ToggleGroup
                 type="single"
                 value={getDividerVariant(block.data)}
@@ -1698,110 +712,41 @@ function BlockEditor({
                   onChange({ ...block.data, variant: value });
                 }}
                 variant="outline"
-                className="grid w-full grid-cols-2"
+                className="w-full"
               >
                 <ToggleGroupItem value="thin" className="gap-1.5 text-[11px]">
-                  Ince Cizgi
+                  İnce Çizgi
                 </ToggleGroupItem>
                 <ToggleGroupItem value="thick" className="gap-1.5 text-[11px]">
-                  Kalin Cizgi
+                  Kalın Çizgi
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
           )}
 
           {block.type === "profile_image" && (
-            <div className="space-y-3">
-              {block.data.kind !== "image" ? (
-                <>
-                  {block.data.url && (
-                    <div className="flex justify-center">
-                      <img src={String(block.data.url)} alt="Logo" className="h-24 w-24 rounded-full object-cover border border-border/50" />
-                    </div>
-                  )}
-                  <Input value={String(block.data.url || "")} onChange={(event) => onChange({ ...block.data, url: event.target.value, kind: "logo" })} placeholder="Logo URL'si" className="bg-input border-border/50 text-sm" />
-                  <Input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(event) => {
-                      handleImageUpload(event.currentTarget.files?.[0]);
-                      event.currentTarget.value = "";
-                    }}
-                    className="bg-input border-border/50 text-sm"
-                  />
-                  <p className="text-xs text-muted-foreground">JPG, PNG veya WebP. Maksimum dosya: 7 MB.</p>
-                  {block.data.url && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => onChange({ kind: "logo" })} className="w-full border-border/60">
-                      Logo sil
-                    </Button>
-                  )}
-                </>
-              ) : (
-                <>
+            <div className="space-y-2">
               {block.data.url && (
                 <div className="flex justify-center">
-                  <img src={String(block.data.url)} alt="Profil resmi" className="h-24 w-24 rounded-2xl object-cover border border-border/50" />
+                  <img src={String(block.data.url)} alt="Profil resmi" className="h-20 w-20 rounded-full object-cover border border-border/50" />
                 </div>
               )}
               <Input
                 value={String(block.data.url || "")}
                 onChange={(event) => onChange({ ...block.data, url: event.target.value })}
-                placeholder="Foto URL'si"
+                placeholder="Profil resmi URL'si"
                 className="bg-input border-border/50 text-sm"
               />
               <Input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*"
                 onChange={(event) => {
                   handleImageUpload(event.currentTarget.files?.[0]);
                   event.currentTarget.value = "";
                 }}
                 className="bg-input border-border/50 text-sm"
               />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Input value={String(block.data.title || "")} onChange={(event) => onChange({ ...block.data, title: event.target.value })} placeholder="Baslik (opsiyonel)" className="bg-input border-border/50 text-sm" />
-                <Select value={String(block.data.textPosition || "below")} onValueChange={(value) => onChange({ ...block.data, textPosition: value })}>
-                  <SelectTrigger className="bg-input border-border/50 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="above">Yazi ustte</SelectItem>
-                    <SelectItem value="below">Yazi altta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Textarea value={String(block.data.description || "")} onChange={(event) => onChange({ ...block.data, description: event.target.value })} placeholder="Aciklama (opsiyonel)" rows={2} className="bg-input border-border/50 text-sm" />
-              <div className="grid gap-2 sm:grid-cols-3">
-                <Select value={String(block.data.aspect || "1/1")} onValueChange={(value) => onChange({ ...block.data, aspect: value })}>
-                  <SelectTrigger className="bg-input border-border/50 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1/1">1:1 kare</SelectItem>
-                    <SelectItem value="4/3">4:3 klasik</SelectItem>
-                    <SelectItem value="16/9">16:9 genis</SelectItem>
-                    <SelectItem value="3/4">3:4 dikey</SelectItem>
-                    <SelectItem value="auto">Orijinal oran</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input type="color" value={String(block.data.titleColor || "#ffffff")} onChange={(event) => onChange({ ...block.data, titleColor: event.target.value })} className="h-10 bg-input p-1" title="Baslik rengi" />
-                <Input type="color" value={String(block.data.descriptionColor || "#d1d5db")} onChange={(event) => onChange({ ...block.data, descriptionColor: event.target.value })} className="h-10 bg-input p-1" title="Aciklama rengi" />
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <ToggleGroup type="single" value={String(block.data.align || "center")} onValueChange={(value) => value && onChange({ ...block.data, align: value })} className="grid w-full grid-cols-3">
-                  <ToggleGroupItem value="left" className="text-[10px]">Sol</ToggleGroupItem>
-                  <ToggleGroupItem value="center" className="text-[10px]">Orta</ToggleGroupItem>
-                  <ToggleGroupItem value="right" className="text-[10px]">Sag</ToggleGroupItem>
-                </ToggleGroup>
-                <label className="flex items-center justify-between rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-xs">
-                  Acilir pencere
-                  <Switch checked={Boolean(block.data.openInModal)} onCheckedChange={(checked) => onChange({ ...block.data, openInModal: checked })} />
-                </label>
-              </div>
-              <p className="text-xs text-muted-foreground">Onerilen: 1:1 800x800, 4:3 1200x900, 16:9 1280x720, 3:4 900x1200. Maksimum dosya: 7 MB.</p>
-              {block.data.url && (
-                <Button type="button" variant="outline" size="sm" onClick={() => onChange({ ...block.data, url: "" })} className="w-full border-border/60">
-                  Foto sil
-                </Button>
-              )}
-                </>
-              )}
+              <p className="text-xs text-muted-foreground">JPG, PNG veya WebP yükleyebilirsiniz. Üst sınır 5 MB.</p>
             </div>
           )}
         </div>
@@ -1814,24 +759,22 @@ function PreviewCardContents({
   blocks,
   page,
   accentColor,
-  textColor,
   theme,
   mode,
 }: {
   blocks: LocalBlock[];
-  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string; customBackgroundImageUrl?: string | null };
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
   accentColor: string;
-  textColor: string;
   theme: string;
   mode: "phone" | "desktop";
 }) {
-  const themeConfig = withCustomBackgroundImage(getBioTheme(theme), page.customBackgroundImageUrl);
+  const themeConfig = getBioTheme(theme);
   const accent = safeAccentColor(accentColor, themeConfig.accent);
-  const resolvedTextColor = /^#[0-9a-fA-F]{6}$/.test(textColor) ? textColor : themeConfig.text;
+  const profileTitle = page.title || "@kullanici";
   const enabledBlocks = blocks.filter(block => block.isEnabled);
-  const contentBlocks = enabledBlocks.filter(block => block.type !== "social" || getSocialPlacement(block.data) !== "top");
-  const topSocialBlocks = enabledBlocks.filter(block => block.type === "social" && block.data.url && getSocialPlacement(block.data) === "top");
-  const buttonStyle = getBioButtonStyle(themeConfig, accent, resolvedTextColor);
+  const contentBlocks = enabledBlocks.filter(block => block.type !== "social" && block.type !== "profile_image");
+  const socialBlocks = enabledBlocks.filter(block => block.type === "social" && block.data.url);
+  const buttonStyle = getBioButtonStyle(themeConfig, accent);
   const isDesktop = mode === "desktop";
   const iconSize = isDesktop ? 30 : 24;
 
@@ -1857,24 +800,22 @@ function PreviewCardContents({
     }
 
     if (block.type === "heading") {
-      const text = String(block.data.text || "Baslik");
-      const blockTextColor = String(block.data.textColor || resolvedTextColor);
+      const text = String(block.data.text || "Başlık");
       return (
-          <p
-            key={block.tempId}
-            className={`line-clamp-2 max-w-full overflow-hidden break-words py-1 [overflow-wrap:anywhere] ${getTextAlignClass(block.data.align)} ${isDesktop ? "text-lg" : "text-sm"}`}
-            style={{ color: blockTextColor, textTransform: block.data.uppercase ? "uppercase" : "none", ...getTextStyleInline(block.data.textStyle) }}
-          >
-          <RichText text={block.data.uppercase ? text.toUpperCase() : text} data={block.data} linkColor={blockTextColor} />
+        <p
+          key={block.tempId}
+          className={`py-1 text-center font-bold ${isDesktop ? "text-lg" : "text-sm"}`}
+          style={{ color: themeConfig.text, textTransform: block.data.uppercase ? "uppercase" : "none" }}
+        >
+          {block.data.uppercase ? text.toUpperCase() : text}
         </p>
       );
     }
 
     if (block.type === "description" || block.type === "text") {
-      const blockTextColor = String(block.data.textColor || resolvedTextColor);
       return (
-        <p key={block.tempId} className={`line-clamp-3 max-w-full overflow-hidden break-words px-2 leading-relaxed [overflow-wrap:anywhere] ${getTextAlignClass(block.data.align)} ${isDesktop ? "text-sm" : "text-xs"}`} style={{ color: blockTextColor, ...getTextStyleInline(block.data.textStyle) }}>
-          <RichText text={String(block.data.text || "Metin...")} data={block.data} linkColor={blockTextColor} />
+        <p key={block.tempId} className={`px-2 text-center leading-relaxed ${isDesktop ? "text-sm" : "text-xs"}`} style={{ color: themeConfig.mutedText }}>
+          {String(block.data.text || "Metin...")}
         </p>
       );
     }
@@ -1883,24 +824,15 @@ function PreviewCardContents({
       const align = getLinkAlignment(block.data);
       const logo = <LinkLogo data={block.data} size={iconSize} fallbackColor={accent} />;
       const secondaryLogo = <LinkSecondaryLogo data={block.data} size={Math.max(12, Math.floor(iconSize * 0.52))} />;
-      const linkStyle = {
-        ...buttonStyle,
-        color: String(block.data.textColor || resolvedTextColor),
-        background: String(block.data.bgColor || (buttonStyle.background as string)),
-        borderColor: String(block.data.borderColor || (buttonStyle.borderColor as string)),
-        borderWidth: `${Number(block.data.borderWidth ?? 1)}px`,
-        borderRadius: getRadiusValue(block.data.radiusPreset),
-      } as React.CSSProperties;
-      const fontPresetClass = getFontPresetClass(block.data.fontPreset);
 
       return (
         <div
           key={block.tempId}
-          className={`link-card link-button mx-auto grid w-full content-center place-items-center overflow-visible rounded-xl border transition-all ${isDesktop ? "min-h-[5.1rem] px-5 py-2" : "min-h-[4.1rem] max-w-[28rem] px-4 py-2"}`}
-          style={linkStyle}
+          className={`overflow-hidden rounded-2xl border shadow-sm transition-all ${isDesktop ? "px-5 py-4" : "px-3.5 py-3"}`}
+          style={buttonStyle}
         >
-          <div className="relative grid h-full w-full place-items-center self-stretch">
-            <div className={`absolute left-0 top-1/2 grid -translate-y-1/2 place-items-center rounded-full ${isDesktop ? "h-8 w-8" : "h-7 w-7"}`}>
+          <div className={`grid items-center gap-3 ${isDesktop ? "min-h-[2.75rem] grid-cols-[2.6rem_minmax(0,1fr)_1.4rem]" : "min-h-[2.45rem] grid-cols-[2.25rem_minmax(0,1fr)_1.1rem]"}`}>
+            <div className={`flex items-center justify-center rounded-full bg-white/10 ring-1 ring-white/10 ${isDesktop ? "h-10 w-10" : "h-9 w-9"}`}>
               {logo || secondaryLogo ? (
                 <div className={`relative ${isDesktop ? "h-8 w-8" : "h-7 w-7"}`}>
                   <div className="absolute left-0 top-0">{logo}</div>
@@ -1911,139 +843,13 @@ function PreviewCardContents({
                   )}
                 </div>
               ) : (
-                <span className={`${isDesktop ? "h-8 w-8" : "h-7 w-7"} rounded-full`} />
+                <Globe className={`${isDesktop ? "h-5 w-5" : "h-4 w-4"} opacity-80`} />
               )}
             </div>
-            <span className={`link-title flex min-h-full w-full min-w-0 max-w-full items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap text-center ${fontPresetClass} ${isDesktop ? "px-10 text-[15px]" : "px-8 text-xs"} ${align === "left" ? "sm:justify-start sm:text-left" : ""}`} style={{ color: String(block.data.textColor || resolvedTextColor) }}>
+            <span className={`block min-w-0 truncate font-semibold tracking-[-0.01em] ${isDesktop ? "text-[15px]" : "text-[12.5px]"} ${align === "left" ? "text-left" : "text-center"}`}>
               {String(block.data.title || "Link")}
             </span>
-            <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3 w-3"} absolute right-0 top-1/2 -translate-y-1/2 opacity-55`} style={{ color: String(block.data.textColor || resolvedTextColor) }} />
-          </div>
-        </div>
-      );
-    }
-
-    if (block.type === "social" && getSocialPlacement(block.data) !== "top") {
-      const accounts = getInlineSocialAccounts(block.data).filter((account) => account.isEnabled !== false && account.platform);
-      if (accounts.length === 0) return null;
-
-      return (
-        <div key={block.tempId} className={`flex flex-wrap justify-center ${isDesktop ? "gap-3 py-2" : "gap-2.5 py-1.5"}`}>
-          {accounts.map((account) => {
-            const platform = SOCIAL_PLATFORMS.find((item) => item.id === account.platform);
-            return (
-              <div
-                key={account.id}
-                className={`${isDesktop ? "h-11 w-11" : "h-10 w-10"} rounded-full border flex items-center justify-center`}
-                style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder }}
-              >
-                <SocialIcon platform={account.platform} size={isDesktop ? 20 : 18} color={platform?.color || accent} />
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-
-    if (block.type === "location") {
-      const title = String(block.data.title || "Konum");
-      const description = String(block.data.description || "");
-      const address = String(block.data.address || "");
-      const buttonText = String(block.data.buttonText || "Yol Tarifi Al");
-      const provider = block.data.provider === "auto_maps" && block.data.url ? detectMapProvider(String(block.data.url)) : String(block.data.provider || "auto_maps");
-      const mapEmbedUrl = buildMapEmbedUrl(block.data);
-      return (
-        <div
-          key={block.tempId}
-          className={`mx-auto w-full overflow-hidden rounded-2xl border ${isDesktop ? "max-w-[32rem]" : "max-w-[28rem]"}`}
-          style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder, boxShadow: themeConfig.shadow }}
-        >
-          <div className={isDesktop ? "p-4" : "p-3"}>
-            <div className="flex items-start gap-3 text-left">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border" style={{ borderColor: themeConfig.cardBorder, background: `${accent}18` }}>
-                <MapPin className="h-5 w-5" style={{ color: accent }} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <p className={`line-clamp-1 font-bold ${isDesktop ? "text-base" : "text-sm"}`} style={{ color: resolvedTextColor }}>{title}</p>
-                  {provider !== "auto_maps" ? (
-                    <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold" style={{ borderColor: themeConfig.cardBorder, color: resolvedTextColor }}>
-                      {getLocationProviderLabel(provider)}
-                    </span>
-                  ) : null}
-                </div>
-                {description ? <p className="mt-1 line-clamp-2 text-xs opacity-75" style={{ color: resolvedTextColor }}>{description}</p> : null}
-                {address ? <p className="mt-1 line-clamp-2 text-[11px] opacity-65" style={{ color: resolvedTextColor }}>{address}</p> : null}
-              </div>
-            </div>
-          </div>
-          {provider === "apple_maps" ? (
-            <div className={`grid place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] ${isDesktop ? "h-40" : "h-28"}`}>
-                <div className="text-center">
-                  <MapPin className="mx-auto mb-1 h-6 w-6" style={{ color: accent }} />
-                <p className="text-xs font-semibold" style={{ color: resolvedTextColor }}>Harita konumu</p>
-                </div>
-              </div>
-          ) : mapEmbedUrl ? (
-            <iframe title="Harita onizlemesi" src={mapEmbedUrl} loading="lazy" className={isDesktop ? "h-40 w-full border-0" : "h-28 w-full border-0"} />
-          ) : (
-            <div className={`grid place-items-center bg-[radial-gradient(circle_at_center,rgba(214,255,0,0.13),transparent_55%),linear-gradient(135deg,#171b20,#090b0d)] ${isDesktop ? "h-40" : "h-28"}`}>
-              <MapPin className="h-6 w-6" style={{ color: accent }} />
-            </div>
-          )}
-          <div className={isDesktop ? "p-4 pt-3" : "p-3 pt-2"}>
-            <div
-              className="grid min-h-10 place-items-center rounded-xl border px-3 text-xs font-extrabold shadow-[0_0_18px_rgba(214,255,0,0.20)] transition hover:border-white/80 hover:shadow-[0_0_28px_rgba(214,255,0,0.42)]"
-              style={{ background: accent, color: "#05070a", borderColor: "rgba(255,255,255,0.42)" }}
-            >
-              {buttonText}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (block.type === "profile_image" && block.data.url) {
-      if (block.data.kind !== "image") {
-        return (
-          <div key={block.tempId} className={isDesktop ? "py-3" : "py-2"}>
-            <div className="flex justify-center">
-              <img
-                src={String(block.data.url)}
-                alt="Logo"
-                className={isDesktop ? "h-28 w-28 rounded-full" : "h-24 w-24 rounded-full"}
-                style={{ objectFit: "cover", border: `2px solid ${themeConfig.cardBorder}`, background: themeConfig.cardBg }}
-              />
-            </div>
-          </div>
-        );
-      }
-      const aspect = String(block.data.aspect || "1/1");
-      const align = String(block.data.align || "center") as "left" | "center" | "right";
-      const image = (
-        <img
-          src={String(block.data.url)}
-          alt={String(block.data.title || "Foto")}
-          className="w-full rounded-2xl border object-cover"
-          style={{
-            aspectRatio: aspect === "auto" ? "auto" : aspect,
-            borderColor: themeConfig.cardBorder,
-            background: themeConfig.cardBg,
-          }}
-        />
-      );
-      const caption = (block.data.title || block.data.description) ? (
-        <div className="space-y-1" style={{ textAlign: align }}>
-          {block.data.title && <h3 className="text-sm font-bold" style={{ color: String(block.data.titleColor || resolvedTextColor) }}>{block.data.title}</h3>}
-          {block.data.description && <p className="text-xs leading-relaxed" style={{ color: String(block.data.descriptionColor || resolvedTextColor) }}>{block.data.description}</p>}
-        </div>
-      ) : null;
-      return (
-        <div key={block.tempId} className={isDesktop ? "py-3" : "py-2"}>
-          <div className={`mx-auto max-w-full space-y-2 ${isDesktop ? "w-[82%]" : "w-full"}`}>
-            {block.data.textPosition === "above" && caption}
-            {image}
-            {block.data.textPosition !== "above" && caption}
+            <ExternalLink className={`${isDesktop ? "h-4 w-4" : "h-3.5 w-3.5"} opacity-55`} />
           </div>
         </div>
       );
@@ -2053,63 +859,57 @@ function PreviewCardContents({
   };
 
   return (
-    <div className={`rounded-[1.95rem] border flex flex-col ${isDesktop ? "min-h-[620px] p-7" : "min-h-full p-4.5"}`} style={getBioCardStyle(themeConfig, resolvedTextColor)}>
-      <div className={`flex flex-col items-center ${isDesktop ? "mb-4 mt-1 gap-3" : "mb-3 mt-1 gap-2"}`}>
+    <div className={`rounded-[2rem] border flex flex-col overflow-hidden ${isDesktop ? "min-h-[620px] p-7" : "min-h-[520px] p-4.5"}`} style={getBioCardStyle(themeConfig)}>
+      <div className={`flex flex-col items-center ${isDesktop ? "mb-6 mt-1 gap-3" : "mb-4 mt-1 gap-2"}`}>
         {page.profileImageUrl ? (
-          isVideoMediaUrl(page.profileImageUrl) ? (
-            <video
-              src={page.profileImageUrl}
-              className={`${isDesktop ? "h-20 w-20" : "h-16 w-16"} rounded-full object-cover border-2`}
-              style={{ borderColor: `${accent}66` }}
-              muted
-              playsInline
-              autoPlay
-              loop
-            />
-          ) : (
-            <img
-              src={page.profileImageUrl}
-              alt="Profil resmi"
-              className={`${isDesktop ? "h-20 w-20" : "h-16 w-16"} rounded-full object-cover border-2`}
-              style={{ borderColor: `${accent}66` }}
-            />
-          )
+          <img
+            src={page.profileImageUrl}
+            alt="Profil resmi"
+            className={`${isDesktop ? "h-20 w-20" : "h-16 w-16"} rounded-full object-cover border-2`}
+            style={{ borderColor: `${accent}66` }}
+          />
         ) : (
           <div
             className={`${isDesktop ? "h-20 w-20" : "h-16 w-16"} rounded-full border-2 flex items-center justify-center`}
             style={{ borderColor: `${accent}66`, background: `${accent}22` }}
           >
-            <UserRound className={isDesktop ? "h-8 w-8" : "h-7 w-7"} style={{ color: accent }} />
+            <span className={`${isDesktop ? "text-2xl" : "text-xl"} font-black tracking-[-0.04em]`} style={{ color: accent }}>
+              {getProfileInitials(profileTitle)}
+            </span>
           </div>
         )}
         <div className="text-center">
-          <p className={`font-semibold ${isDesktop ? "text-xl" : "text-sm"}`} style={{ color: resolvedTextColor }}>
-            {page.title || "@kullanici"}
-          </p>
+          <div className="inline-flex max-w-full items-center justify-center gap-1.5">
+            <p className={`truncate font-bold tracking-[-0.02em] ${isDesktop ? "text-xl" : "text-[15px]"}`} style={{ color: themeConfig.text }}>
+              {profileTitle}
+            </p>
+            <BadgeCheck className={isDesktop ? "h-[18px] w-[18px] flex-shrink-0" : "h-3.5 w-3.5 flex-shrink-0"} style={{ color: accent }} />
+          </div>
           {page.description && (
-            <p className={`${isDesktop ? "mt-2 text-sm" : "mt-1 text-xs"}`} style={{ color: resolvedTextColor }}>
+            <p className={`${isDesktop ? "mt-1 text-sm" : "mt-1 text-[12px]"} mx-auto max-w-[16rem] leading-relaxed`} style={{ color: themeConfig.mutedText }}>
               {page.description}
             </p>
-          )}
-          {topSocialBlocks.length > 0 && (
-            <div className={`mt-3 flex flex-wrap justify-center ${isDesktop ? "gap-3" : "gap-2.5"}`}>
-              {topSocialBlocks.map(block => (
-                <div
-                  key={block.tempId}
-                  className={`${isDesktop ? "h-11 w-11" : "h-10 w-10"} rounded-full border flex items-center justify-center`}
-                  style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder }}
-                >
-                  <SocialIcon platform={String(block.data.platform || "")} size={isDesktop ? 20 : 18} color={getSocialColor(block)} />
-                </div>
-              ))}
-            </div>
           )}
         </div>
       </div>
 
-      <div className={`w-full flex-1 ${isDesktop ? "space-y-3.5" : "space-y-2.5"}`}>
+      <div className={`flex-1 ${isDesktop ? "space-y-3.5" : "space-y-2"}`}>
         {contentBlocks.map(renderBlock)}
       </div>
+
+      {socialBlocks.length > 0 && (
+        <div className={`flex flex-wrap justify-center ${isDesktop ? "mt-7 gap-3" : "mt-5 gap-2.5"}`}>
+          {socialBlocks.map(block => (
+            <div
+              key={block.tempId}
+              className={`${isDesktop ? "h-11 w-11" : "h-10 w-10"} rounded-full border flex items-center justify-center shadow-sm`}
+              style={{ background: themeConfig.cardBg, borderColor: themeConfig.cardBorder }}
+            >
+              <SocialIcon platform={String(block.data.platform || "")} size={isDesktop ? 20 : 18} color={getSocialColor(block)} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2118,138 +918,49 @@ function PhonePreview({
   blocks,
   page,
   accentColor,
-  textColor,
   theme,
+  exportRef,
 }: {
   blocks: LocalBlock[];
-  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string; customBackgroundImageUrl?: string | null };
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
   accentColor: string;
-  textColor: string;
   theme: string;
+  exportRef?: RefObject<HTMLDivElement | null>;
 }) {
-  const themeConfig = withCustomBackgroundImage(getBioTheme(theme), page.customBackgroundImageUrl);
+  const themeConfig = getBioTheme(theme);
   const accent = safeAccentColor(accentColor, themeConfig.accent);
 
   return (
-    <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
-      <div className="flex min-w-0 flex-1 flex-col items-center overflow-x-hidden">
-        <div className="relative mx-auto aspect-[9/17.2] w-[min(100%,310px)] max-w-full overflow-hidden rounded-[2.15rem] border-2 border-black/70 bg-black shadow-2xl sm:w-[330px] lg:w-[340px]">
-          <div className="absolute top-0 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
-          <div
-            className="h-full min-h-0 overflow-x-hidden overflow-y-auto px-3 pt-7 pb-4"
-            style={getBioBackgroundStyleStatic(themeConfig, accent)}
-          >
-            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} textColor={textColor} theme={theme} mode="phone" />
+    <div className="flex h-full flex-col">
+      <div className="flex flex-1 flex-col items-center">
+        <div
+          ref={exportRef}
+          className="relative w-[318px] max-w-full overflow-hidden rounded-[2.9rem] border-[7px] border-[#050506] bg-[#050506] shadow-[0_28px_80px_rgba(0,0,0,0.48)] ring-1 ring-white/10"
+        >
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-11 items-center justify-between px-8 text-[11px] font-semibold text-white/92">
+            <span>10:24</span>
+            <div className="flex items-center gap-1.5">
+              <Signal className="h-3.5 w-3.5" />
+              <Wifi className="h-3.5 w-3.5" />
+              <BatteryFull className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="absolute top-2 left-1/2 z-30 h-5 w-24 -translate-x-1/2 rounded-full bg-[#050506] shadow-[inset_0_-1px_0_rgba(255,255,255,0.07)]">
+            <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/12" />
+          </div>
+          <div className="min-h-[610px] px-3.5 pt-12 pb-4.5" style={getBioBackgroundStyle(themeConfig, accent)}>
+            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="phone" />
           </div>
         </div>
         <div className="mt-3 text-center">
-          <p className="text-xs text-muted-foreground">Canli Onizleme</p>
+          <p className="text-xs text-muted-foreground">Canlı Önizleme</p>
           <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center justify-center gap-1 text-xs text-primary hover:underline">
             <Globe className="h-3 w-3" />
             llinktr.com/{page.slug}
           </a>
         </div>
-        </div>
       </div>
-  );
-}
-
-function getRadiusValue(preset?: string | number | boolean) {
-  if (preset === "pill") return "9999px";
-  if (preset === "square") return "12px";
-  return "18px";
-}
-
-function getFontPresetClass(preset?: string | number | boolean) {
-  switch (preset) {
-    case "bold":
-      return "font-bold tracking-[0.01em]";
-    case "caps":
-      return "font-semibold uppercase tracking-[0.12em]";
-    case "wide":
-      return "font-semibold tracking-[0.06em]";
-    case "compact":
-      return "font-medium";
-    default:
-      return "font-semibold";
-  }
-}
-
-function getTextStyleClass(preset?: string | number | boolean) {
-  switch (preset) {
-    case "bold":
-      return "font-bold";
-    case "light":
-      return "font-light";
-    case "display":
-      return "text-xl font-bold";
-    case "small":
-      return "text-xs font-medium";
-    case "accent":
-      return "font-semibold underline underline-offset-4";
-    default:
-      return "font-medium";
-  }
-}
-
-function getTextAlignClass(align?: string | number | boolean) {
-  if (align === "left") return "text-left";
-  if (align === "right") return "text-right";
-  return "text-center";
-}
-
-function getTextStyleInline(preset?: string | number | boolean): React.CSSProperties {
-  switch (preset) {
-    case "bold":
-      return { fontWeight: 800 };
-    case "light":
-      return { fontWeight: 300 };
-    case "display":
-      return { fontSize: "1.45em", fontWeight: 850, lineHeight: 1.15 };
-    case "small":
-      return { fontSize: "0.86em", fontWeight: 500 };
-    case "accent":
-      return { fontWeight: 750, letterSpacing: "0.02em" };
-    default:
-      return { fontWeight: 500 };
-  }
-}
-
-function getTextLinkParts(text: string, data: Record<string, string | boolean | number>) {
-  const start = Number(data.textLinkStart);
-  const end = Number(data.textLinkEnd);
-  const url = String(data.textLinkUrl || "");
-  if (!url || Number.isNaN(start) || Number.isNaN(end) || start < 0 || end <= start || end > text.length) {
-    return null;
-  }
-
-  return {
-    before: text.slice(0, start),
-    linked: text.slice(start, end),
-    after: text.slice(end),
-    url,
-  };
-}
-
-function RichText({
-  text,
-  data,
-  linkColor,
-}: {
-  text: string;
-  data: Record<string, string | boolean | number>;
-  linkColor: string;
-}) {
-  const parts = getTextLinkParts(text, data);
-  if (!parts) return <>{text}</>;
-  return (
-    <>
-      {parts.before}
-      <a href={parts.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4" style={{ color: linkColor }}>
-        {parts.linked}
-      </a>
-      {parts.after}
-    </>
+    </div>
   );
 }
 
@@ -2257,20 +968,18 @@ function DesktopPreview({
   blocks,
   page,
   accentColor,
-  textColor,
   theme,
 }: {
   blocks: LocalBlock[];
-  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string; customBackgroundImageUrl?: string | null };
+  page: { title: string; description?: string | null; profileImageUrl?: string | null; slug: string };
   accentColor: string;
-  textColor: string;
   theme: string;
 }) {
-  const themeConfig = withCustomBackgroundImage(getBioTheme(theme), page.customBackgroundImageUrl);
+  const themeConfig = getBioTheme(theme);
   const accent = safeAccentColor(accentColor, themeConfig.accent);
 
   return (
-    <div className="flex h-full min-w-0 flex-col">
+    <div className="flex h-full flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.8rem] border border-border/60 bg-card shadow-2xl">
         <div className="flex items-center gap-3 border-b border-border/50 bg-background/75 px-4 py-3">
           <div className="flex items-center gap-2">
@@ -2284,12 +993,12 @@ function DesktopPreview({
             </div>
           </div>
           <div className="rounded-full border border-border/50 px-3 py-1 text-[11px] text-muted-foreground">
-            Masaustu gorunumu
+            Masaüstü görünümü
           </div>
         </div>
-        <div className="min-h-[560px] overflow-y-auto p-4 md:p-6" style={getBioBackgroundStyle(themeConfig, accent)}>
-          <div className="mx-auto w-full max-w-[38rem]">
-            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} textColor={textColor} theme={theme} mode="desktop" />
+        <div className="min-h-[620px] p-5 md:p-7" style={getBioBackgroundStyle(themeConfig, accent)}>
+          <div className="mx-auto max-w-[40rem]">
+            <PreviewCardContents blocks={blocks} page={page} accentColor={accent} theme={theme} mode="desktop" />
           </div>
         </div>
       </div>
@@ -2308,16 +1017,10 @@ export default function BioBuilder() {
   const [, navigate] = useLocation();
   const { isAuthenticated, loading } = useAuth();
   const pageId = parseInt(id || "0");
-  const utils = trpc.useUtils();
 
   const { data: pageData, isLoading } = trpc.bioPages.getById.useQuery(
     { id: pageId },
-    {
-      enabled: isAuthenticated && !!pageId,
-      staleTime: 1000 * 60 * 2,
-      gcTime: 1000 * 60 * 10,
-      refetchOnWindowFocus: false,
-    },
+    { enabled: isAuthenticated && !!pageId },
   );
 
   const [blocks, setBlocks] = useState<LocalBlock[]>([]);
@@ -2327,45 +1030,26 @@ export default function BioBuilder() {
   const [faviconUrl, setFaviconUrl] = useState("");
   const [theme, setTheme] = useState("dark_grid");
   const [accentColor, setAccentColor] = useState("#22D3EE");
-  const [textColor, setTextColor] = useState("#F8FAFC");
-  const [customBackgroundImageUrl, setCustomBackgroundImageUrl] = useState("");
-  const [activeThemeCategory, setActiveThemeCategory] = useState<(typeof THEME_CATEGORY_TABS)[number]["id"]>("all");
   const [isPublished, setIsPublished] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
-  const [pendingExitPath, setPendingExitPath] = useState<string | null>(null);
-  const [isUnsavedExitOpen, setIsUnsavedExitOpen] = useState(false);
   const [isAddBlockDialogOpen, setIsAddBlockDialogOpen] = useState(false);
   const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
-  const [isProfileMediaModalOpen, setIsProfileMediaModalOpen] = useState(false);
-  const [isProfileTextModalOpen, setIsProfileTextModalOpen] = useState(false);
-  const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
-  const [isSmartStartOpen, setIsSmartStartOpen] = useState(false);
+  const [showCommercePresets, setShowCommercePresets] = useState(false);
+  const [showLocationPresets, setShowLocationPresets] = useState(false);
   const [previewMode, setPreviewMode] = useState<"phone" | "desktop">("phone");
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [touchDragActive, setTouchDragActive] = useState(false);
-  const [expandedBlockIds, setExpandedBlockIds] = useState<Record<string, boolean>>({});
+  const previewExportRef = useRef<HTMLDivElement | null>(null);
   const lastHydratedAtRef = useRef<Date | null>(null);
   const hydratedPageIdRef = useRef<number | null>(null);
 
-  const themeConfig = withCustomBackgroundImage(getBioTheme(theme), customBackgroundImageUrl);
+  const themeConfig = getBioTheme(theme);
   const activeAccentColor = safeAccentColor(accentColor, themeConfig.accent);
-  const visibleThemes = useMemo(() => {
-    const seen = new Set<string>();
-    return BIO_THEMES.filter((item) => {
-      if (seen.has(item.id)) return false;
-      seen.add(item.id);
-      return activeThemeCategory === "all" || getThemeCategory(item) === activeThemeCategory;
-    });
-  }, [activeThemeCategory]);
-  const totalClicks = useMemo(() => blocks.reduce((sum, block) => sum + (block.clicks ?? 0), 0), [blocks]);
-  const activeBlockCount = useMemo(() => blocks.filter(block => block.isEnabled).length, [blocks]);
+  const hasProfileImageBlock = blocks.some(block => block.type === "profile_image");
+  const totalClicks = blocks.reduce((sum, block) => sum + (block.clicks ?? 0), 0);
+  const activeBlockCount = blocks.filter(block => block.isEnabled).length;
   const hiddenBlockCount = blocks.length - activeBlockCount;
-  const actionBlockCount = useMemo(
-    () => blocks.filter(block => block.type === "link" || block.type === "social" || block.type === "location").length,
-    [blocks],
-  );
+  const actionBlockCount = blocks.filter(block => block.type === "link" || block.type === "social").length;
 
   useEffect(() => {
     if (!pageData) return;
@@ -2381,11 +1065,8 @@ export default function BioBuilder() {
     setFaviconUrl(pageData.page.faviconUrl || "");
     setTheme(selectedTheme.id);
     setAccentColor(pageData.page.accentColor || selectedTheme.accent);
-    setTextColor((pageData.page as { textColor?: string | null }).textColor || selectedTheme.defaultTextColor || selectedTheme.text);
-    setCustomBackgroundImageUrl((pageData.page as { customBackgroundImageUrl?: string | null }).customBackgroundImageUrl || "");
-    setActiveThemeCategory(((pageData.page as { themeCategory?: "all" | "solid" | "pattern" | "photo" | null }).themeCategory || "all"));
     setIsPublished(pageData.page.isPublished);
-    const hydratedBlocks = normalizeBlocks(pageData.blocks.map(block => ({
+    setBlocks(normalizeBlocks(pageData.blocks.filter(block => block.type !== "profile_image").map(block => ({
       id: block.id,
       tempId: generateTempId(),
       type: block.type as BlockType,
@@ -2393,26 +1074,11 @@ export default function BioBuilder() {
       isEnabled: block.isEnabled,
       clicks: block.clicks ?? 0,
       data: (block.data as Record<string, string | boolean | number>) || {},
-    })));
-    setBlocks(hydratedBlocks);
-    setExpandedBlockIds(
-      Object.fromEntries(hydratedBlocks.map((block) => [block.tempId, false])),
-    );
+    }))));
     lastHydratedAtRef.current = pageData.page.updatedAt;
     hydratedPageIdRef.current = pageId;
     setIsDirty(false);
   }, [pageData, isDirty, pageId]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!isDirty) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
 
   const updatePageMutation = trpc.bioPages.update.useMutation({
     onSuccess: () => undefined,
@@ -2421,7 +1087,7 @@ export default function BioBuilder() {
 
   const bulkSaveMutation = trpc.bioBlocks.bulkSave.useMutation({
     onSuccess: (savedBlocks) => {
-      const nextBlocks = normalizeBlocks(savedBlocks.map(block => ({
+      setBlocks(normalizeBlocks(savedBlocks.map(block => ({
         id: block.id,
         tempId: generateTempId(),
         type: block.type as BlockType,
@@ -2429,12 +1095,9 @@ export default function BioBuilder() {
         isEnabled: block.isEnabled,
         clicks: block.clicks ?? 0,
         data: (block.data as Record<string, string | boolean | number>) || {},
-      })));
-      setBlocks(nextBlocks);
-      setExpandedBlockIds((prev) =>
-        Object.fromEntries(nextBlocks.map((block) => [block.tempId, prev[block.tempId] ?? false])),
-      );
+      }))));
       setIsDirty(false);
+      toast.success("Kaydedildi");
     },
     onError: (error) => toast.error(error.message),
   });
@@ -2442,154 +1105,75 @@ export default function BioBuilder() {
   const handleSave = async () => {
     try {
       const existingBlockCount = pageData?.blocks?.length ?? 0;
-      const allowEmptyBlocks = blocks.length === 0 && existingBlockCount > 0;
       if (blocks.length === 0 && existingBlockCount > 0) {
         const confirmed = window.confirm(
-          "Tum icerik bloklari silinecek. Bos olarak kaydetmek istediginize emin misiniz?",
+          "Tüm içerik blokları silinecek. Boş olarak kaydetmek istediğinize emin misiniz?",
         );
         if (!confirmed) return;
       }
 
-      const pagePatch: {
-        id: number;
-        title: string;
-        description: string | null;
-        profileImageUrl?: string | null;
-        faviconUrl?: string | null;
-        theme: string;
-        selectedThemeId: string;
-        accentColor: string;
-        textColor: string;
-        customBackgroundImageUrl?: string | null;
-        themeCategory: "solid" | "pattern" | "photo" | null;
-        isPublished: boolean;
-      } = {
+      await updatePageMutation.mutateAsync({
         id: pageId,
         title: pageTitle,
         description: pageDesc || null,
+        profileImageUrl: profileImageUrl || null,
+        faviconUrl: faviconUrl || null,
         theme,
-        selectedThemeId: theme,
         accentColor: activeAccentColor,
-        textColor,
-        themeCategory: activeThemeCategory === "all" ? null : activeThemeCategory,
         isPublished,
-      };
+      });
 
-      const savedPage = pageData?.page as
-        | {
-            profileImageUrl?: string | null;
-            faviconUrl?: string | null;
-            customBackgroundImageUrl?: string | null;
-          }
-        | undefined;
-
-      if ((savedPage?.profileImageUrl || "") !== (profileImageUrl || "")) {
-        pagePatch.profileImageUrl = profileImageUrl || null;
-      }
-
-      if ((savedPage?.faviconUrl || "") !== (faviconUrl || "")) {
-        pagePatch.faviconUrl = faviconUrl || null;
-      }
-
-      if ((savedPage?.customBackgroundImageUrl || "") !== (customBackgroundImageUrl || "")) {
-        pagePatch.customBackgroundImageUrl = customBackgroundImageUrl || null;
-      }
-
-      const pageHasChanges =
-        !pageData?.page ||
-        pageData.page.title !== pagePatch.title ||
-        (pageData.page.description || null) !== pagePatch.description ||
-        pageData.page.theme !== pagePatch.theme ||
-        pageData.page.accentColor !== pagePatch.accentColor ||
-        ((pageData.page as { textColor?: string | null }).textColor || "") !== pagePatch.textColor ||
-        ((pageData.page as { themeCategory?: string | null }).themeCategory || null) !== pagePatch.themeCategory ||
-        pageData.page.isPublished !== pagePatch.isPublished ||
-        "profileImageUrl" in pagePatch ||
-        "faviconUrl" in pagePatch ||
-        "customBackgroundImageUrl" in pagePatch;
-
-      const blocksPayload = blocks.map((block, index) => ({
-        id: block.id,
-        type: block.type,
-        sortOrder: index,
-        isEnabled: block.isEnabled,
-        data: sanitizeBlockData(block.data),
-      }));
-      const savedBlocksPayload = (pageData?.blocks ?? []).map((block, index) => ({
-        id: block.id,
-        type: block.type,
-        sortOrder: index,
-        isEnabled: block.isEnabled,
-        data: block.data || {},
-      }));
-      const blocksHaveChanges =
-        !pageData?.blocks ||
-        serializeBlocksForSave(blocksPayload) !== serializeBlocksForSave(savedBlocksPayload);
-
-      if (!pageHasChanges && !blocksHaveChanges) {
-        setIsDirty(false);
-        toast.success("Kaydedildi");
-        return;
-      }
-
-      const [, savedBlocks] = await Promise.all([
-        pageHasChanges ? updatePageMutation.mutateAsync(pagePatch) : Promise.resolve({ success: true }),
-        blocksHaveChanges
-          ? bulkSaveMutation.mutateAsync({
-              pageId,
-              allowEmpty: allowEmptyBlocks,
-              blocks: blocksPayload,
-            })
-          : Promise.resolve(pageData?.blocks ?? []),
-      ]);
-
-      if (pageData?.page) {
-        const nextPage = {
-          ...pageData.page,
-          ...pagePatch,
-          profileImageUrl: "profileImageUrl" in pagePatch ? pagePatch.profileImageUrl : pageData.page.profileImageUrl,
-          faviconUrl: "faviconUrl" in pagePatch ? pagePatch.faviconUrl : pageData.page.faviconUrl,
-          customBackgroundImageUrl: "customBackgroundImageUrl" in pagePatch
-            ? pagePatch.customBackgroundImageUrl
-            : (pageData.page as { customBackgroundImageUrl?: string | null }).customBackgroundImageUrl,
-          updatedAt: new Date(),
-        };
-
-        utils.bioPages.getById.setData({ id: pageId }, { page: nextPage, blocks: savedBlocks });
-        if (pageData.page.slug) {
-          utils.bioPages.getBySlug.setData({ slug: pageData.page.slug }, { page: nextPage, blocks: savedBlocks, isPaused: !isPublished });
-        }
-      }
-
-      void utils.bioPages.list.invalidate();
-      setIsDirty(false);
-      toast.success("Kaydedildi");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Kayit sirasinda bir hata olustu. Lutfen tekrar deneyin.");
+      await bulkSaveMutation.mutateAsync({
+        pageId,
+        blocks: blocks.map((block, index) => ({
+          id: block.id,
+          type: block.type,
+          sortOrder: index,
+          isEnabled: block.isEnabled,
+          data: block.data,
+        })),
+      });
+    } catch {
+      toast.error("Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.");
     }
   };
 
-  const requestExit = (path = "/dashboard") => {
-    if (!isDirty) {
-      navigate(path);
+  const handleDownloadPreview = async () => {
+    if (!previewExportRef.current) {
+      toast.error("Önizleme hazırlanamadı");
       return;
     }
 
-    setPendingExitPath(path);
-    setIsUnsavedExitOpen(true);
+    try {
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(previewExportRef.current, {
+        pixelRatio: 3,
+        cacheBust: true,
+        backgroundColor: "#f3f4f6",
+        style: {
+          transform: "scale(1)",
+          transformOrigin: "top left",
+        },
+      });
+      const link = document.createElement("a");
+      const cleanSlug = (pageData?.page.slug || "bio-onizleme").replace(/[^a-z0-9-_]+/gi, "-");
+      link.download = `llinktr-${cleanSlug}-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success("Önizleme indirildi");
+    } catch {
+      toast.error("Görsel indirilemedi. Lütfen tekrar deneyin.");
+    }
   };
 
-  const confirmExitWithoutSaving = () => {
-    const targetPath = pendingExitPath || "/dashboard";
-    setIsDirty(false);
-    setIsUnsavedExitOpen(false);
-    setPendingExitPath(null);
-    navigate(targetPath);
-  };
-
-  const addBlock = (type: BlockType, initialData?: Record<string, string | boolean | number>) => {
+  const addBlock = (type: BlockType) => {
     if (blocks.length >= 50) {
-      toast.error("Maksimum 50 oge sinirina ulastiniz");
+      toast.error("Maksimum 50 öğe sınırına ulaştınız");
+      return;
+    }
+
+    if (type === "profile_image" && hasProfileImageBlock) {
+      toast.error("Profil resmi bloğu yalnızca bir kez eklenebilir");
       return;
     }
 
@@ -2600,67 +1184,24 @@ export default function BioBuilder() {
       isEnabled: true,
       clicks: 0,
       data:
-        type === "profile_image"
-          ? (initialData || (profileImageUrl ? { url: profileImageUrl, kind: "logo" } : { kind: "logo" }))
-          : type === "social"
-            ? {
-                placement: "inline",
-                accounts: JSON.stringify([{ id: makeSocialAccountId(), platform: "", url: "", isEnabled: true }]),
-                ...(initialData || {}),
-              }
+        type === "profile_image" && profileImageUrl
+          ? { url: profileImageUrl }
           : type === "link"
-            ? { align: "center", ...(initialData || {}) }
-            : type === "location"
-              ? { title: "Konum", description: "", address: "", url: "", buttonText: "Yol Tarifi Al", provider: "auto_maps", addressMode: "address", ...(initialData || {}) }
+            ? { align: "center" }
             : type === "divider"
               ? { variant: "thin" }
-              : initialData || {},
+            : {},
     };
     setBlocks(prev => normalizeBlocks([...prev, newBlock]));
-    setExpandedBlockIds((prev) => ({ ...prev, [newBlock.tempId]: false }));
     setIsDirty(true);
     setIsAddBlockDialogOpen(false);
-  };
-
-  const toggleExpandedBlock = (tempId: string) => {
-    setExpandedBlockIds((prev) => ({ ...prev, [tempId]: !prev[tempId] }));
-  };
-
-  const addSocialDraft = () => {
-    addBlock("social", { placement: "top" });
-  };
-
-  const applySocialDrafts = (items: SocialLinkDraft[]) => {
-    const socialByTempId = new Map(
-      items.map((item) => [item.tempId ?? item.id, item]),
-    );
-    setBlocks((prev) =>
-      normalizeBlocks(
-        prev
-          .filter((block) => block.type !== "social" || getSocialPlacement(block.data) !== "top" || socialByTempId.has(block.tempId))
-          .map((block) => {
-            if (block.type !== "social" || getSocialPlacement(block.data) !== "top") return block;
-            const draft = socialByTempId.get(block.tempId);
-            if (!draft) return block;
-            return {
-              ...block,
-              isEnabled: draft.isEnabled,
-              data: {
-                ...block.data,
-                placement: "top",
-                platform: draft.platform,
-                url: normalizeSocialUrl(draft.platform, draft.url),
-              },
-            };
-          }),
-      ),
-    );
-    setIsDirty(true);
+    setShowCommercePresets(false);
+    setShowLocationPresets(false);
   };
 
   const addCommerceBlock = (presetId: string) => {
     if (blocks.length >= 50) {
-      toast.error("Maksimum 50 oge sinirina ulastiniz");
+      toast.error("Maksimum 50 öğe sınırına ulaştınız");
       return;
     }
 
@@ -2682,14 +1223,15 @@ export default function BioBuilder() {
     };
 
     setBlocks(prev => normalizeBlocks([...prev, newBlock]));
-    setExpandedBlockIds((prev) => ({ ...prev, [newBlock.tempId]: false }));
     setIsDirty(true);
     setIsAddBlockDialogOpen(false);
+    setShowCommercePresets(false);
+    setShowLocationPresets(false);
   };
 
   const addLocationBlock = (presetId: string) => {
     if (blocks.length >= 50) {
-      toast.error("Maksimum 50 oge sinirina ulastiniz");
+      toast.error("Maksimum 50 öğe sınırına ulaştınız");
       return;
     }
 
@@ -2698,25 +1240,22 @@ export default function BioBuilder() {
 
     const newBlock: LocalBlock = {
       tempId: generateTempId(),
-      type: "location",
+      type: "link",
       sortOrder: blocks.length,
       isEnabled: true,
       clicks: 0,
       data: {
         title: preset.label,
-        description: "",
-        address: "",
         url: "",
-        buttonText: "Yol Tarifi Al",
-        provider: preset.platform,
         logoPreset: preset.platform,
+        align: "center",
       },
     };
 
     setBlocks(prev => normalizeBlocks([...prev, newBlock]));
-    setExpandedBlockIds((prev) => ({ ...prev, [newBlock.tempId]: false }));
     setIsDirty(true);
     setIsAddBlockDialogOpen(false);
+    setShowLocationPresets(false);
   };
 
   const updateBlock = (tempId: string, data: Record<string, string | boolean | number>) => {
@@ -2774,14 +1313,12 @@ export default function BioBuilder() {
       const targetId = targetContainer?.dataset.blockId;
       if (!targetId || targetId === draggingId) return;
 
-      setDropTargetId(targetId);
       moveBlockTo(draggingId, targetId);
     };
 
     const handleTouchEnd = () => {
       setTouchDragActive(false);
       setDraggingId(null);
-      setDropTargetId(null);
     };
 
     window.addEventListener("touchmove", handleTouchMove, { passive: false });
@@ -2798,9 +1335,7 @@ export default function BioBuilder() {
   const handleThemeChange = (themeId: string) => {
     const selectedTheme = getBioTheme(themeId);
     setTheme(selectedTheme.id);
-    setAccentColor(selectedTheme.defaultAccent || selectedTheme.accent);
-    setTextColor(selectedTheme.defaultTextColor || selectedTheme.text);
-    setActiveThemeCategory(getThemeCategory(selectedTheme));
+    setAccentColor(selectedTheme.accent);
     setIsDirty(true);
   };
 
@@ -2820,76 +1355,6 @@ export default function BioBuilder() {
     }, "Sekme logosu");
   };
 
-  const applyPalette = (accent: string, text: string) => {
-    setAccentColor(accent);
-    setTextColor(text);
-    setIsDirty(true);
-  };
-
-  const handleBackgroundImageUpload = (file?: File) => {
-    if (!file) return;
-    readImageFile(file, (dataUrl) => {
-      setCustomBackgroundImageUrl(dataUrl);
-      setTheme("custom_photo");
-      setActiveThemeCategory("photo");
-      setIsDirty(true);
-    }, "Arka plan fotografi");
-  };
-
-  const applySmartPreset = (kind: typeof SMART_PRESETS[number]["kind"]) => {
-    const preset = SMART_PRESETS.find(item => item.kind === kind);
-    if (!preset) return;
-
-    setAccentColor(preset.accent);
-    setIsDirty(true);
-
-    if (kind === "influencer") {
-      if (!pageDesc) setPageDesc("Icerik, is birlikleri ve en guncel paylasimlar");
-      addBlock("social");
-      addBlock("link");
-      toast.success("Influencer akisi icin sosyal ve link blogu eklendi");
-      return;
-    }
-
-    if (kind === "sales") {
-      if (!pageDesc) setPageDesc("Urunler, kampanyalar ve hizli siparis");
-      addCommerceBlock("shopier_store");
-      addBlock("link");
-      toast.success("Satis akisi icin magaza ve aksiyon linki eklendi");
-      return;
-    }
-
-    if (!pageDesc) setPageDesc("Portfolyo, hizmetler ve teklif talepleri");
-    addBlock("link");
-    addBlock("description");
-    toast.success("Freelancer akisi icin portfolyo ve aciklama blogu eklendi");
-  };
-  const previewPage = useMemo(
-    () => ({
-      title: pageTitle || pageData?.page.title || "",
-      description: pageDesc || pageData?.page.description || "",
-      profileImageUrl: profileImageUrl || pageData?.page.profileImageUrl || "",
-      customBackgroundImageUrl,
-      slug: pageData?.page.slug || "",
-    }),
-    [customBackgroundImageUrl, pageData?.page.description, pageData?.page.profileImageUrl, pageData?.page.slug, pageData?.page.title, pageDesc, pageTitle, profileImageUrl],
-  );
-  const socialDrafts = useMemo<SocialLinkDraft[]>(
-    () =>
-      blocks
-        .filter((block) => block.type === "social" && getSocialPlacement(block.data) === "top")
-        .map((block) => ({
-          id: block.id ? String(block.id) : block.tempId,
-          tempId: block.tempId,
-          platform: String(block.data.platform || ""),
-          url: String(block.data.url || ""),
-          isEnabled: block.isEnabled,
-          clicks: block.clicks ?? 0,
-        })),
-    [blocks],
-  );
-  const isSaving = updatePageMutation.isPending || bulkSaveMutation.isPending;
-
   if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -2907,229 +1372,559 @@ export default function BioBuilder() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Sayfa bulunamadi</p>
-          <Button onClick={() => requestExit("/dashboard")}>Panele Don</Button>
+          <p className="text-muted-foreground mb-4">Sayfa bulunamadı</p>
+          <Button onClick={() => navigate("/dashboard")}>Panele Dön</Button>
         </div>
       </div>
     );
   }
 
+  const isSaving = updatePageMutation.isPending || bulkSaveMutation.isPending;
+  const previewPage = {
+    title: pageTitle || pageData.page.title,
+    description: pageDesc || pageData.page.description,
+    profileImageUrl: profileImageUrl || pageData.page.profileImageUrl,
+    slug: pageData.page.slug,
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#07090c]">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
 
-      <BuilderTopBar
-        title={pageTitle || pageData.page.title}
-        slug={pageData.page.slug}
-        isPublished={isPublished}
-        isSaving={isSaving}
-        isDirty={isDirty}
-        onBack={() => requestExit("/dashboard")}
-        onSave={handleSave}
-        onTogglePublished={(checked) => {
-          setIsPublished(checked);
-          setIsDirty(true);
-        }}
-      />
+      <div className="border-b border-border/50 bg-card/50 sticky top-16 z-40 backdrop-blur-xl">
+        <div className="container py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-muted-foreground flex-shrink-0">
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Panel
+            </Button>
+            <div className="h-4 w-px bg-border" />
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold truncate">{pageData.page.title}</h1>
+              <p className="text-xs text-muted-foreground truncate">llinktr.com/{pageData.page.slug}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="hidden sm:flex items-center gap-2 rounded-lg border border-border/50 px-3 py-1.5">
+              <span className="text-xs text-muted-foreground">{isPublished ? "Yayında" : "Durduruldu"}</span>
+              <Switch checked={isPublished} onCheckedChange={(checked) => { setIsPublished(checked); setIsDirty(true); }} className="scale-75" />
+            </div>
+            <a href={`/${pageData.page.slug}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="border-border/50 text-xs">
+                <Eye className="h-3.5 w-3.5 mr-1.5" />
+                Görüntüle
+              </Button>
+            </a>
+            <Button size="sm" onClick={handleSave} disabled={isSaving || !isDirty} className="bg-primary text-primary-foreground text-xs shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]">
+              {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Save className="h-3.5 w-3.5 mr-1.5" />Kaydet</>}
+            </Button>
+          </div>
+        </div>
+      </div>
 
-      <div className="flex-1">
-        <div className="container max-w-[1500px] overflow-x-hidden py-6">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_460px] xl:items-start">
-            <div className="min-w-0 space-y-6">
-              <ProfileHeroCard
-                title={pageTitle}
-                description={pageDesc}
-                profileImageUrl={profileImageUrl}
-                faviconUrl={faviconUrl}
-                socialItems={socialDrafts}
-                onOpenMedia={() => setIsProfileMediaModalOpen(true)}
-                onOpenText={() => setIsProfileTextModalOpen(true)}
-                onOpenSocial={() => setIsSocialModalOpen(true)}
-                onFaviconSelect={handleFaviconUpload}
-              />
+      <div className="flex-1 container py-6">
+        <div className="space-y-6">
+            <div className="panel-strong p-5 rounded-2xl bg-card border border-border/70">
+              <h2 className="font-semibold mb-4">Profil Detayları</h2>
+              <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sayfa Başlığı</Label>
+                    <div className="flex items-center gap-2">
+                      <Input value={pageTitle} onChange={(event) => { setPageTitle(event.target.value); setIsDirty(true); }} placeholder="Sayfa başlığı..." className="bg-input border-border/50" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setPageTitle(prev => prev.toUpperCase());
+                          setIsDirty(true);
+                        }}
+                        className="h-10 whitespace-nowrap text-[11px]"
+                      >
+                        BÜYÜK HARF
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Kısa Açıklama</Label>
+                    <Input value={pageDesc} onChange={(event) => { setPageDesc(event.target.value); setIsDirty(true); }} placeholder="Dijital içerik üreticisi" className="bg-input border-border/50" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Profil Resmi URL</Label>
+                    <Input value={profileImageUrl} onChange={(event) => { setProfileImageUrl(event.target.value); setIsDirty(true); }} placeholder="https://..." className="bg-input border-border/60" />
+                    <ImageUploadHint text="Profil resmi için önerilen boyut 800 x 800 px, oran 1:1 kare. Yuvarlak alana tam oturur. Maksimum 7 MB." />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sekme Logosu URL (Favicon)</Label>
+                    <Input value={faviconUrl} onChange={(event) => { setFaviconUrl(event.target.value); setIsDirty(true); }} placeholder="https://..." className="bg-input border-border/60" />
+                    <ImageUploadHint text="Sekme logosu için önerilen boyut 512 x 512 px, oran 1:1 kare. Boş bırakırsanız varsayılan llinktr logosu kullanılır. Maksimum 7 MB." />
+                  </div>
+                </div>
+                <div className="panel-strong rounded-xl border border-border/70 bg-muted/20 p-4 flex flex-col items-center justify-center gap-3">
+                  {profileImageUrl ? (
+                    <img src={profileImageUrl} alt="Profil resmi" className="h-20 w-20 rounded-full object-cover border border-border/50" />
+                  ) : (
+                    <div className="h-20 w-20 rounded-full border border-border/50 bg-muted flex items-center justify-center">
+                      <UserRound className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      handleProfileImageUpload(event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                    className="bg-input border-border/50 text-xs"
+                  />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      handleFaviconUpload(event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                    className="bg-input border-border/50 text-xs"
+                  />
+                  <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/50 px-3 py-2">
+                    <img src={faviconUrl || "/favicon.svg"} alt="Sekme logosu" className="h-5 w-5 rounded-sm object-cover" />
+                    <span className="text-[11px] text-muted-foreground">{faviconUrl ? "Ozel sekme logosu secili" : "Varsayilan logo aktif"}</span>
+                  </div>
+                  {profileImageUrl && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setProfileImageUrl(""); setIsDirty(true); }} className="h-8 text-xs text-muted-foreground">
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Kaldır
+                    </Button>
+                  )}
+                  {faviconUrl && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setFaviconUrl(""); setIsDirty(true); }} className="h-8 text-xs text-muted-foreground">
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Sekme logosunu sifirla
+                    </Button>
+                  )}
+                  <p className="text-[11px] text-muted-foreground text-center">İsteğe bağlıdır. En fazla 7 MB görsel kabul edilir.</p>
+                </div>
+              </div>
+            </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-border/60 bg-card/90 p-5 shadow-[0_12px_40px_rgba(0,0,0,0.16)]">
-                  <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-                    <Eye className="h-4 w-4 text-primary" />
-                    Goruntulenme
-                  </div>
-                  <p className="text-3xl font-semibold">{pageData.page.views ?? 0}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Bu bio sayfasinin toplam gorunmesi.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl bg-card border border-border/50 flex items-center gap-4">
+                <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Eye className="h-5 w-5 text-primary" />
                 </div>
-                <div className="rounded-2xl border border-border/60 bg-card/90 p-5 shadow-[0_12px_40px_rgba(0,0,0,0.16)]">
-                  <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-                    <MousePointerClick className="h-4 w-4 text-primary" />
-                    Toplam tiklama
-                  </div>
-                  <p className="text-3xl font-semibold">{totalClicks}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Link ve sosyal ogelerin aldigi toplam etkilesim.</p>
+                <div>
+                  <p className="text-2xl font-bold">{pageData.page.views ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Sayfa görüntülenmesi</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowMobilePreview((prev) => !prev)}
-                  className="rounded-2xl border border-border/60 bg-card/90 p-5 text-left shadow-[0_12px_40px_rgba(0,0,0,0.16)] transition-colors hover:border-primary/35 xl:hidden"
-                >
-                  <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-                    <Smartphone className="h-4 w-4 text-primary" />
-                    Mobil onizleme
+              </div>
+              <div className="p-5 rounded-2xl bg-card border border-border/50 flex items-center gap-4">
+                <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <MousePointerClick className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalClicks}</p>
+                  <p className="text-xs text-muted-foreground">Toplam link tıklaması</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-card border border-border/50">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold">Tema ve Renk</h2>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tema Seçimi</Label>
+                  <button
+                    type="button"
+                    onClick={() => setIsThemeDialogOpen(true)}
+                    className="w-full rounded-xl border border-border/50 bg-input px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-16 rounded-lg border border-border/50" style={getBioThemePreviewStyle(themeConfig, activeAccentColor)} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-tight">Temaları Aç</p>
+                        <p className="truncate text-xs text-muted-foreground">Seçili tema: {themeConfig.label}</p>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Arka Plan ve Vurgu Rengi</Label>
+                  <div className="flex items-center gap-3">
+                    <input type="color" value={activeAccentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} className="h-10 w-16 rounded-lg cursor-pointer border border-border/50 bg-transparent" />
+                    <Input value={accentColor} onChange={(event) => { setAccentColor(event.target.value); setIsDirty(true); }} placeholder="#22D3EE" className="bg-input border-border/50 font-mono text-sm" />
                   </div>
-                  <p className="text-lg font-semibold">{showMobilePreview ? "Kapat" : "Ac"}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Telefondaki gorunumu ihtiyacin oldugunda goster.</p>
-                </button>
+                  <p className="text-xs text-muted-foreground">Seçtiğiniz renk arka plana ton verir ve buton vurgularını anında günceller.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-card border border-border/50">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="font-semibold">İçerik Blokları</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Blokları sürükleyip sıralayın, tek tek açıp düzenleyin ve bio sayfanızı daha rahat kurun.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 self-start">
+                  <div className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${blocks.length >= 50 ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${blocks.length >= 50 ? "bg-destructive" : "bg-primary"}`} />
+                    {blocks.length}/50 öğe
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setShowCommercePresets(false);
+                      setShowLocationPresets(false);
+                      setIsAddBlockDialogOpen(true);
+                    }}
+                    disabled={blocks.length >= 50}
+                    className="bg-primary text-primary-foreground"
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Yeni blok
+                  </Button>
+                </div>
+              </div>
+              <div className="mb-4 border-y border-border/40 py-2.5">
+                <div className="mx-auto w-full max-w-sm">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={isSaving || !isDirty}
+                    className="w-full bg-primary text-primary-foreground shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]"
+                  >
+                    {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+                    Kayıt Et
+                  </Button>
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 shadow-[0_10px_32px_rgba(0,0,0,0.12)]">
-                <button
-                  type="button"
-                  onClick={() => setIsSmartStartOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between gap-3 text-left"
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <MessageCircle className="h-4 w-4 text-primary" />
-                    <span className="font-semibold">Akilli baslangic</span>
-                  </span>
-                  {isSmartStartOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                </button>
-                {isSmartStartOpen && (
-                  <div className="mt-3">
-                    <p className="mb-3 text-xs text-muted-foreground">
-                      Uygun baslangic setini sec. Vurgu rengi ve onerilen bloklar hizlica yerlessin.
+              <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Aktif</p>
+                  <p className="mt-1 text-2xl font-semibold">{activeBlockCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Yayında görünen bloklar</p>
+                </div>
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Gizli</p>
+                  <p className="mt-1 text-2xl font-semibold">{hiddenBlockCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Şimdilik kapalı duran bloklar</p>
+                </div>
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Aksiyon</p>
+                  <p className="mt-1 text-2xl font-semibold">{actionBlockCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Link ve sosyal hesap öğeleri</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                {blocks.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-border/50 bg-muted/20 px-4 py-8 text-center">
+                    <p className="text-sm font-medium">Henüz blok eklenmedi</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Sağ üstteki butondan veya aşağıdaki hızlı ekleme alanından başlayabilirsiniz.
                     </p>
-                    <div className="grid gap-2 md:grid-cols-3">
-                      {SMART_PRESETS.map((preset) => (
+                  </div>
+                )}
+                {blocks.map((block, index) => (
+                  <div
+                    key={block.tempId}
+                    data-block-id={block.tempId}
+                    draggable
+                    onDragStart={() => {
+                      setTouchDragActive(false);
+                      setDraggingId(block.tempId);
+                    }}
+                    onDragEnd={() => setDraggingId(null)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => {
+                      if (draggingId) moveBlockTo(draggingId, block.tempId);
+                      setDraggingId(null);
+                      setTouchDragActive(false);
+                    }}
+                    className={`transition-opacity ${draggingId === block.tempId ? "opacity-50" : "opacity-100"}`}
+                  >
+                    <BlockEditor
+                      block={block}
+                      onChange={(data) => updateBlock(block.tempId, data)}
+                      onDelete={() => deleteBlock(block.tempId)}
+                      onToggle={() => toggleBlock(block.tempId)}
+                      onMoveUp={() => moveBlock(block.tempId, "up")}
+                      onMoveDown={() => moveBlock(block.tempId, "down")}
+                      onTouchDragStart={() => {
+                        setDraggingId(block.tempId);
+                        setTouchDragActive(true);
+                      }}
+                      canMoveUp={index > 0}
+                      canMoveDown={index < blocks.length - 1}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                <div className="mb-3 flex items-start gap-2 text-xs text-muted-foreground">
+                  <GripVertical className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                  <p>Blokları oklarla veya sürükle-bırak ile sıralayabilir, anahtarla gizleyebilir ve sağdaki okla detay düzenlemeyi açıp kapatabilirsiniz.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  {BLOCK_TYPES.map(blockType => {
+                    const Icon = BLOCK_ICONS[blockType.type as BlockType];
+                    return (
+                      <button
+                        key={blockType.type}
+                        type="button"
+                        onClick={() => addBlock(blockType.type as BlockType)}
+                        disabled={blocks.length >= 50}
+                        className="flex items-center gap-2.5 rounded-lg border border-border/40 bg-background/60 p-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium">{blockType.label}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{blockType.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 border-t border-border/30 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowCommercePresets(prev => !prev)}
+                    disabled={blocks.length >= 50}
+                    className="flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/60 px-3 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Store className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Hazır e-ticaret siteleri</span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showCommercePresets ? "rotate-180" : ""}`} />
+                  </button>
+                  {showCommercePresets && (
+                    <div className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-3">
+                      {COMMERCE_LINK_PRESETS.map((preset) => (
                         <button
-                          key={preset.kind}
+                          key={`quick-commerce-${preset.id}`}
                           type="button"
-                          onClick={() => applySmartPreset(preset.kind)}
-                          className="rounded-xl border border-border/50 bg-background/55 px-3 py-3 text-left transition-colors hover:border-primary/45 hover:bg-primary/5"
+                          onClick={() => addCommerceBlock(preset.id)}
+                          disabled={blocks.length >= 50}
+                          className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 p-2 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
                         >
-                          <span className="block text-sm font-medium">{preset.label}</span>
-                          <span className="mt-1 block text-[11px] text-muted-foreground">{preset.desc}</span>
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background/90">
+                            <img src={preset.logoUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                          </div>
+                          <span className="truncate text-xs font-medium">{preset.label}</span>
                         </button>
                       ))}
                     </div>
-                  </div>
-                )}
-              </div>
-
-              <ThemePanelCard
-                themeLabel={themeConfig.label}
-                themePreviewStyle={getBioThemePreviewStyle(themeConfig, activeAccentColor)}
-                accentColor={activeAccentColor}
-                textColor={textColor}
-                palettes={QUICK_PALETTES}
-                customBackgroundImageUrl={customBackgroundImageUrl}
-                onOpenThemeDialog={() => setIsThemeDialogOpen(true)}
-                onAccentChange={(value) => {
-                  setAccentColor(value);
-                  setIsDirty(true);
-                }}
-                onTextColorChange={(value) => {
-                  setTextColor(value);
-                  setIsDirty(true);
-                }}
-                onApplyPalette={applyPalette}
-                onBackgroundUpload={handleBackgroundImageUpload}
-                onClearBackground={() => {
-                  setCustomBackgroundImageUrl("");
-                  setIsDirty(true);
-                }}
-              />
-
-              <BlockListPanel
-                totalBlocks={blocks.length}
-                activeBlockCount={activeBlockCount}
-                hiddenBlockCount={hiddenBlockCount}
-                actionBlockCount={actionBlockCount}
-                isSaving={isSaving}
-                isDirty={isDirty}
-                onSave={handleSave}
-                onOpenAddDialog={() => setIsAddBlockDialogOpen(true)}
-                isDragging={Boolean(draggingId)}
-              >
-                <div className="space-y-3">
-                  {blocks.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-8 text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                        <Plus className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="font-medium">Henuz oge eklenmedi</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Yeni oge ekleyerek link, sosyal medya veya metin bloklariyla baslayabilirsiniz.
-                      </p>
+                  )}
+                </div>
+                <div className="mt-4 border-t border-border/30 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationPresets(prev => !prev)}
+                    disabled={blocks.length >= 50}
+                    className="flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/60 px-3 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <span className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Hazır konum linkleri</span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showLocationPresets ? "rotate-180" : ""}`} />
+                  </button>
+                  {showLocationPresets && (
+                    <div className="mt-3 grid grid-cols-1 gap-2 xl:grid-cols-3">
+                      {LOCATION_LINK_PRESETS.map((preset) => (
+                        <button
+                          key={`quick-location-${preset.id}`}
+                          type="button"
+                          onClick={() => addLocationBlock(preset.id)}
+                          disabled={blocks.length >= 50}
+                          className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 p-2 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background/90">
+                            <img src={preset.logoUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                          </div>
+                          <span className="truncate text-xs font-medium">{preset.label}</span>
+                        </button>
+                      ))}
                     </div>
                   )}
-
-                  {blocks.map((block, index) => (
-                    <div
-                      key={block.tempId}
-                      data-block-id={block.tempId}
-                      draggable={!touchDragActive}
-                      onDragStart={() => {
-                        setTouchDragActive(false);
-                        setDraggingId(block.tempId);
-                        setDropTargetId(block.tempId);
-                      }}
-                      onDragEnd={() => {
-                        setDraggingId(null);
-                        setDropTargetId(null);
-                      }}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDragEnter={() => {
-                        if (draggingId && draggingId !== block.tempId) {
-                          setDropTargetId(block.tempId);
-                        }
-                      }}
-                      onDrop={() => {
-                        if (draggingId) moveBlockTo(draggingId, block.tempId);
-                        setDraggingId(null);
-                        setDropTargetId(null);
-                        setTouchDragActive(false);
-                      }}
-                      className={`relative transition-all duration-200 ${
-                        draggingId === block.tempId
-                          ? "scale-[0.985] opacity-55"
-                          : dropTargetId === block.tempId
-                            ? "scale-[1.01]"
-                            : "opacity-100"
-                      }`}
-                    >
-                      {dropTargetId === block.tempId && draggingId !== block.tempId ? (
-                        <div className="pointer-events-none absolute -left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-primary/40 bg-primary text-black shadow-[0_0_18px_rgba(214,255,0,0.35)]">
-                          <Check className="h-4 w-4" />
-                        </div>
-                      ) : null}
-                      <BlockEditor
-                        block={block}
-                        expanded={expandedBlockIds[block.tempId] ?? false}
-                        onChange={(data) => updateBlock(block.tempId, data)}
-                        onDelete={() => deleteBlock(block.tempId)}
-                        onToggle={() => toggleBlock(block.tempId)}
-                        onToggleExpanded={() => toggleExpandedBlock(block.tempId)}
-                        onMoveUp={() => moveBlock(block.tempId, "up")}
-                        onMoveDown={() => moveBlock(block.tempId, "down")}
-                        onTouchDragStart={() => {
-                          setDraggingId(block.tempId);
-                          setTouchDragActive(true);
-                        }}
-                        canMoveUp={index > 0}
-                        canMoveDown={index < blocks.length - 1}
-                      />
-                    </div>
-                  ))}
                 </div>
-              </BlockListPanel>
-            </div>
+                <Button variant="outline" className="mt-3 w-full border-dashed border-border/50 px-3 text-[11px] leading-snug text-muted-foreground whitespace-normal text-center" disabled>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Profil resmi üstteki Profil Detayları alanından eklenir.
+                </Button>
+              </div>
 
-            <div className={`${showMobilePreview ? "block" : "hidden"} min-w-0 xl:sticky xl:top-24 xl:block`}>
-              <BuilderPreviewPanel previewMode={previewMode} onPreviewModeChange={setPreviewMode}>
+              {isAddBlockDialogOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
+                  <div className="w-full max-w-2xl rounded-[1.5rem] border border-border/50 bg-card p-5 shadow-2xl">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-semibold">Yeni blok ekle</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Bio sayfanıza eklemek istediğiniz öğeyi seçin. Eklenen blok anında listenize gelir.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCommercePresets(false);
+                          setShowLocationPresets(false);
+                          setIsAddBlockDialogOpen(false);
+                        }}
+                        className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label="Pencereyi kapat"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {BLOCK_TYPES.map(blockType => {
+                        const Icon = BLOCK_ICONS[blockType.type as BlockType];
+                        return (
+                          <button
+                            key={`dialog-${blockType.type}`}
+                            type="button"
+                            onClick={() => addBlock(blockType.type as BlockType)}
+                            disabled={blocks.length >= 50}
+                            className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/60 p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                          >
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                              <Icon className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">{blockType.label}</p>
+                              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{blockType.desc}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-5 border-t border-border/30 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowCommercePresets(prev => !prev)}
+                        className="flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Store className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">Hazır e-ticaret siteleri</span>
+                        </span>
+                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showCommercePresets ? "rotate-180" : ""}`} />
+                      </button>
+                      {showCommercePresets && (
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {COMMERCE_LINK_PRESETS.map((preset) => (
+                            <button
+                              key={`commerce-dialog-${preset.id}`}
+                              type="button"
+                              onClick={() => addCommerceBlock(preset.id)}
+                              disabled={blocks.length >= 50}
+                              className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background/90">
+                                <img src={preset.logoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{preset.label}</p>
+                                <p className="truncate text-[11px] text-muted-foreground">{preset.placeholder.replace("https://", "")}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-5 border-t border-border/30 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowLocationPresets(prev => !prev)}
+                        className="flex w-full items-center justify-between rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <span className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">Hazır konum linkleri</span>
+                        </span>
+                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showLocationPresets ? "rotate-180" : ""}`} />
+                      </button>
+                      {showLocationPresets && (
+                        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {LOCATION_LINK_PRESETS.map((preset) => (
+                            <button
+                              key={`location-dialog-${preset.id}`}
+                              type="button"
+                              onClick={() => addLocationBlock(preset.id)}
+                              disabled={blocks.length >= 50}
+                              className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background/90">
+                                <img src={preset.logoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{preset.label}</p>
+                                <p className="truncate text-[11px] text-muted-foreground">{preset.placeholder.replace("https://", "")}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="rounded-2xl border border-border/50 bg-card/80 p-4 backdrop-blur">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold">Canlı Önizleme</h2>
+                  <p className="text-xs text-muted-foreground">Düzenlediğiniz sayfanın telefon ve masaüstü görünümünü aynı akışta kontrol edin.</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <ToggleGroup
+                    type="single"
+                    value={previewMode}
+                    onValueChange={(value) => {
+                      if (value === "phone" || value === "desktop") {
+                        setPreviewMode(value);
+                      }
+                    }}
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                  >
+                    <ToggleGroupItem value="phone" className="gap-2">
+                      <Smartphone className="h-4 w-4" />
+                      Telefon
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="desktop" className="gap-2">
+                      <Monitor className="h-4 w-4" />
+                      Masaüstü
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                  <Button type="button" variant="outline" onClick={handleDownloadPreview} disabled={previewMode !== "phone"} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    PNG İndir
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-border/40 bg-background/35 p-3 sm:p-4">
                 {previewMode === "desktop" ? (
                   <DesktopPreview
                     blocks={blocks}
                     page={previewPage}
                     accentColor={activeAccentColor}
-                    textColor={textColor}
                     theme={themeConfig.id}
                   />
                 ) : (
@@ -3137,61 +1932,21 @@ export default function BioBuilder() {
                     blocks={blocks}
                     page={previewPage}
                     accentColor={activeAccentColor}
-                    textColor={textColor}
                     theme={themeConfig.id}
+                    exportRef={previewExportRef}
                   />
                 )}
-              </BuilderPreviewPanel>
+              </div>
             </div>
           </div>
 
-          <ProfileImageModal
-            open={isProfileMediaModalOpen}
-            onOpenChange={setIsProfileMediaModalOpen}
-            onImageSelect={handleProfileImageUpload}
-          />
-          <ProfileTextModal
-            open={isProfileTextModalOpen}
-            onOpenChange={setIsProfileTextModalOpen}
-            title={pageTitle}
-            description={pageDesc}
-            onTitleChange={(value) => {
-              setPageTitle(value);
-              setIsDirty(true);
-            }}
-            onDescriptionChange={(value) => {
-              setPageDesc(value);
-              setIsDirty(true);
-            }}
-          />
-          <SocialLinksModal
-            open={isSocialModalOpen}
-            onOpenChange={setIsSocialModalOpen}
-            items={socialDrafts}
-            onItemsChange={(items) => {
-              applySocialDrafts(items);
-              setIsDirty(true);
-            }}
-            onAdd={() => {
-              addSocialDraft();
-              setIsDirty(true);
-            }}
-          />
-          <BlockLibraryDialog
-            open={isAddBlockDialogOpen}
-            onOpenChange={setIsAddBlockDialogOpen}
-            onAddBlock={addBlock}
-            onAddCommerce={addCommerceBlock}
-            onAddLocation={addLocationBlock}
-            disabled={blocks.length >= 50}
-          />
           {isThemeDialogOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
-              <div className="w-full max-w-6xl rounded-[1.5rem] border border-white/12 bg-[#101419]/95 p-4 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-5">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
+              <div className="w-full max-w-4xl rounded-[1.5rem] border border-border/50 bg-card p-5 shadow-2xl">
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-xl font-semibold">Tema Seçimi</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Tekrarsız tema kütüphanesi. Dokunup anında uygulayın.</p>
+                    <h3 className="text-lg font-semibold">Tema Seçimi</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Tüm temalar tek yerde. Dokunup anında uygulayın.</p>
                   </div>
                   <button
                     type="button"
@@ -3203,40 +1958,9 @@ export default function BioBuilder() {
                   </button>
                 </div>
 
-                <div className="mb-4 grid gap-2 sm:grid-cols-4">
-                  {THEME_CATEGORY_TABS.map((tab) => (
-                    <button
-                      key={`theme-tab-${tab.id}`}
-                      type="button"
-                      onClick={() => setActiveThemeCategory(tab.id)}
-                      className={`rounded-2xl border px-3 py-2.5 text-xs font-semibold transition-all ${activeThemeCategory === tab.id ? "border-primary bg-primary text-primary-foreground shadow-[0_0_24px_rgba(214,255,0,0.18)]" : "border-white/10 bg-white/[0.035] text-muted-foreground hover:border-primary/45 hover:bg-primary/5 hover:text-foreground"}`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {activeThemeCategory === "photo" && (
-                  <div className="mb-4 rounded-2xl border border-border/50 bg-background/45 p-3">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Kendi fotografini ekle</Label>
-                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => {
-                          handleBackgroundImageUpload(event.currentTarget.files?.[0]);
-                          event.currentTarget.value = "";
-                          setIsThemeDialogOpen(false);
-                        }}
-                        className="bg-input border-border/50 text-xs"
-                      />
-                      <span className="text-xs text-muted-foreground">Onerilen: 1080x1920 veya 1920x1080, maksimum 7 MB</span>
-                    </div>
-                  </div>
-                )}
                 <div className="max-h-[65vh] overflow-y-auto pr-1">
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
-                    {visibleThemes.map(item => (
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
+                    {BIO_THEMES.map(item => (
                       <button
                         key={`theme-modal-${item.id}`}
                         type="button"
@@ -3244,9 +1968,9 @@ export default function BioBuilder() {
                           handleThemeChange(item.id);
                           setIsThemeDialogOpen(false);
                         }}
-                        className={`group rounded-2xl border p-2.5 text-left transition-all hover:-translate-y-0.5 ${themeConfig.id === item.id ? "border-primary bg-primary/10 shadow-[0_0_28px_rgba(214,255,0,0.16)]" : "border-white/10 bg-white/[0.035] hover:border-primary/40 hover:bg-white/[0.055]"}`}
+                        className={`rounded-xl border p-2 text-left transition-all ${themeConfig.id === item.id ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/40"}`}
                       >
-                        <div className="mb-2 h-24 rounded-xl border border-white/15 shadow-inner transition-transform duration-300 group-hover:scale-[1.015]" style={getBioThemePreviewStyle(item, item.accent)} />
+                        <div className="mb-2 h-20 rounded-lg border border-white/20" style={getBioThemePreviewStyle(item, item.accent)} />
                         <div className="mb-2 flex items-center gap-1.5">
                           {themeHasImageBackground(item) && (
                             <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -3259,48 +1983,20 @@ export default function BioBuilder() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs font-semibold leading-tight">{item.label}</p>
-                        <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-muted-foreground">{item.description}</p>
+                        <p className="text-xs font-medium leading-tight">{item.label}</p>
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
-
-              <div className="rounded-2xl border border-border/60 bg-[#14181d] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.18)]">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-white">Hizli kaydet</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Degisiklikleri buradan da kaydedebilirsiniz.</p>
-                  </div>
-                  <Button onClick={handleSave} disabled={isSaving || !isDirty} className="bg-primary text-primary-foreground">
-                    <Save className="mr-2 h-4 w-4" />
-                    Kaydet
-                  </Button>
-                </div>
-              </div>
             </div>
           )}
-          <AlertDialog open={isUnsavedExitOpen} onOpenChange={setIsUnsavedExitOpen}>
-            <AlertDialogContent className="border-border/60 bg-[#111418]">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Kayıt etmeden çıkmak istiyor musunuz?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Kaydedilmemiş değişiklikler var. Evet derseniz değişiklikler kaydedilmeden panel sayfasına dönersiniz.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setPendingExitPath(null)} className="border-border/60">
-                  Hayır, sayfada kal
-                </AlertDialogCancel>
-                <AlertDialogAction onClick={confirmExitWithoutSaving} className="bg-primary text-primary-foreground">
-                  Evet, çık
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
       </div>
     </div>
   );
 }
+
+
+
+
+

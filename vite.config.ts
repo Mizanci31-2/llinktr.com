@@ -1,4 +1,4 @@
-import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
+﻿import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
@@ -191,6 +191,211 @@ function vitePluginExposeRootServiceWorker(): Plugin {
   };
 }
 
+const SEO_PAGE_CONFIGS = [
+  {
+    path: "login",
+    title: "Giriş Yap | Llinktr",
+    description: "Llinktr hesabınıza giriş yapın. Bio link sayfalarınızı, kısa linklerinizi ve QR kodlarınızı tek panelden yönetin.",
+    canonical: "https://llinktr.com/login",
+    breadcrumb: "Giriş Yap",
+  },
+  {
+    path: "kayit",
+    title: "Ücretsiz Kayıt Ol | Llinktr",
+    description: "Ücretsiz Llinktr hesabı oluşturun, bio link sayfanızı hazırlayın ve tüm sosyal medya bağlantılarınızı tek linkte paylaşın.",
+    canonical: "https://llinktr.com/kayit",
+    breadcrumb: "Ücretsiz Kayıt Ol",
+  },
+  {
+    path: "hakkimizda",
+    title: "Hakkımızda | Llinktr",
+    description: "Llinktr; içerik üreticileri, işletmeler ve freelancerlar için modern, hızlı ve ücretsiz bio link sayfası oluşturma platformudur.",
+    canonical: "https://llinktr.com/hakkimizda",
+    breadcrumb: "Hakkımızda",
+  },
+  {
+    path: "bio-duzenleyici",
+    title: "Bio Düzenleyici | Llinktr",
+    description: "Llinktr Bio Düzenleyici ile sosyal medya, mağaza, WhatsApp ve iletişim linklerinizi tek mobil uyumlu sayfada düzenleyin.",
+    canonical: "https://llinktr.com/bio-duzenleyici",
+    breadcrumb: "Bio Düzenleyici",
+  },
+  {
+    path: "link-kisaltici",
+    title: "Link Kısaltıcı | Llinktr",
+    description: "Llinktr Link Kısaltıcı ile uzun bağlantılarınızı kısa, paylaşılabilir ve takip edilebilir linklere dönüştürün.",
+    canonical: "https://llinktr.com/link-kisaltici",
+    breadcrumb: "Link Kısaltıcı",
+  },
+  {
+    path: "qr-olusturucu",
+    title: "QR Oluşturucu | Llinktr",
+    description: "Llinktr QR Oluşturucu ile link, WhatsApp, e-posta ve metinler için hızlı, modern ve paylaşılabilir QR kodlar oluşturun.",
+    canonical: "https://llinktr.com/qr-olusturucu",
+    breadcrumb: "QR Oluşturucu",
+  },
+  {
+    path: "blog",
+    title: "Blog | Llinktr",
+    description: "Bio link, sosyal medya link yönetimi, Linktree alternatifleri, QR kod ve ücretsiz link sayfası rehberleri.",
+    canonical: "https://llinktr.com/blog",
+    breadcrumb: "Blog",
+  },
+  {
+    path: "instagram-bio-linki",
+    title: "Instagram Bio Linki Oluşturma Rehberi | Llinktr",
+    description: "Instagram bio alanında tüm linklerinizi tek sayfada paylaşmak için ücretsiz ve mobil uyumlu yöntemleri öğrenin.",
+    canonical: "https://llinktr.com/instagram-bio-linki",
+    breadcrumb: "Instagram Bio Linki",
+  },
+  {
+    path: "linktree-alternatifi",
+    title: "Linktree Alternatifi Ücretsiz Bio Link Platformu | Llinktr",
+    description: "Linktree alternatifi arayanlar için Türkçe, hızlı, ücretsiz ve SEO dostu bio link sayfası rehberi.",
+    canonical: "https://llinktr.com/linktree-alternatifi",
+    breadcrumb: "Linktree Alternatifi",
+  },
+  {
+    path: "ucretsiz-link-sayfasi",
+    title: "Ücretsiz Link Sayfası Oluşturma | Llinktr",
+    description: "Ücretsiz link sayfası oluşturun, sosyal medya ve satış bağlantılarınızı tek yerde toplayın.",
+    canonical: "https://llinktr.com/ucretsiz-link-sayfasi",
+    breadcrumb: "Ücretsiz Link Sayfası",
+  },
+  {
+    path: "bio-link-olusturucu",
+    title: "Bio Link Oluşturucu | Llinktr",
+    description: "Bio link oluşturucu ile tüm sosyal medya, mağaza ve iletişim bağlantılarınızı tek mobil sayfada paylaşın.",
+    canonical: "https://llinktr.com/bio-link-olusturucu",
+    breadcrumb: "Bio Link Oluşturucu",
+  },
+  {
+    path: "topluluk-kurallari",
+    title: "Topluluk Kuralları | Llinktr",
+    description: "Llinktr kullanıcıları için güvenli bağlantı, spam, yetişkin içerik ve kötüye kullanım kuralları.",
+    canonical: "https://llinktr.com/topluluk-kurallari",
+    breadcrumb: "Topluluk Kuralları",
+  },
+  {
+    path: "yardim-merkezi",
+    title: "Yardım Merkezi | Llinktr",
+    description: "Bio link sayfası, kısa link, QR kod, hesap ayarları ve güvenlik bildirimleri için Llinktr yardım merkezi.",
+    canonical: "https://llinktr.com/yardim-merkezi",
+    breadcrumb: "Yardım Merkezi",
+  },
+  {
+    path: "blog/instagram-bio-linki-nasil-olusturulur",
+    title: "Instagram Bio Linki Nasıl Oluşturulur? | Llinktr Blog",
+    description: "Instagram profilinizde tek bağlantıyla tüm sosyal medya, mağaza ve iletişim linklerinizi nasıl paylaşabileceğinizi öğrenin.",
+    canonical: "https://llinktr.com/blog/instagram-bio-linki-nasil-olusturulur",
+    breadcrumb: "Instagram Bio Linki Nasıl Oluşturulur?",
+  },
+  {
+    path: "blog/linktree-alternatifleri",
+    title: "Linktree Alternatifleri | Llinktr Blog",
+    description: "Linktree alternatifi arayanlar için sade, hızlı ve Türkçe bio link sayfası oluşturma seçenekleri.",
+    canonical: "https://llinktr.com/blog/linktree-alternatifleri",
+    breadcrumb: "Linktree Alternatifleri",
+  },
+  {
+    path: "blog/icerik-ureticileri-icin-en-iyi-bio-araclari",
+    title: "İçerik Üreticileri İçin En İyi Bio Araçları | Llinktr Blog",
+    description: "İçerik üreticileri için bio link sayfası, sosyal link yönetimi, QR kod ve tıklama istatistiklerinin avantajları.",
+    canonical: "https://llinktr.com/blog/icerik-ureticileri-icin-en-iyi-bio-araclari",
+    breadcrumb: "İçerik Üreticileri İçin En İyi Bio Araçları",
+  },
+  {
+    path: "blog/e-ticaret-icin-bio-link-kullanimi",
+    title: "E-Ticaret İçin Bio Link Kullanımı | Llinktr Blog",
+    description: "E-ticaret satıcıları için kampanya, WhatsApp sipariş, ürün koleksiyonu ve sosyal medya linklerini tek sayfada toplama rehberi.",
+    canonical: "https://llinktr.com/blog/e-ticaret-icin-bio-link-kullanimi",
+    breadcrumb: "E-Ticaret İçin Bio Link Kullanımı",
+  },
+  {
+    path: "blog/tek-link-ile-tum-sosyal-medya-hesaplarini-paylasma",
+    title: "Tek Link ile Tüm Sosyal Medya Hesaplarını Paylaşma | Llinktr Blog",
+    description: "Instagram, TikTok, YouTube, X, LinkedIn ve WhatsApp hesaplarınızı tek link altında toplamanın pratik yolu.",
+    canonical: "https://llinktr.com/blog/tek-link-ile-tum-sosyal-medya-hesaplarini-paylasma",
+    breadcrumb: "Tek Link ile Tüm Sosyal Medya Hesaplarını Paylaşma",
+  },
+];
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function replaceOrInsertMeta(html: string, selector: RegExp, replacement: string) {
+  if (selector.test(html)) return html.replace(selector, replacement);
+  return html.replace("</head>", `    ${replacement}\n  </head>`);
+}
+
+function vitePluginGenerateSeoPages(): Plugin {
+  let outDirAbs = "";
+
+  return {
+    name: "generate-seo-pages",
+    apply: "build",
+    configResolved(config) {
+      outDirAbs = config.build.outDir;
+    },
+    closeBundle() {
+      if (!outDirAbs) return;
+      const indexPath = path.resolve(outDirAbs, "index.html");
+      if (!fs.existsSync(indexPath)) return;
+
+      const baseHtml = fs.readFileSync(indexPath, "utf-8");
+
+      for (const page of SEO_PAGE_CONFIGS) {
+        const title = escapeHtml(page.title);
+        const description = escapeHtml(page.description);
+        const canonical = escapeHtml(page.canonical);
+
+        let html = baseHtml
+          .replace(/<title>[\s\S]*?<\/title>/i, `<title>${title}</title>`)
+          .replace(/<link rel="canonical" href="[^"]*" \/>/i, `<link rel="canonical" href="${canonical}" />`);
+
+        html = replaceOrInsertMeta(html, /<meta\s+name="description"[\s\S]*?\/>/i, `<meta name="description" content="${description}" />`);
+        html = replaceOrInsertMeta(html, /<meta\s+property="og:title"[\s\S]*?\/>/i, `<meta property="og:title" content="${title}" />`);
+        html = replaceOrInsertMeta(html, /<meta\s+property="og:description"[\s\S]*?\/>/i, `<meta property="og:description" content="${description}" />`);
+        html = replaceOrInsertMeta(html, /<meta\s+property="og:url"[\s\S]*?\/>/i, `<meta property="og:url" content="${canonical}" />`);
+        html = replaceOrInsertMeta(html, /<meta\s+name="twitter:title"[\s\S]*?\/>/i, `<meta name="twitter:title" content="${title}" />`);
+        html = replaceOrInsertMeta(html, /<meta\s+name="twitter:description"[\s\S]*?\/>/i, `<meta name="twitter:description" content="${description}" />`);
+
+        const breadcrumbJsonLd = JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Ana Sayfa",
+              item: "https://llinktr.com/",
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: page.breadcrumb,
+              item: page.canonical,
+            },
+          ],
+        });
+        html = html.replace(
+          "</head>",
+          `    <script type="application/ld+json" id="llinktr-page-breadcrumb-jsonld">${breadcrumbJsonLd}</script>\n  </head>`,
+        );
+
+        const pageDir = path.resolve(outDirAbs, page.path);
+        fs.mkdirSync(pageDir, { recursive: true });
+        fs.writeFileSync(path.resolve(pageDir, "index.html"), html, "utf-8");
+      }
+    },
+  };
+}
+
 const isProduction = process.env.NODE_ENV === "production";
 const plugins = [
   react(),
@@ -199,7 +404,7 @@ const plugins = [
 ];
 
 export default defineConfig({
-  plugins: [...plugins, vitePluginExposeRootServiceWorker()],
+  plugins: [...plugins, vitePluginExposeRootServiceWorker(), vitePluginGenerateSeoPages()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

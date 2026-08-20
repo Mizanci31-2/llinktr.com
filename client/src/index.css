@@ -53,9 +53,9 @@
   --chart-4: oklch(0.7 0.15 30);
   --chart-5: oklch(0.7 0.15 160);
   --radius: 0.75rem;
-  --background: #0A0A0A;
+  --background: #0b0c0a;
   --foreground: oklch(0.92 0 0);
-  --card: #111111;
+  --card: #121412;
   --card-foreground: oklch(0.92 0 0);
   --popover: #111111;
   --popover-foreground: oklch(0.92 0 0);
@@ -83,9 +83,9 @@
   --primary-foreground: oklch(0.1 0 0);
   --sidebar-primary: #D6FF00;
   --sidebar-primary-foreground: oklch(0.1 0 0);
-  --background: #0A0A0A;
+  --background: #0b0c0a;
   --foreground: oklch(0.92 0 0);
-  --card: #111111;
+  --card: #121412;
   --card-foreground: oklch(0.92 0 0);
   --popover: #111111;
   --popover-foreground: oklch(0.92 0 0);
@@ -125,13 +125,24 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(circle at 12% 14%, rgba(250, 204, 21, 0.08), transparent 38%),
-      radial-gradient(circle at 85% 12%, rgba(34, 211, 238, 0.08), transparent 34%),
-      radial-gradient(circle at 62% 88%, rgba(168, 85, 247, 0.08), transparent 32%);
+      radial-gradient(circle at 12% 14%, rgba(214, 255, 0, 0.12), transparent 38%),
+      radial-gradient(circle at 85% 12%, rgba(34, 211, 238, 0.10), transparent 34%),
+      radial-gradient(circle at 62% 88%, rgba(168, 85, 247, 0.08), transparent 32%),
+      linear-gradient(180deg, #0d0f0b 0%, #0a0a0a 48%, #0d0e0c 100%);
     background-attachment: fixed;
   }
   p, li, label {
     color: color-mix(in oklab, var(--foreground) 86%, white 14%);
+  }
+
+  .premium-card,
+  .panel-strong {
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  }
+
+  .premium-card:hover,
+  .panel-strong:hover {
+    box-shadow: 0 22px 80px rgba(0, 0, 0, 0.3), 0 0 34px rgba(214, 255, 0, 0.08);
   }
   a,
   button,
@@ -177,6 +188,40 @@
     opacity: 1;
     cursor: pointer;
   }
+
+  input[type="file"] {
+    min-height: 2.75rem;
+    color: color-mix(in oklab, var(--foreground) 72%, transparent);
+  }
+
+  input[type="file"]::file-selector-button {
+    min-height: 2rem;
+    margin-right: 0.75rem;
+    border: 1px solid rgba(214, 255, 0, 0.38);
+    border-radius: 0.75rem;
+    background: rgba(214, 255, 0, 0.12);
+    color: #d6ff00;
+    font-weight: 800;
+    transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  }
+
+  input[type="file"]:hover::file-selector-button {
+    background: #d6ff00;
+    color: #050505;
+    box-shadow: 0 0 18px rgba(214, 255, 0, 0.28);
+  }
+
+  [data-sonner-toaster] {
+    z-index: 2147483647 !important;
+  }
+
+  [data-sonner-toaster][data-x-position="right"] {
+    right: max(1rem, env(safe-area-inset-right)) !important;
+  }
+
+  [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+  }
 }
 
 @layer components {
@@ -208,6 +253,73 @@
       0 0 0 1px rgba(255, 255, 255, 0.08),
       0 0 0 2px rgba(17, 24, 39, 0.22),
       0 12px 34px rgba(2, 6, 23, 0.33);
+  }
+
+  .llinktr-toast {
+    width: min(420px, calc(100vw - 2rem)) !important;
+    min-height: 4.5rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.13) !important;
+    border-radius: 1rem !important;
+    background:
+      linear-gradient(145deg, rgba(21, 21, 21, 0.98), rgba(7, 9, 10, 0.98)) !important;
+    color: #f8fafc !important;
+    box-shadow:
+      0 18px 55px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+    padding: 1rem 1.1rem !important;
+    font-size: 0.96rem !important;
+  }
+
+  .llinktr-toast-title {
+    font-size: 0.98rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+  }
+
+  .llinktr-toast-description {
+    color: rgba(226, 232, 240, 0.78) !important;
+    font-size: 0.86rem !important;
+  }
+
+  .llinktr-toast-success {
+    border-color: rgba(214, 255, 0, 0.42) !important;
+    box-shadow:
+      0 18px 55px rgba(0, 0, 0, 0.42),
+      0 0 26px rgba(214, 255, 0, 0.14) !important;
+  }
+
+  .llinktr-toast-success [data-icon] {
+    color: #d6ff00 !important;
+  }
+
+  .llinktr-toast-error {
+    border-color: rgba(248, 113, 113, 0.48) !important;
+  }
+
+  .llinktr-toast-error [data-icon] {
+    color: #fb7185 !important;
+  }
+
+  .llinktr-toast-warning {
+    border-color: rgba(251, 191, 36, 0.5) !important;
+  }
+
+  .llinktr-toast-warning [data-icon] {
+    color: #fbbf24 !important;
+  }
+
+  .llinktr-toast-info {
+    border-color: rgba(125, 211, 252, 0.45) !important;
+  }
+
+  .llinktr-toast-info [data-icon] {
+    color: #7dd3fc !important;
+  }
+
+  .llinktr-toast-close {
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #f8fafc !important;
   }
 
   .link-card,
@@ -409,3 +521,24 @@
   to { transform: scaleY(1); opacity: 1; }
 }
 
+@layer components {
+  .add-item-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(214, 255, 0, 0.55) rgba(255, 255, 255, 0.06);
+  }
+
+  .add-item-scroll::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .add-item-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.055);
+    border-radius: 999px;
+  }
+
+  .add-item-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(214, 255, 0, 0.72), rgba(214, 255, 0, 0.32));
+    border: 2px solid rgba(16, 19, 23, 0.96);
+    border-radius: 999px;
+  }
+}

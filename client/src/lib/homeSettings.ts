@@ -1,4 +1,4 @@
-export type HomeAdminSettings = {
+﻿export type HomeAdminSettings = {
   heroTitle: string;
   heroSubtitle: string;
   heroProof: string;

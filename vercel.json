@@ -8,6 +8,73 @@
       "includeFiles": "dist/api-app.js"
     }
   },
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/ana-sayfa",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/index",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/about",
+      "destination": "/hakkimizda",
+      "permanent": true
+    },
+    {
+      "source": "/pricing",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/fiyatlandirma",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/signup",
+      "destination": "/kayit",
+      "permanent": true
+    },
+    {
+      "source": "/register",
+      "destination": "/kayit",
+      "permanent": true
+    },
+    {
+      "source": "/join",
+      "destination": "/kayit",
+      "permanent": true
+    },
+    {
+      "source": "/katil",
+      "destination": "/kayit",
+      "permanent": true
+    },
+    {
+      "source": "/ucretsiz-katil",
+      "destination": "/kayit",
+      "permanent": true
+    },
+    {
+      "source": "/kayitol",
+      "destination": "/kayit",
+      "permanent": true
+    },
+    {
+      "source": "/hesap",
+      "destination": "/giris",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",

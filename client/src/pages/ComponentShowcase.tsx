@@ -1097,7 +1097,7 @@ export default function ComponentsShowcase() {
                     </PopoverTrigger>
                     <PopoverContent>
                       <div className="space-y-2">
-                        <h4 className="font-medium leading-[1.4]">Dimensions</h4>
+                        <h4 className="font-medium leading-none">Dimensions</h4>
                         <p className="text-sm text-muted-foreground">
                           Set the dimensions for the layer.
                         </p>

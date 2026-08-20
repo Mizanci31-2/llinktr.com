@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SOCIAL_PLATFORMS } from "@/lib/constants";
+import { SOCIAL_PLATFORMS, detectSocialPlatformFromUrl } from "@/lib/constants";
 import { SocialIcon } from "@/components/SocialIcon";
 import type { SocialLinkDraft } from "./types";
 
@@ -42,6 +42,15 @@ export function SocialLinksModal({
 
   const updateItem = (id: string, patch: Partial<SocialLinkDraft>) => {
     onItemsChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  };
+
+  const updateUrl = (id: string, rawValue: string) => {
+    const current = items.find((item) => item.id === id);
+    const detectedPlatform = detectSocialPlatformFromUrl(rawValue);
+    updateItem(id, {
+      url: rawValue,
+      platform: detectedPlatform || current?.platform || "",
+    });
   };
 
   const removeItem = (id: string) => {
@@ -162,7 +171,7 @@ export function SocialLinksModal({
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Baglanti</Label>
                   <Input
                     value={activeItem.url}
-                    onChange={(event) => updateItem(activeItem.id, { url: event.target.value })}
+                    onChange={(event) => updateUrl(activeItem.id, event.target.value)}
                     placeholder={SOCIAL_PLATFORMS.find((platform) => platform.id === activeItem.platform)?.placeholder || "https://..."}
                     className="bg-input border-border/50"
                   />

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,78 +11,13 @@ import { trpc } from "@/lib/trpc";
 import { getBioBackgroundStyle, getBioTheme, safeAccentColor } from "@/lib/constants";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { PageAnalyticsDialog } from "@/components/dashboard/PageAnalyticsDialog";
 import { toast } from "sonner";
 import {
-  Activity, Plus, Edit2, Trash2, Eye, ExternalLink,
+  Plus, Edit2, Trash2, Eye, ExternalLink,
   Globe, Loader2, LayoutDashboard, Link2, QrCode,
-  Clock3, MousePointerClick, PauseCircle, PlayCircle, UserRound, Trophy, BarChart3, Search, Users, TrendingUp, FileText
+  MousePointerClick, PauseCircle, PlayCircle, UserRound
 } from "lucide-react";
 
-
-type DashboardActivityItem = {
-  label: string;
-  value: string;
-  icon: typeof Activity;
-};
-
-function DashboardActivityCard({ items }: { items: DashboardActivityItem[] }) {
-  const hasActivity = items.some((item) => item.value !== "Veri yok" && item.value !== "0");
-  const primaryItems = items.slice(0, 2);
-  const detailItems = items.slice(2);
-
-  return (
-    <aside className="panel-strong rounded-2xl border border-primary/15 bg-[linear-gradient(145deg,rgba(214,255,0,0.055),rgba(18,24,32,0.94))] p-4 shadow-[0_14px_38px_rgba(0,0,0,0.18)]">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-bold">
-            <Activity className="h-4 w-4 text-primary" />
-            Canli durum
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Bugunun verileri ve son sinyaller.</p>
-        </div>
-        <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_18px_rgba(214,255,0,0.65)]" />
-      </div>
-
-      {!hasActivity ? (
-        <div className="rounded-2xl border border-dashed border-border/60 bg-background/35 p-4 text-sm text-muted-foreground">Henuz aktivite yok</div>
-      ) : (
-        <div className="space-y-2.5">
-          <div className="grid grid-cols-2 gap-2">
-            {primaryItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.label} className="rounded-xl border border-primary/15 bg-primary/10 p-2.5">
-                  <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <p className="truncate text-[11px] text-muted-foreground">{item.label}</p>
-                    <Icon className="h-4 w-4 shrink-0 text-primary" />
-                  </div>
-                  <p className="truncate text-xl font-black text-primary">{item.value}</p>
-                </div>
-              );
-            })}
-          </div>
-          <div className="grid gap-2">
-            {detailItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.label} className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[11px] text-muted-foreground">{item.label}</p>
-                    <p className="truncate text-sm font-semibold">{item.value}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </aside>
-  );
-}
 export default function Dashboard() {
   const MAX_BIO_PAGES = 5;
   const [, navigate] = useLocation();
@@ -92,7 +27,6 @@ export default function Dashboard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [analyticsPageId, setAnalyticsPageId] = useState<number | null>(null);
   const [newSlug, setNewSlug] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [displayName, setDisplayName] = useState(user?.name ?? "");
@@ -100,58 +34,9 @@ export default function Dashboard() {
 
   const { data: pages, isLoading } = trpc.bioPages.list.useQuery(undefined, {
     enabled: isAuthenticated,
-    staleTime: 1000 * 60 * 2,
-    gcTime: 1000 * 60 * 10,
-    refetchOnWindowFocus: false,
   });
   const pageCount = pages?.length ?? 0;
-  const totalViews = pages?.reduce((sum, page) => sum + (page.views ?? 0), 0) ?? 0;
-  const totalClicks = pages?.reduce((sum, page) => sum + (page.totalClicks ?? 0), 0) ?? 0;
-  const todayClicks = pages?.reduce((sum, page) => sum + (page.todayClicks ?? 0), 0) ?? 0;
-  const todayViews = pages?.reduce((sum, page) => sum + (page.todayViews ?? 0), 0) ?? 0;
-  const bestPage = pages?.slice().sort((a, b) => (b.totalClicks ?? 0) - (a.totalClicks ?? 0))[0];
-  const activePages = pages?.filter((page) => page.isPublished).length ?? 0;
-  const dailyChange = totalViews > 0 ? Math.round(((todayViews + todayClicks) / Math.max(totalViews + totalClicks, 1)) * 100) : 0;
   const reachedPageLimit = pageCount >= MAX_BIO_PAGES;
-  const analyticsPage = pages?.find((page) => page.id === analyticsPageId) ?? null;
-  const [pageSearch, setPageSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
-  const [sortBy, setSortBy] = useState<"created" | "views" | "clicks" | "title">("created");
-  const [tablePage, setTablePage] = useState(1);
-  const pageSize = 6;
-  const metricCards = [
-    { label: "Toplam goruntulenme", value: totalViews, icon: Eye, note: "Tum sayfalar", bars: [24, 32, 38, 46, 54, 62, 72] },
-    { label: "En iyi link", value: bestPage?.title || "Yok", icon: Trophy, note: bestPage ? `${bestPage.totalClicks ?? 0} tiklama` : "Ilk sayfani olustur", bars: [20, 28, 36, 48, 62, 78, 92] },
-    { label: "Toplam link sayfasi", value: pageCount, icon: FileText, note: `${MAX_BIO_PAGES} sayfa limitinden`, bars: [12, 18, 24, 36, 48, 58, 66] },
-    { label: "Aktif kullanici", value: activePages, icon: Users, note: "Yayindaki sayfalar", bars: [14, 22, 34, 38, 46, 54, 64] },
-    { label: "Gunluk degisim", value: `%${dailyChange}`, icon: TrendingUp, note: "Bugun / toplam oran", bars: [18, 20, 26, 34, 44, 52, Math.max(18, Math.min(92, dailyChange + 18))] },
-  ];
-  const filteredPages = useMemo(() => {
-    const query = pageSearch.trim().toLocaleLowerCase("tr-TR");
-    return [...(pages ?? [])]
-      .filter((page) => {
-        const matchesStatus = statusFilter === "all" || (statusFilter === "published" ? page.isPublished : !page.isPublished);
-        const matchesQuery = !query || `${page.title} ${page.slug}`.toLocaleLowerCase("tr-TR").includes(query);
-        return matchesStatus && matchesQuery;
-      })
-      .sort((a, b) => {
-        if (sortBy === "views") return (b.views ?? 0) - (a.views ?? 0);
-        if (sortBy === "clicks") return (b.totalClicks ?? 0) - (a.totalClicks ?? 0);
-        if (sortBy === "title") return String(a.title).localeCompare(String(b.title), "tr");
-        return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
-      });
-  }, [pageSearch, pages, sortBy, statusFilter]);
-  const totalTablePages = Math.max(1, Math.ceil(filteredPages.length / pageSize));
-  const visibleTablePages = filteredPages.slice((tablePage - 1) * pageSize, tablePage * pageSize);
-  const latestPage = pages?.slice().sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())[0];
-  const activityItems: DashboardActivityItem[] = [
-    { label: "Bugunku goruntuleme", value: String(todayViews), icon: Eye },
-    { label: "Bugunku tiklama", value: String(todayClicks), icon: MousePointerClick },
-    { label: "Son olusturulan bio", value: latestPage?.title || "Veri yok", icon: Link2 },
-    { label: "En iyi sayfa", value: bestPage?.title || "Veri yok", icon: Trophy },
-    { label: "Yayindaki sayfa", value: String(activePages), icon: Users },
-    { label: "Son guncelleme", value: latestPage?.createdAt ? new Date(latestPage.createdAt).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Veri yok", icon: Clock3 },
-  ];
 
   const { data: slugCheck } = trpc.bioPages.checkSlug.useQuery(
     { slug: newSlug },
@@ -266,74 +151,42 @@ export default function Dashboard() {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
 
-      <div className="flex-1 container py-5 md:py-6">
+      <div className="flex-1 container py-8">
         {/* Header */}
-        <div className="mb-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_330px]">
-          <section className="rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-4 py-4 panel-strong sm:px-5">
-            <div className="flex flex-col gap-4">
-              <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  <LayoutDashboard className="h-3.5 w-3.5" />
-                  Panel ozeti
-                </div>
-                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Hos geldin, {user?.name || "kullanici"}</h1>
-                <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">Bugunun ozeti hazir. En hizli aksiyon: bio sayfani duzenle, yayina al ve performansi takip et.</p>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-full border border-primary/45 bg-primary/10 px-2.5 py-1 font-semibold text-primary">%100 ucretsiz</span>
-                  <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-1">{pageCount}/{MAX_BIO_PAGES} sayfa</span>
-                  <span className="rounded-full border border-border/60 bg-background/40 px-2.5 py-1">Kredi karti gerekmez</span>
-                </div>
-              </div>
-              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 md:max-w-md">
-                <Button
-                  onClick={() => setCreateOpen(true)}
-                  disabled={reachedPageLimit}
-                  className="h-10 w-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)]"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {reachedPageLimit ? "Limit Doldu" : "Yeni Sayfa"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setDisplayName(user?.name ?? "");
-                    setProfileOpen(true);
-                  }}
-                  className="h-10 w-full border-border/60"
-                >
-                  <UserRound className="h-4 w-4 mr-2" />
-                  Kullanici Adi
-                </Button>
-              </div>
+        <div className="mb-8 rounded-2xl border border-border/70 bg-card/70 px-4 py-4 panel-strong sm:px-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+            <h1 className="text-3xl font-bold">Panel</h1>
+            <p className="text-muted-foreground mt-1">Hoş geldin, {user?.name || "kullanıcı"}</p>
+            <p className="text-xs text-muted-foreground mt-2">{pageCount}/{MAX_BIO_PAGES} sayfa kullanılıyor</p>
+            <p className="mt-2 inline-flex items-center rounded-full border border-primary/70 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">%100 ücretsiz</p>
             </div>
-          </section>
-          <DashboardActivityCard items={activityItems} />
-        </div>
-        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {metricCards.map((card, cardIndex) => {
-            const Icon = card.icon;
-            return (
-              <div key={card.label} className="panel-strong min-h-[150px] rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(18,24,32,0.96),rgba(12,14,16,0.94))] p-4 transition-all hover:-translate-y-0.5 hover:border-primary/25">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="min-w-0 text-sm text-muted-foreground">{card.label}</p>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-                    <Icon className="h-4 w-4 text-primary" />
-                  </span>
-                </div>
-                <p className="truncate text-2xl font-black tracking-tight sm:text-3xl">{card.value}</p>
-                <p className="mt-2 truncate text-xs text-muted-foreground">{card.note}</p>
-                <div className="mt-4 flex h-8 items-end gap-1.5">
-                  {card.bars.map((value, index) => (
-                    <span key={`${card.label}-${index}`} className="mini-chart-bar flex-1 rounded-t bg-primary/80" style={{ height: `${value}%`, animationDelay: `${(index + cardIndex) * 45}ms` }} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+            <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 sm:gap-3">
+              <Button
+                onClick={() => setCreateOpen(true)}
+                disabled={reachedPageLimit}
+                className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_oklch(0.93_0.23_110/0.25)] sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {reachedPageLimit ? "Limit Doldu" : "Yeni Sayfa"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDisplayName(user?.name ?? "");
+                  setProfileOpen(true);
+                }}
+                className="h-10 w-full border-border/60 sm:w-auto"
+              >
+                <UserRound className="h-4 w-4 mr-2" />
+                Kullanıcı Adı
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Quick Tools */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <Link href="/shortener">
             <div className="panel-strong group flex cursor-pointer items-center gap-4 rounded-xl border border-border/70 bg-card p-4 transition-all hover:border-primary/40">
               <div className="h-10 w-10 rounded-lg bg-blue-400/10 flex items-center justify-center">
@@ -362,104 +215,6 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        <section className="mb-6 rounded-2xl border border-white/10 bg-card/95 p-4 panel-strong">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Sayfa performansi</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Link sayfalarini ara, filtrele ve hizli karsilastir.</p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_150px_150px]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={pageSearch} onChange={(event) => { setPageSearch(event.target.value); setTablePage(1); }} placeholder="Sayfa ara" className="h-10 bg-input pl-9" />
-              </div>
-              <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as typeof statusFilter); setTablePage(1); }} className="h-10 rounded-md border border-border bg-input px-3 text-sm">
-                <option value="all">Tum durumlar</option>
-                <option value="published">Yayinda</option>
-                <option value="draft">Taslak</option>
-              </select>
-              <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="h-10 rounded-md border border-border bg-input px-3 text-sm">
-                <option value="created">Tarihe gore</option>
-                <option value="views">Goruntulenme</option>
-                <option value="clicks">Tiklama</option>
-                <option value="title">Ada gore</option>
-              </select>
-            </div>
-          </div>
-
-          {filteredPages.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/60 bg-background/45 py-10 text-center">
-              <Globe className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-              <p className="font-semibold">Bu filtreyle sayfa bulunamadi</p>
-              <p className="mt-1 text-sm text-muted-foreground">Aramayi veya filtreyi degistirin.</p>
-            </div>
-          ) : (
-            <>
-              <div className="hidden overflow-hidden rounded-2xl border border-border/60 md:block">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-white/[0.035] text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                    <tr>
-                      <th className="px-4 py-3">Link adi</th>
-                      <th className="px-4 py-3">Goruntuleme</th>
-                      <th className="px-4 py-3">Tiklama</th>
-                      <th className="px-4 py-3">Tarih</th>
-                      <th className="px-4 py-3">Durum</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {visibleTablePages.map((page) => (
-                      <tr key={page.id} className="bg-background/30 transition-colors hover:bg-primary/5">
-                        <td className="px-4 py-3">
-                          <p className="font-semibold">{page.title}</p>
-                          <p className="text-xs text-muted-foreground">llinktr.com/{page.slug}</p>
-                        </td>
-                        <td className="px-4 py-3 font-semibold">{page.views ?? 0}</td>
-                        <td className="px-4 py-3 font-semibold">{page.totalClicks ?? 0}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{new Date(page.createdAt ?? Date.now()).toLocaleDateString("tr-TR")}</td>
-                        <td className="px-4 py-3">
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${page.isPublished ? "bg-primary/10 text-primary" : "bg-white/10 text-muted-foreground"}`}>
-                            {page.isPublished ? "Yayinda" : "Taslak"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="grid gap-3 md:hidden">
-                {visibleTablePages.map((page) => (
-                  <article key={page.id} className="rounded-2xl border border-border/60 bg-background/40 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="truncate font-semibold">{page.title}</h3>
-                        <p className="truncate text-xs text-muted-foreground">llinktr.com/{page.slug}</p>
-                      </div>
-                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${page.isPublished ? "bg-primary/10 text-primary" : "bg-white/10 text-muted-foreground"}`}>
-                        {page.isPublished ? "Yayinda" : "Taslak"}
-                      </span>
-                    </div>
-                    <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="rounded-xl bg-white/[0.04] p-2"><b className="block text-base">{page.views ?? 0}</b>Gor.</div>
-                      <div className="rounded-xl bg-white/[0.04] p-2"><b className="block text-base">{page.totalClicks ?? 0}</b>Tik.</div>
-                      <div className="rounded-xl bg-white/[0.04] p-2"><b className="block text-base">{new Date(page.createdAt ?? Date.now()).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" })}</b>Tarih</div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">{filteredPages.length} kayit icinden {visibleTablePages.length} gosteriliyor.</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={tablePage <= 1} onClick={() => setTablePage((current) => Math.max(1, current - 1))}>Onceki</Button>
-                  <span className="flex min-w-16 items-center justify-center rounded-md border border-border px-3 text-xs">{tablePage}/{totalTablePages}</span>
-                  <Button variant="outline" size="sm" disabled={tablePage >= totalTablePages} onClick={() => setTablePage((current) => Math.min(totalTablePages, current + 1))}>Sonraki</Button>
-                </div>
-              </div>
-            </>
-          )}
-        </section>
-
         {/* Bio Pages */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Bio Sayfalarım</h2>
@@ -482,12 +237,9 @@ export default function Dashboard() {
               {pages.map((page) => {
                 const theme = getBioTheme(page.theme);
                 const accent = safeAccentColor(page.accentColor, theme.accent);
-                const pageBars = (page.todayClicks ?? 0) === 0 && (page.todayViews ?? 0) === 0
-                  ? Array.from({ length: 7 }, () => 16)
-                  : [18, 24, 21, 32, 28, 36, Math.min(86, 22 + (page.todayClicks ?? 0) * 6 + (page.todayViews ?? 0) * 2)];
 
                 return (
-                <div key={page.id} className="panel-strong group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_0_34px_rgba(214,255,0,0.08)]">
+                <div key={page.id} className="panel-strong group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-primary/40">
                   {/* Page header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">
@@ -512,15 +264,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="mb-4 flex h-12 items-end gap-1.5 rounded-xl border border-border/30 bg-background/35 px-3 py-2">
-                    {pageBars.map((value, index) => (
-                      <span
-                        key={index}
-                        className="mini-chart-bar flex-1 rounded-t bg-primary/75"
-                        style={{ height: `${value}%`, animationDelay: `${index * 60}ms` }}
-                      />
-                    ))}
-                  </div>
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
@@ -541,29 +284,20 @@ export default function Dashboard() {
                   {/* Actions */}
                   <div className="flex flex-wrap gap-2">
                     <Link href={`/builder/${page.id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full border-white/12 bg-white/[0.035] text-xs hover:border-primary/45 hover:bg-primary/10">
+                      <Button variant="outline" size="sm" className="w-full border-border/50 text-xs">
                         <Edit2 className="h-3 w-3 mr-1.5" />
                         Düzenle
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-white/12 bg-white/[0.035] text-xs hover:border-primary/45 hover:bg-primary/10"
-                      onClick={() => setAnalyticsPageId(page.id)}
-                    >
-                      <BarChart3 className="h-3 w-3 mr-1.5" />
-                      Analiz
-                    </Button>
                     <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="border-white/12 bg-white/[0.035] text-xs hover:border-primary/45 hover:bg-primary/10">
+                      <Button variant="outline" size="sm" className="border-border/50 text-xs">
                         <Eye className="h-3 w-3" />
                       </Button>
                     </a>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-white/12 bg-white/[0.035] text-xs hover:border-primary/45 hover:bg-primary/10"
+                      className="border-border/50 text-xs"
                       disabled={publishMutation.isPending}
                       onClick={() => publishMutation.mutate({ id: page.id, isPublished: !page.isPublished })}
                     >
@@ -573,7 +307,7 @@ export default function Dashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-white/12 bg-white/[0.035] text-xs text-destructive hover:border-destructive/45 hover:bg-destructive/10 hover:text-destructive"
+                      className="border-border/50 text-destructive hover:text-destructive text-xs"
                       onClick={() => setDeleteId(page.id)}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -588,19 +322,6 @@ export default function Dashboard() {
       </div>
 
       <Footer />
-
-      <PageAnalyticsDialog
-        open={analyticsPageId !== null}
-        onOpenChange={(open) => {
-          if (!open) setAnalyticsPageId(null);
-        }}
-        pageId={analyticsPage?.id ?? null}
-        pageTitle={analyticsPage?.title ?? "Bio sayfasi"}
-        totalViews={analyticsPage?.views ?? 0}
-        totalClicks={analyticsPage?.totalClicks ?? 0}
-        todayViews={analyticsPage?.todayViews ?? 0}
-        todayClicks={analyticsPage?.todayClicks ?? 0}
-      />
 
       {/* Create Dialog */}
       <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
@@ -721,3 +442,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 
 type ShortenerResult = {
-  id?: number;
   code: string;
   shortUrl: string;
   originalUrl: string;
@@ -56,15 +55,6 @@ export default function Shortener() {
     },
     onError: (err) => toast.error(err.message || "Link silinemedi"),
   });
-
-  useEffect(() => {
-    if (!result?.code) return;
-    if (result.id) return;
-    if (!shortLinks) return;
-    const match = shortLinks.find((item) => item.code === result.code);
-    if (!match?.id) return;
-    setResult((prev) => (prev && prev.code === match.code ? { ...prev, id: match.id } : prev));
-  }, [result?.code, result?.id, shortLinks]);
 
   const handleShorten = () => {
     const trimmedUrl = url.trim();
@@ -208,16 +198,6 @@ export default function Shortener() {
                         Kopyala
                       </>
                     )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 border-border/50 px-3 text-xs text-destructive hover:text-destructive"
-                    disabled={deleteMutation.isPending || !result.id}
-                    onClick={() => result.id && void handleDelete(result.id, result.code)}
-                  >
-                    <Trash2 className="mr-1 h-3.5 w-3.5" />
-                    Sil
                   </Button>
                 </div>
               </div>

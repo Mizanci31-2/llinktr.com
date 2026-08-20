@@ -14,9 +14,13 @@ import { relations } from "drizzle-orm";
 
 // Auth users table (from Supabase auth)
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  openId: varchar("openId", { length: 128 }).notNull().unique(),
   email: varchar("email", { length: 320 }),
   name: text("name"),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: varchar("role", { length: 32 }),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -30,7 +34,7 @@ export const profiles = pgTable("profiles", {
   userId: uuid("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
   username: varchar("username", { length: 50 }).notNull().unique(),
   bio: text("bio"),
-  avatarUrl: varchar("avatar_url", { length: 512 }),
+  avatarUrl: text("avatar_url"),
   avatarKey: varchar("avatar_key", { length: 256 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -126,6 +130,20 @@ export const shortLinks = pgTable("short_links", {
 
 export type ShortLink = typeof shortLinks.$inferSelect;
 export type InsertShortLink = typeof shortLinks.$inferInsert;
+
+export const helpArticles = pgTable("help_articles", {
+  id: varchar("id", { length: 120 }).primaryKey(),
+  title: text("title").notNull(),
+  category: varchar("category", { length: 80 }).notNull(),
+  summary: text("summary").notNull(),
+  steps: json("steps").$type<string[]>().notNull(),
+  tags: json("tags").$type<string[]>().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type HelpArticle = typeof helpArticles.$inferSelect;
+export type InsertHelpArticle = typeof helpArticles.$inferInsert;
 
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({

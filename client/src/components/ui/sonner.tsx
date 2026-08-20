@@ -8,6 +8,25 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      position="bottom-right"
+      richColors
+      closeButton
+      expand
+      visibleToasts={5}
+      toastOptions={{
+        classNames: {
+          toast: "llinktr-toast",
+          title: "llinktr-toast-title",
+          description: "llinktr-toast-description",
+          success: "llinktr-toast-success",
+          error: "llinktr-toast-error",
+          warning: "llinktr-toast-warning",
+          info: "llinktr-toast-info",
+          actionButton: "llinktr-toast-action",
+          cancelButton: "llinktr-toast-cancel",
+          closeButton: "llinktr-toast-close",
+        },
+      }}
       style={
         {
           "--normal-bg": "var(--popover)",

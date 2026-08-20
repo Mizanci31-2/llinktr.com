@@ -24,7 +24,7 @@ type ChartPoint = {
   clicks: number;
 };
 
-const dayNames = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+const dayNames = ["Paz", "Pzt", "Sal", "�ar", "Per", "Cum", "Cmt"];
 const hourTicks = [0, 4, 8, 12, 16, 20, 24];
 
 function getTopBlocks(
@@ -209,25 +209,25 @@ export function PageAnalyticsDialog({
         <DialogHeader className="border-b border-white/10 pb-4">
           <DialogTitle className="flex flex-col gap-1 text-xl sm:text-2xl">
             <span>{pageTitle} analizi</span>
-            <span className="text-xs font-medium text-muted-foreground">Seçili tarih aralığına göre görüntülenme ve tıklama grafiği</span>
+            <span className="text-xs font-medium text-muted-foreground">Se�ili tarih aral11na g�re g�r�nt�lenme ve t1klama grafii</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="mb-4 rounded-2xl border border-white/10 bg-[#151a20]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_48px_rgba(0,0,0,0.22)]">
           <div className="mb-3 flex items-center gap-2">
             <CalendarRange className="h-4 w-4 text-primary" />
-            <p className="text-sm font-semibold">Tarih seçimi</p>
+            <p className="text-sm font-semibold">Tarih se�imi</p>
           </div>
           <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
             <Select value={range} onValueChange={setRange}>
               <SelectTrigger className="border-white/10 bg-[#0b0f14]">
-                <SelectValue placeholder="Aralık seçin" />
+                <SelectValue placeholder="Aral1k se�in" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="today">Bugün</SelectItem>
-                <SelectItem value="7d">Son 7 gün</SelectItem>
-                <SelectItem value="30d">Son 30 gün</SelectItem>
-                <SelectItem value="custom">Özel tarih</SelectItem>
+                <SelectItem value="today">Bug�n</SelectItem>
+                <SelectItem value="7d">Son 7 g�n</SelectItem>
+                <SelectItem value="30d">Son 30 g�n</SelectItem>
+                <SelectItem value="custom">�zel tarih</SelectItem>
               </SelectContent>
             </Select>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -237,7 +237,7 @@ export function PageAnalyticsDialog({
           </div>
           <div className="mt-3 flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/[0.045] px-3 py-2 text-xs text-muted-foreground">
             <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-            <p>Geçmiş saatlik/günlük kayıt olmayan aralıklarda grafik boş görünür; mevcut toplamlar gerçek kayıt alanlarından okunur.</p>
+            <p>Ge�mi_ saatlik/g�nl�k kay1t olmayan aral1klarda grafik bo_ g�r�n�r; mevcut toplamlar ger�ek kay1t alanlar1ndan okunur.</p>
           </div>
         </div>
 
@@ -247,14 +247,14 @@ export function PageAnalyticsDialog({
               <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
                   <Eye className="h-4 w-4 text-primary" />
-                  Seçili görüntülenme
+                  Se�ili g�r�nt�lenme
                 </div>
                 <p className="text-4xl font-semibold tracking-tight">{chart.displayedViews}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(214,255,0,0.075),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
                   <MousePointerClick className="h-4 w-4 text-primary" />
-                  Seçili tıklama
+                  Se�ili t1klama
                 </div>
                 <p className="text-4xl font-semibold tracking-tight">{chart.displayedClicks}</p>
               </div>
@@ -264,13 +264,13 @@ export function PageAnalyticsDialog({
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold">Performans grafiği</h3>
+                  <h3 className="text-sm font-semibold">Performans grafii</h3>
                 </div>
-                <div className="text-xs text-muted-foreground">Y ekseni otomatik ölçeklenir</div>
+                <div className="text-xs text-muted-foreground">Y ekseni otomatik �l�eklenir</div>
               </div>
               {!hasData ? (
                 <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed border-border/50 bg-card/35 px-3 text-center text-sm text-muted-foreground">
-                  Bu tarih aralığında veri bulunamadı
+                  Bu tarih aral11nda veri bulunamad1
                 </div>
               ) : (
                 <div className="h-[320px] w-full min-w-0">
@@ -281,8 +281,8 @@ export function PageAnalyticsDialog({
                       <YAxis ticks={yTicks} domain={[0, yTicks[yTicks.length - 1] || 1]} tick={{ fill: "rgba(255,255,255,0.58)", fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
                       <Tooltip content={<AnalyticsTooltip />} cursor={{ fill: "rgba(214,255,0,0.055)" }} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="views" name="Görüntülenme" fill="rgba(214,255,0,0.62)" radius={[8, 8, 0, 0]} maxBarSize={34} />
-                      <Line type="monotone" dataKey="clicks" name="Tıklama" stroke="#DFFF00" strokeWidth={3} dot={{ r: 4, fill: "#DFFF00", stroke: "#0f1318", strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                      <Bar dataKey="views" name="G�r�nt�lenme" fill="rgba(214,255,0,0.62)" radius={[8, 8, 0, 0]} maxBarSize={34} />
+                      <Line type="monotone" dataKey="clicks" name="T1klama" stroke="#DFFF00" strokeWidth={3} dot={{ r: 4, fill: "#DFFF00", stroke: "#0f1318", strokeWidth: 2 }} activeDot={{ r: 6 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -293,14 +293,14 @@ export function PageAnalyticsDialog({
           <div className="rounded-2xl border border-white/10 bg-[#121820] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
             <div className="mb-3 flex items-center gap-2">
               <Link2 className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold">En çok tıklanan öğeler</h3>
+              <h3 className="text-sm font-semibold">En �ok t1klanan �eler</h3>
             </div>
             {isLoading ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">Yükleniyor...</div>
+              <div className="py-12 text-center text-sm text-muted-foreground">Y�kleniyor...</div>
             ) : topBlocks.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border/50 bg-card/40 px-4 py-10 text-center">
-                <p className="text-sm font-medium">Henüz hareket yok</p>
-                <p className="mt-1 text-xs text-muted-foreground">Linkler tıklandıkça en çok etkileşim alan öğeler burada listelenir.</p>
+                <p className="text-sm font-medium">Hen�z hareket yok</p>
+                <p className="mt-1 text-xs text-muted-foreground">Linkler t1kland1k�a en �ok etkile_im alan �eler burada listelenir.</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -308,7 +308,7 @@ export function PageAnalyticsDialog({
                   <div key={block.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-card/70 px-3 py-3 transition-colors hover:border-primary/35">
                     <p className="min-w-0 truncate text-sm font-medium">{index + 1}. {block.label}</p>
                     <div className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                      {block.clicks} tıklama
+                      {block.clicks} t1klama
                     </div>
                   </div>
                 ))}

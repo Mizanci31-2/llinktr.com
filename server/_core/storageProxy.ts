@@ -23,17 +23,17 @@ export function registerStorageProxy(app: Express) {
     const size = Number(req.body?.size || 0);
 
     if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
-      res.status(400).json({ message: "Lütfen geçerli bir görsel dosyası seçin" });
+      res.status(400).json({ message: "L�tfen ge�erli bir g�rsel dosyas1 se�in" });
       return;
     }
 
     if (!Number.isFinite(size) || size <= 0 || size > MAX_IMAGE_UPLOAD_BYTES) {
-      res.status(400).json({ message: "Görsel en fazla 7 MB olabilir" });
+      res.status(400).json({ message: "G�rsel en fazla 7 MB olabilir" });
       return;
     }
 
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(503).json({ message: "Storage bağlantısı hazır değil. Lütfen Supabase Storage ayarlarını kontrol edin." });
+      res.status(503).json({ message: "Storage balant1s1 haz1r deil. L�tfen Supabase Storage ayarlar1n1 kontrol edin." });
       return;
     }
 

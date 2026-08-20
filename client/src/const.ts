@@ -26,5 +26,5 @@ export const getAuthUrl = (mode: AuthFlowMode = "signIn", provider?: AuthProvide
   return url.toString();
 };
 
-export const getLoginUrl = () => "/giris";
-export const getSignupUrl = () => "/kayitol";
+export const getLoginUrl = () => "/login";
+export const getSignupUrl = () => "/kayit";

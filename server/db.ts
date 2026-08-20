@@ -2,9 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {
-  profiles,
+  bioBlocks,
+  bioPages,
   links,
   linkClicks,
+  profiles,
+  shortLinks,
   users,
   type Profile,
   type Link,
@@ -90,11 +93,19 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getUserById(id: number) {
+export async function getUserById(id: string) {
   const db = await getDb();
   if (!db) return undefined;
 
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -107,7 +118,7 @@ export async function getProfileByUsername(username: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getProfileByUserId(userId: number) {
+export async function getProfileByUserId(userId: string) {
   const db = await getDb();
   if (!db) return undefined;
 
@@ -116,7 +127,7 @@ export async function getProfileByUserId(userId: number) {
 }
 
 export async function createProfile(data: {
-  userId: number;
+  userId: string;
   username: string;
   bio?: string;
   avatarUrl?: string;
@@ -136,7 +147,7 @@ export async function createProfile(data: {
   return result[0];
 }
 
-export async function updateProfile(userId: number, data: Partial<{
+export async function updateProfile(userId: string, data: Partial<{
   username: string;
   bio: string | null;
   avatarUrl: string | null;
@@ -154,7 +165,7 @@ export async function updateProfile(userId: number, data: Partial<{
 }
 
 // Link operations
-export async function getLinksByUserId(userId: number) {
+export async function getLinksByUserId(userId: string) {
   const db = await getDb();
   if (!db) return [];
 
@@ -172,7 +183,7 @@ export async function getLinkById(id: number) {
 }
 
 export async function createLink(data: {
-  userId: number;
+  userId: string;
   title: string;
   url: string;
   order: number;
@@ -190,7 +201,7 @@ export async function createLink(data: {
   return result[0];
 }
 
-export async function updateLink(id: number, userId: number, data: Partial<{
+export async function updateLink(id: number, userId: string, data: Partial<{
   title: string;
   url: string;
   order: number;
@@ -206,7 +217,7 @@ export async function updateLink(id: number, userId: number, data: Partial<{
   return result[0];
 }
 
-export async function deleteLink(id: number, userId: number) {
+export async function deleteLink(id: number, userId: string) {
   const db = await getDb();
   if (!db) return false;
 
@@ -214,7 +225,7 @@ export async function deleteLink(id: number, userId: number) {
   return true;
 }
 
-export async function reorderLinks(userId: number, linkIds: number[]) {
+export async function reorderLinks(userId: string, linkIds: number[]) {
   const db = await getDb();
   if (!db) return;
 
@@ -244,7 +255,7 @@ export async function getLinkClickCount(linkId: number) {
   return result.length > 0 ? result.length : 0;
 }
 
-export async function getLinkClicksByUserId(userId: number) {
+export async function getLinkClicksByUserId(userId: string) {
   const db = await getDb();
   if (!db) return [];
 
@@ -254,4 +265,77 @@ export async function getLinkClicksByUserId(userId: number) {
   }).from(linkClicks)
     .innerJoin(links, eq(linkClicks.linkId, links.id))
     .where(eq(links.userId, userId));
+}
+
+export async function getBioPagesByUserId(userId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(bioPages).where(eq(bioPages.userId, userId)).orderBy(bioPages.createdAt);
+}
+
+export async function checkSlugAvailable(slug: string) {
+  const db = await getDb();
+  if (!db) return true;
+
+  const result = await db.select({ id: bioPages.id }).from(bioPages).where(eq(bioPages.slug, slug)).limit(1);
+  return result.length === 0;
+}
+
+export async function createBioPage(data: typeof bioPages.$inferInsert) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.insert(bioPages).values(data).returning();
+  return result[0];
+}
+
+export async function createBioBlock(data: typeof bioBlocks.$inferInsert) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.insert(bioBlocks).values(data).returning();
+  return result[0];
+}
+
+export async function getBioBlockById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(bioBlocks).where(eq(bioBlocks.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getBioPageByPublicId(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(bioPages).where(eq(bioPages.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getShortLinkByCode(code: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(shortLinks).where(eq(shortLinks.code, code)).limit(1);
+  return result[0];
+}
+
+export async function incrementShortLinkClicks(code: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  const link = await getShortLinkByCode(code);
+  if (!link) return;
+  await db.update(shortLinks).set({ clicks: (link.clicks || 0) + 1 }).where(eq(shortLinks.code, code));
+}
+
+export async function incrementBioBlockClicks(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const block = await getBioBlockById(id);
+  if (!block) return;
+  await db.update(bioBlocks).set({ clicks: (block.clicks || 0) + 1 }).where(eq(bioBlocks.id, id));
 }

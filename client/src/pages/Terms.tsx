@@ -1,66 +1,35 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-const sections = [
-  {
-    title: "Hizmetin Kapsamı",
-    text: "llinktr; bio link sayfası oluşturma, bağlantı yönetimi, kısa URL üretme, QR kod oluşturma ve temel profil düzenleme araçları sunar. Hizmet, kullanıcıların dijital bağlantılarını tek bir panelden yönetmesini kolaylaştırmak amacıyla sağlanır.",
-  },
-  {
-    title: "Kullanıcı Sorumlulukları",
-    text: "Kullanıcı, hesabında paylaştığı tüm metin, görsel, bağlantı, QR kod ve yönlendirmelerin doğruluğundan, güvenliğinden ve hukuka uygunluğundan sorumludur. Hesap bilgilerinin güncel tutulması kullanıcının sorumluluğundadır.",
-  },
-  {
-    title: "Yasaklı Kullanımlar",
-    text: "Telif hakkı ihlali, dolandırıcılık, zararlı yazılım bağlantıları, yasa dışı içerikler, yanıltıcı veya sahte yönlendirmeler ve başkalarının haklarını ihlal eden içerikler platformda kullanılamaz. Bu tür içerikler tespit edildiğinde erişim kısıtlanabilir veya kaldırılabilir.",
-  },
-  {
-    title: "Kullanıcı İçerikleri",
-    text: "Kullanıcı tarafından oluşturulan bio sayfaları, kısa linkler, QR kodlar ve diğer içerikler kullanıcıya aittir. llinktr, hizmetin işletilmesi için bu içerikleri teknik olarak saklayabilir ve yayınlayabilir.",
-  },
-  {
-    title: "Hesap Güvenliği",
-    text: "Şifre güvenliği, hesap erişimi ve hesabın yetkisiz kullanıma karşı korunması kullanıcının sorumluluğundadır. Şüpheli bir durum fark edilirse destek ekibiyle iletişime geçilmelidir.",
-  },
-  {
-    title: "Hizmette Yapılabilecek Değişiklikler",
-    text: "llinktr, hizmet özelliklerinde, arayüzde, teknik altyapıda veya kullanım şartlarında gerekli gördüğü güncellemeleri yapabilir. Güncel koşullar bu sayfada yayımlanır.",
-  },
-  {
-    title: "Sorumluluk Sınırları",
-    text: "llinktr, kullanıcı tarafından eklenen üçüncü taraf bağlantıların içeriğinden, erişilebilirliğinden veya doğurabileceği sonuçlardan sorumlu değildir. Hizmetin kesintisiz veya hatasız çalışacağı garanti edilmez.",
-  },
-  {
-    title: "Hesap Silme ve Hizmet Sonlandırma",
-    text: "Kullanıcı hesabının silinmesini talep edebilir. Kullanım şartlarına aykırı, güvenlik riski oluşturan veya yasal sorun doğuran hesaplar için hizmet erişimi sınırlandırılabilir.",
-  },
-  {
-    title: "İletişim",
-    text: "Kullanım şartları hakkında sorularınız veya destek talepleriniz için iletişim sayfamızdan bize ulaşabilirsiniz.",
-  },
-];
-
 export default function Terms() {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
-      <main className="container max-w-4xl flex-1 py-12">
-        <h1 className="mb-2 text-3xl font-bold md:text-5xl">Kullanım Şartları</h1>
-        <p className="mb-8 text-sm text-muted-foreground">Son güncelleme: Nisan 2026</p>
-        <div className="mb-8 rounded-2xl border border-border/50 bg-card p-6">
-          <p className="leading-relaxed text-muted-foreground">
-            Bu kullanım şartları, llinktr hizmetlerini kullanırken geçerli olan temel kuralları açıklar. Platformu kullanarak bu şartları okuduğunuzu ve kabul ettiğinizi beyan etmiş olursunuz.
-          </p>
+      <main className="flex-1 container py-12 max-w-3xl">
+        <h1 className="text-3xl font-bold mb-2">Kullanım Şartları</h1>
+        <p className="text-muted-foreground mb-8">Son güncelleme: Nisan 2026</p>
+
+        <div className="space-y-6 text-muted-foreground leading-relaxed">
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">1. Hizmetin Kullanımı</h2>
+            <p>llinktr; bio link sayfası oluşturma, link kısaltma, QR kod üretme ve bağlantı analizlerini takip etme araçları sunar. Hizmeti kullanırken yürürlükteki mevzuata ve üçüncü taraf haklarına uygun davranmanız gerekir.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">2. Kullanıcı İçeriği</h2>
+            <p>Bio sayfalarınıza eklediğiniz metin, görsel ve linklerden siz sorumlusunuz. Telif hakkı ihlali, yanıltıcı içerik, zararlı bağlantılar veya hukuka aykırı içerikler platformdan kaldırılabilir.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">3. Hesap Güvenliği</h2>
+            <p>Hesabınızın güvenliğini korumak sizin sorumluluğunuzdadır. Şüpheli bir kullanım fark ederseniz destek ekibiyle iletişime geçebilirsiniz.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">4. Değişiklikler</h2>
+            <p>llinktr, hizmet özelliklerini ve bu şartları gerektiğinde güncelleyebilir. Güncel şartlar bu sayfada yayınlanır.</p>
+          </section>
         </div>
-        <div className="space-y-5">
-          {sections.map((section, index) => (
-            <section key={section.title} className="rounded-2xl border border-border/50 bg-card p-6">
-              <h2 className="mb-3 text-xl font-semibold">{index + 1}. {section.title}</h2>
-              <p className="leading-relaxed text-muted-foreground">{section.text}</p>
-            </section>
-          ))}
-        </div>
-        <p className="mt-8 text-xs text-muted-foreground">Bu ücretsiz araç Silahşör Ağı tarafından sunulmaktadır.</p>
       </main>
       <Footer />
     </div>

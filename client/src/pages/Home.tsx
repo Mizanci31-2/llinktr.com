@@ -3,364 +3,695 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SocialIcon } from "@/components/SocialIcon";
-import { fetchHomeAdminSettings, readHomeAdminSettings, type HomeAdminSettings } from "@/lib/homeSettings";
+import {
+  COMMERCE_LINK_PRESETS,
+  getBioButtonStyle,
+  getBioCardStyle,
+  getBioTheme,
+  getBioThemePreviewStyle,
+  safeAccentColor,
+} from "@/lib/constants";
 import {
   ArrowRight,
-  Check,
-  Clock3,
-  Palette,
-  Rocket,
-  Share2,
-  ShieldCheck,
-  Smartphone,
+  ChevronDown,
+  ChevronUp,
+  LayoutDashboard,
+  Link2,
+  QrCode,
   Sparkles,
-  Star,
-  UserRound,
-  Zap,
 } from "lucide-react";
 
-const viewport = { once: true, amount: 0.2 };
-const transition = { duration: 0.68, ease: "easeOut" as const };
+type FeatureDefinition = {
+  icon: typeof LayoutDashboard;
+  title: string;
+  desc: string;
+  color: string;
+  bg: string;
+  themeId: string;
+  cta: string;
+  href: string;
+  authOnly?: boolean;
+  bullets: string[];
+  preview: {
+    title: string;
+    description: string;
+    links: Array<{ label: string; logo: string }>;
+    socials: string[];
+  };
+};
 
-const howItWorks = [
-  { title: "Kullanıcı adı al", desc: "Bio adresini seç, sayfan anında hazır olsun.", icon: UserRound },
-  { title: "Linklerini ekle", desc: "Sosyal medya, mağaza, WhatsApp ve teklif linklerini sırala.", icon: Share2 },
-  { title: "Paylaş ve kazan", desc: "Tek linkle daha fazla tıklama ve satış fırsatı yakala.", icon: Rocket },
-];
-
-const whyItems = [
-  { title: "Hızlı kurulum", desc: "Dakikalar değil, saniyeler içinde yayına çık.", icon: Zap },
-  { title: "Ücretsiz kullanım", desc: "Başlamak için kredi kartı veya ödeme gerekmez.", icon: ShieldCheck },
-  { title: "Mobil uyum", desc: "Tek elle kullanıma uygun, hızlı açılan sayfalar.", icon: Smartphone },
-  { title: "Modern tasarım", desc: "Koyu tema, net CTA ve premium görünüm.", icon: Palette },
-];
-
-const heroInfoCards = [
-  "Canli onizleme",
-  "Mobil uyumlu",
-  "Tek panelden yonet",
-  "10 saniyede hazir",
-];
-
-const useCases = [
-  { title: "Influencer", desc: "İş birlikleri, son içerikler ve sosyal hesaplar tek akışta.", tag: "İçerik" },
-  { title: "E-ticaret", desc: "Ürün, kampanya, WhatsApp ve mağaza linklerini öne çıkar.", tag: "Satış" },
-  { title: "Freelancer", desc: "Portfolyo, teklif al ve randevu linklerini düzenli göster.", tag: "Lead" },
-];
-
-const examples = [
+const FEATURES: readonly FeatureDefinition[] = [
   {
-    title: "Creator Kit",
-    handle: "@ececreator",
-    bio: "Yeni video, iş birliği ve sosyal hesaplar",
-    accent: "from-pink-500/22",
-    links: ["Instagram içeriklerim", "YouTube videolarım", "Sponsor teklif al"],
-    socials: ["instagram", "youtube", "tiktok"],
+    icon: LayoutDashboard,
+    title: "Bio Link",
+    desc: "Tum linklerinizi tek profil kartinda toplayin, blok bazli duzenleyin, sosyal hesaplari alta yuvarlak ikonlarla yerlestirin ve yayina almadan once canli onizleme ile kontrol edin.",
+    color: "text-primary",
+    bg: "bg-primary/10",
+    themeId: "dark_grid",
+    cta: "Bio Link Olustur",
+    href: "/dashboard",
+    bullets: ["Tema sec", "Blok ekle", "Profil resmi", "Canli onizleme", "Paylas"],
+    preview: {
+      title: "Koleksiyon",
+      description: "Yeni sezon vitrini",
+      links: [
+        { label: "Yeni koleksiyon", logo: "trendyol" },
+        { label: "Magaza vitrini", logo: "shopier_store" },
+        { label: "Favori urunler", logo: "hepsiburada" },
+        { label: "Kampanya indirimi", logo: "n11" },
+      ],
+      socials: ["instagram", "tiktok", "youtube"],
+    },
   },
   {
-    title: "Shop Launch",
-    handle: "@shoplaunch",
-    bio: "Yeni ürünler, kampanya ve hızlı sipariş",
-    accent: "from-lime-400/22",
-    links: ["Yeni koleksiyon", "WhatsApp sipariş", "İndirim linki"],
-    socials: ["instagram", "whatsapp", "website"],
+    icon: Link2,
+    title: "Link Kisaltma",
+    desc: "Uzun baglantilari okunabilir kisaltin, istediginizde silin, ozel kisa ad kullanin ve tiklama analiziyle hangi kampanyanin daha iyi dondugunu takip edin.",
+    color: "text-sky-400",
+    bg: "bg-sky-400/10",
+    themeId: "minimal_light",
+    cta: "Kisa Linke Git",
+    href: "/shortener",
+    authOnly: true,
+    bullets: ["Kisa ad", "Silme", "Uzun URL", "Tiklama analizi", "Hizli kopya"],
+    preview: {
+      title: "Kisa linkler",
+      description: "Kampanya akisi ve yonlendirme",
+      links: [
+        { label: "yeni-sezon", logo: "amazon_store" },
+        { label: "bahar-kodlari", logo: "ebay_store" },
+        { label: "kampanya-2026", logo: "n11" },
+        { label: "toplu-liste", logo: "pttavm" },
+      ],
+      socials: ["linkedin", "github", "telegram"],
+    },
   },
   {
-    title: "Portfolio Pro",
-    handle: "@dilanworks",
-    bio: "Projeler, teklif formu ve toplantı linki",
-    accent: "from-sky-400/22",
-    links: ["Portfolyo", "Teklif al", "Toplantı planla"],
-    socials: ["website", "linkedin", "mail"],
+    icon: QrCode,
+    title: "QR Kod",
+    desc: "Baglantilarinizi QR kod ile saniyeler icinde dagitin, fuar, masa ustu, paket ve vitrin gibi fiziksel alanlarda tek taramada mobil trafigi hizlandirin.",
+    color: "text-fuchsia-400",
+    bg: "bg-fuchsia-400/10",
+    themeId: "soft_gradient",
+    cta: "QR Ekrani",
+    href: "/qr",
+    authOnly: true,
+    bullets: ["Anlik olustur", "Temiz gorunum", "Mobilden tara", "PNG indir", "Hizli paylas"],
+    preview: {
+      title: "QR akisi",
+      description: "Etkinlik ve stand akisi",
+      links: [
+        { label: "Stand katalogu", logo: "pazarama" },
+        { label: "Anlik kampanya", logo: "ciceksepeti" },
+        { label: "Ziyaretci formu", logo: "pttavm" },
+        { label: "Tanitim videosu", logo: "youtube" },
+      ],
+      socials: ["whatsapp", "telegram", "facebook"],
+    },
   },
-];
+] as const;
 
-const testimonials = [
-  { name: "Ece", role: "İçerik üreticisi", text: "Sayfam dolu ve temiz görünüyor. Takipçilerim doğru linke daha hızlı gidiyor." },
-  { name: "Mert", role: "E-ticaret", text: "WhatsApp ve mağaza linklerini tek yerde topladım. Satış akışı çok daha net oldu." },
-  { name: "Dilan", role: "Freelancer", text: "Portfolyo ve teklif linklerim artık profesyonel duruyor. Paylaşması da kolay." },
-];
+const FAQS = [
+  { q: "llinktr tamamen ucretsiz mi?", a: "Evet, llinktr tamamen ucretsiz hizmet sunar. Bio link olusturma, link kisaltma ve QR kod uretme ozelliklerini ucretsiz kullanabilirsiniz." },
+  { q: "Kac tane bio sayfasi olusturabilirim?", a: "Istediginiz kadar bio sayfasi olusturabilirsiniz. Her sayfa icin benzersiz bir slug belirleyebilirsiniz." },
+  { q: "Bio sayfama kac oge ekleyebilirim?", a: "Her bio sayfasina maksimum 50 oge ekleyebilirsiniz. Baslik, aciklama, link, sosyal medya baglantisi ve daha fazlasini ekleyebilirsiniz." },
+  { q: "QR kodlarini sonradan duzenleyebilir miyim?", a: "QR kodlari anlik olarak olusturulur ve PNG formatinda indirilebilir. Her zaman yeni bir QR kod olusturabilirsiniz." },
+] as const;
 
-function Reveal({ children, direction = "up", className = "" }: { children: React.ReactNode; direction?: "right" | "up"; className?: string }) {
-  const initial = direction === "right" ? { opacity: 0, x: 42 } : { opacity: 0, y: 36 };
+const HOME_QR_TARGET = "https://www.google.com/";
+
+function HomeQrPreview() {
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    import("qrcode")
+      .then((module) => module.default.toDataURL(HOME_QR_TARGET, {
+        width: 260,
+        margin: 2,
+        color: {
+          dark: "#0F172A",
+          light: "#FFFFFF",
+        },
+      }))
+      .then((dataUrl) => {
+        if (mounted) setQrDataUrl(dataUrl);
+      })
+      .catch(() => {
+        if (mounted) setQrDataUrl("");
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
-    <motion.div initial={initial} whileInView={{ opacity: 1, x: 0, y: 0 }} viewport={viewport} transition={transition} className={className}>
-      {children}
-    </motion.div>
+    <a href={HOME_QR_TARGET} target="_blank" rel="noreferrer" className="block">
+      <div className="rounded-[1.8rem] border border-white/20 bg-white/95 p-5 shadow-2xl">
+        <div className="mx-auto mb-4 flex h-44 w-44 items-center justify-center rounded-2xl bg-white shadow-inner ring-1 ring-slate-200">
+          {qrDataUrl ? (
+            <img src={qrDataUrl} alt="QR onizlemesi" className="h-[10.5rem] w-[10.5rem] rounded-xl object-contain" />
+          ) : (
+            <QrCode className="h-12 w-12 text-slate-300" />
+          )}
+        </div>
+        <div className="space-y-2">
+          <div className="rounded-full border px-4 py-2 text-center text-xs font-medium text-slate-800">Stand afisi</div>
+          <div className="rounded-full border px-4 py-2 text-center text-xs font-medium text-slate-800">Masa uzeri kart</div>
+          <div className="rounded-full border px-4 py-2 text-center text-xs font-medium text-slate-800">Paket ici yonlendirme</div>
+        </div>
+      </div>
+    </a>
   );
 }
 
-function SectionTitle({ eyebrow, title, desc }: { eyebrow: string; title: string; desc: string }) {
-  return (
-    <Reveal direction="right" className="mb-10 max-w-2xl">
-      <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">{eyebrow}</p>
-      <h2 className="text-3xl font-bold text-white md:text-4xl">{title}</h2>
-      <p className="mt-3 text-sm leading-relaxed text-white/58 md:text-base">{desc}</p>
-    </Reveal>
-  );
-}
+function HeroPhone({
+  themeId,
+  title,
+  description,
+  links,
+  socials,
+  compact = false,
+  className = "",
+}: {
+  themeId: string;
+  title: string;
+  description: string;
+  links: Array<{ label: string; logo: string }>;
+  socials: string[];
+  compact?: boolean;
+  className?: string;
+}) {
+  const theme = getBioTheme(themeId);
+  const accent = safeAccentColor(theme.accent, theme.accent);
+  const buttonStyle = getBioButtonStyle(theme, accent);
+  const resolveLogo = (platform: string) => COMMERCE_LINK_PRESETS.find(item => item.id === platform);
 
-function BioExamplePhone({ item }: { item: (typeof examples)[number] }) {
   return (
-    <div className={`premium-card rounded-[18px] border border-white/10 bg-gradient-to-br ${item.accent} to-[#111] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_0_50px_rgba(213,255,32,0.12)]`}>
-      <div className="mx-auto max-w-[245px] rounded-[30px] border border-white/12 bg-black p-2 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
-        <div className="relative overflow-hidden rounded-[24px] border border-white/8 bg-[#080808] px-4 pb-5 pt-9">
-          <div className="absolute left-1/2 top-0 h-5 w-20 -translate-x-1/2 rounded-b-2xl bg-black" />
-          <div className="absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,#dfff0033,transparent_65%)]" />
-          <div className="relative">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-primary/45 bg-primary/12 text-lg font-black text-primary shadow-[0_0_34px_rgba(223,255,0,0.14)]">
-              ll
+    <div className={`relative w-full max-w-[286px] md:w-[304px] md:max-w-none ${className}`}>
+      <div className="relative overflow-hidden rounded-[2.6rem] border-2 border-white/15 bg-[#09090b] shadow-2xl">
+        <div className={`absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-b-2xl bg-black ${compact ? "h-5 w-20" : "h-6 w-24"}`} />
+        <div
+          className={compact
+            ? "min-h-[416px] px-2.5 pt-6 pb-3 sm:min-h-[442px]"
+            : "min-h-[520px] px-3 pt-8 pb-4 md:min-h-[560px] md:px-3.5 md:pb-4.5"}
+          style={getBioThemePreviewStyle(theme, accent)}
+        >
+          <div
+            className={compact
+              ? "min-h-[360px] rounded-[1.85rem] border p-3 sm:min-h-[382px] sm:p-3.5"
+              : "min-h-[460px] rounded-[2rem] border p-4 md:min-h-[500px] md:p-5"}
+            style={getBioCardStyle(theme)}
+          >
+            <div className={compact ? "mb-4 flex flex-col items-center gap-2.5" : "mb-5 flex flex-col items-center gap-3 md:mb-6 md:gap-3.5"}>
+              <div className={compact
+                ? "flex h-[3.7rem] w-[3.7rem] items-center justify-center rounded-full border-2 border-white/20 bg-white/10"
+                : "flex h-[4.4rem] w-[4.4rem] items-center justify-center rounded-full border-2 border-white/20 bg-white/10 md:h-[4.9rem] md:w-[4.9rem]"}>
+                <span className="text-xl font-semibold" style={{ color: theme.text }}>ll</span>
+              </div>
+              <div className="text-center">
+                <p className={compact ? "text-sm font-semibold" : "text-[15px] font-semibold"} style={{ color: theme.text }}>{title}</p>
+                <p className={compact ? "mt-1 text-[11px] leading-relaxed" : "mt-1 text-xs leading-relaxed"} style={{ color: theme.mutedText }}>{description}</p>
+              </div>
             </div>
-            <div className="mt-4 text-center">
-              <p className="text-base font-bold text-white">{item.handle}</p>
-              <p className="mx-auto mt-1 max-w-[180px] text-xs leading-relaxed text-white/58">{item.bio}</p>
-            </div>
-            <div className="mt-5 space-y-2.5">
-              {item.links.map((link) => (
-                <div key={link} className="grid min-h-11 grid-cols-[1.75rem_minmax(0,1fr)_0.75rem] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.075] px-3 text-xs font-semibold text-white">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-black">
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="truncate text-center">{link}</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-primary" />
+
+            <div className={compact ? "space-y-2" : "space-y-3"}>
+              {links.map((item) => (
+                <div key={item.label} className={compact ? "rounded-[0.95rem] border px-3 py-2.5" : "rounded-[1.05rem] border px-3.5 py-3 md:px-4 md:py-3.5"} style={buttonStyle}>
+                  <div className="relative flex min-h-[2rem] items-center justify-center">
+                    <div className={compact
+                      ? "absolute left-0 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/80"
+                      : "absolute left-0 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80"}>
+                      {resolveLogo(item.logo)?.logoUrl ? (
+                        <img src={resolveLogo(item.logo)?.logoUrl} alt="" className="h-[18px] w-[18px] rounded-full object-cover" />
+                      ) : (
+                        <SocialIcon platform={item.logo} size={18} />
+                      )}
+                    </div>
+                    <span className={compact
+                      ? "block w-full truncate px-8 text-center text-[12px] font-medium"
+                      : "block w-full truncate px-10 text-center text-[13px] font-medium"}>{item.label}</span>
+                    <ArrowRight className={compact
+                      ? "absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 opacity-55"
+                      : "absolute right-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-55"} />
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="mt-5 flex justify-center gap-2">
-              {item.socials.map((platform) => (
-                <span key={platform} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/45">
-                  <SocialIcon platform={platform} size={18} />
-                </span>
+
+            <div className={compact ? "mt-4 flex justify-center gap-2" : "mt-6 flex justify-center gap-2.5"}>
+              {socials.map((platform) => (
+                <div key={platform} className={compact
+                  ? "flex h-8 w-8 items-center justify-center rounded-full border"
+                  : "flex h-9 w-9 items-center justify-center rounded-full border"} style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
+                  <SocialIcon platform={platform} size={compact ? 16 : 18} />
+                </div>
               ))}
-            </div>
-            <div className="mt-5 flex min-h-10 items-center justify-center rounded-2xl border border-primary/30 bg-primary/12 px-3 text-xs font-bold text-primary">
-              llinktr.com/{item.handle.replace("@", "")}
             </div>
           </div>
         </div>
       </div>
-      <h3 className="mt-5 text-xl font-bold text-white">{item.title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-white/58">{item.bio}</p>
     </div>
+  );
+}
+
+function HeroPhoneStage() {
+  const stagePhoneClass = "w-[164px] max-w-[164px] sm:w-[198px] sm:max-w-[198px] lg:w-[258px] lg:max-w-[258px]";
+
+  const leftPhone = (
+    <HeroPhone
+      themeId="minimal_light"
+      title="Kurumsal profil"
+      description="Teklif, toplanti ve dosya akisi"
+      links={[
+        { label: "Toplanti rezervasyonu", logo: "amazon_store" },
+        { label: "Sunum dosyalari", logo: "ebay_store" },
+        { label: "Kurumsal baglanti", logo: "linkedin" },
+        { label: "Pazar yeri listesi", logo: "hepsiburada" },
+      ]}
+      socials={["linkedin", "github", "telegram"]}
+      compact
+      className={stagePhoneClass}
+    />
+  );
+
+  const rightPhone = (
+    <HeroPhone
+      themeId="dark_grid"
+      title="Moda vitrini"
+      description="Yeni sezon kampanya akisi"
+      links={[
+        { label: "Trendyol magazam", logo: "trendyol" },
+        { label: "Shopier koleksiyonu", logo: "shopier_store" },
+        { label: "Hepsiburada urunleri", logo: "hepsiburada" },
+        { label: "N11 kampanyasi", logo: "n11" },
+      ]}
+      socials={["instagram", "tiktok", "youtube"]}
+      compact
+      className={stagePhoneClass}
+    />
+  );
+
+  return (
+    <div className="relative mx-auto h-[522px] w-full max-w-[292px] overflow-hidden px-1 sm:h-[540px] sm:max-w-[332px] lg:mx-0 lg:h-[700px] lg:max-w-[540px]">
+      <div className="absolute inset-0 rounded-[2.2rem] border border-white/8 bg-white/[0.03] backdrop-blur-[2px]" />
+
+      <motion.div
+        className="absolute left-1/2 top-[1.7rem] z-10 -translate-x-1/2 sm:top-[2.2rem] lg:top-[8.2rem]"
+        animate={{
+          x: [-12, 14, -12],
+          y: [8, -10, 8],
+          scale: [0.82, 1, 0.82],
+          rotate: [-8, 5, -8],
+          opacity: [0.74, 1, 0.74],
+        }}
+        transition={{
+          duration: 8.5,
+          ease: "easeInOut",
+          repeat: Infinity,
+        }}
+      >
+        {leftPhone}
+      </motion.div>
+
+      <motion.div
+        className="absolute left-1/2 top-[1.7rem] z-20 -translate-x-1/2 sm:top-[2.2rem] lg:top-[8.2rem]"
+        animate={{
+          x: [12, -14, 12],
+          y: [-10, 12, -10],
+          scale: [1, 0.82, 1],
+          rotate: [6, -7, 6],
+          opacity: [1, 0.76, 1],
+        }}
+        transition={{
+          duration: 8.5,
+          ease: "easeInOut",
+          repeat: Infinity,
+        }}
+      >
+        {rightPhone}
+      </motion.div>
+    </div>
+  );
+}
+
+function FeatureVisual({
+  feature,
+}: {
+  feature: (typeof FEATURES)[number];
+}) {
+  const visualByTitle: Record<string, string> = {
+    "Bio Link":
+      "linear-gradient(rgba(2,6,23,0.26), rgba(2,6,23,0.58)), url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&crop=entropy&w=2000&h=1320&q=80') center/cover no-repeat",
+    "Link Kisaltma":
+      "linear-gradient(rgba(2,6,23,0.3), rgba(2,6,23,0.58)), url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&crop=entropy&w=2000&h=1320&q=80') center/cover no-repeat",
+    "QR Kod":
+      "linear-gradient(rgba(2,6,23,0.18), rgba(2,6,23,0.4)), url('https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&crop=entropy&w=2000&h=1320&q=80') center/cover no-repeat",
+  };
+
+  if (feature.title === "Bio Link") {
+    return (
+      <div className="relative overflow-hidden rounded-[1.7rem] border border-border/40 px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8" style={{ background: visualByTitle[feature.title] }}>
+        <div className="relative flex justify-center">
+          <HeroPhone
+            themeId={feature.themeId}
+            title={feature.preview.title}
+            description={feature.preview.description}
+            links={feature.preview.links}
+            socials={feature.preview.socials}
+            compact
+            className="mx-auto w-full max-w-[220px] sm:max-w-[248px] md:w-[286px] md:max-w-none"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (feature.title === "Link Kisaltma") {
+    return (
+      <div className="relative overflow-hidden rounded-[1.7rem] border border-border/40 p-3 sm:p-5 md:p-6" style={{ background: visualByTitle[feature.title] }}>
+        <div className="mx-auto max-w-[26rem] rounded-[1.4rem] border border-white/20 bg-slate-950/72 p-3 backdrop-blur sm:max-w-[31rem] sm:p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            </div>
+            <div className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-white/70 sm:text-[11px]">
+              yonlendirme paneli
+            </div>
+          </div>
+          <div className="mb-4 grid gap-2.5 sm:grid-cols-[1.2fr_0.8fr] md:grid-cols-[1.4fr_0.8fr]">
+            <div className="rounded-2xl border border-cyan-400/25 bg-slate-950/70 p-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">Uzun URL</p>
+              <p className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-white/5 px-2.5 py-2 text-[11px] leading-relaxed text-white/85 sm:px-3 sm:text-sm">
+                https://magaza.example.com/kampanyalar/yeni-sezon/indirim-2026/urun-koleksiyonu
+              </p>
+              <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">Kisa baglanti</p>
+              <div className="mt-2 flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-2.5">
+                <span className="truncate text-xs font-medium text-cyan-50 sm:text-sm">llinktr.co/yeni-sezon</span>
+                <ArrowRight className="h-4 w-4 text-cyan-200" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-1">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-[11px] text-white/60">Tiklama</p>
+                <p className="mt-1 text-xl font-semibold text-white sm:text-2xl">1.284</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-[11px] text-white/60">Kopyalama</p>
+                <p className="mt-1 text-xl font-semibold text-white sm:text-2xl">326</p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2.5 sm:space-y-3">
+            {feature.preview.links.map((item) => (
+              <div key={item.label} className="grid grid-cols-[2rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2.5 text-white/90 sm:grid-cols-[2.25rem_minmax(0,1fr)_1rem] sm:gap-3 sm:px-4 sm:py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[11px] font-semibold text-cyan-200 sm:h-9 sm:w-9 sm:text-xs">
+                  /r
+                </div>
+                <span className="truncate text-[11px] font-medium sm:text-sm">{item.label}</span>
+                <ArrowRight className="h-4 w-4 opacity-60" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-[1.7rem] border border-border/40 p-4 sm:p-5 md:p-6" style={{ background: visualByTitle[feature.title] }}>
+      <div className="mx-auto flex max-w-[20rem] items-center justify-center sm:max-w-[31rem]">
+        <HomeQrPreview />
+      </div>
+    </div>
+  );
+}
+
+function FeatureTile({
+  feature,
+  isAuthenticated,
+}: {
+  feature: (typeof FEATURES)[number];
+  isAuthenticated: boolean;
+}) {
+  const href = feature.authOnly && !isAuthenticated ? getLoginUrl() : feature.href;
+
+  return (
+    <a href={href} className="panel-strong group rounded-2xl border border-border/70 bg-card/90 p-4 transition-all hover:border-primary/40 hover:bg-card">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ${feature.bg}`}>
+          <feature.icon className={`h-5 w-5 ${feature.color}`} />
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+      </div>
+      <p className="text-sm font-semibold">{feature.title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{feature.desc}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {feature.bullets.map((item) => (
+          <span key={item} className="rounded-full border border-border/50 bg-background/70 px-2.5 py-1 text-[11px] text-muted-foreground">
+            {item}
+          </span>
+        ))}
+      </div>
+      {!isAuthenticated && (
+        <p className="mt-3 text-[11px] text-primary">Giris yaptiktan sonra acilir</p>
+      )}
+    </a>
+  );
+}
+
+function FeatureShowcase({
+  feature,
+  isAuthenticated,
+  reverse = false,
+}: {
+  feature: (typeof FEATURES)[number];
+  isAuthenticated: boolean;
+  reverse?: boolean;
+}) {
+  const href = feature.authOnly && !isAuthenticated ? getLoginUrl() : feature.href;
+
+  return (
+    <motion.div
+      className="panel-strong grid items-start gap-5 rounded-[2rem] border border-border/70 bg-card p-4 sm:p-5 lg:grid-cols-[420px_1fr] lg:items-center lg:gap-8 lg:p-7"
+      initial={{ opacity: 0, y: 30, scale: 0.98 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.55, ease: "easeOut" }}
+    >
+      <div className={reverse ? "order-1 lg:order-2" : "order-1"}>
+        <FeatureVisual feature={feature} />
+      </div>
+
+      <div className={reverse ? "order-2 lg:order-1" : "order-2"}>
+        <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bg}`}>
+          <feature.icon className={`h-6 w-6 ${feature.color}`} />
+        </div>
+        <h3 className="text-xl font-semibold sm:text-2xl">{feature.title}</h3>
+        <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-sm md:text-[15px]">{feature.desc}</p>
+        <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-sm">
+          llinktr ile bu alanlari ayni panelde yonetebilir, bio linkinizi, kisa baglantilarinizi ve QR akislarinizi daha duzenli bir sekilde ayni yerden kontrol edebilirsiniz.
+        </p>
+        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          {feature.bullets.map((item) => (
+            <div key={item} className="flex items-center gap-2 text-[13px] leading-relaxed sm:text-sm">
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+        <a href={href} className="mt-6 inline-flex w-full sm:w-auto">
+          <Button className="w-full bg-primary px-6 font-semibold text-primary-foreground hover:bg-primary/90 sm:w-auto">
+            {feature.cta}
+          </Button>
+        </a>
+      </div>
+    </motion.div>
   );
 }
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
-  const [username, setUsername] = useState("");
-  const [adminSettings, setAdminSettings] = useState<HomeAdminSettings>(() => readHomeAdminSettings());
-  const targetHref = isAuthenticated ? "/dashboard" : "/register";
-
-  useEffect(() => {
-    const refresh = () => {
-      setAdminSettings(readHomeAdminSettings());
-      void fetchHomeAdminSettings()
-        .then((nextSettings) => setAdminSettings(nextSettings))
-        .catch(() => {});
-    };
-    refresh();
-    window.addEventListener("storage", refresh);
-    window.addEventListener("llinktr-home-settings", refresh);
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener("llinktr-home-settings", refresh);
-    };
-  }, []);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const visibleFeatures = FEATURES;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
-      <main className="flex-1">
-        <section className="relative overflow-hidden border-b border-white/8 pb-14 pt-10 md:pb-20 md:pt-20">
-          <div className="absolute inset-0 landing-surface" aria-hidden />
-          <div className="absolute right-[8%] top-[10%] h-96 w-96 rounded-full bg-primary/16 blur-3xl" aria-hidden />
-          <div className="absolute left-[8%] bottom-[10%] h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" aria-hidden />
 
-          <div className="container relative">
-            <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,1.1fr)]">
-              <Reveal direction="right">
-                <div className="max-w-3xl">
-                  <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-medium text-white/70 backdrop-blur">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    {adminSettings.heroProof}
-                  </div>
-                  <h1 className="text-4xl font-black leading-[1.02] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                    {adminSettings.heroTitle}
-                  </h1>
-                  <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/66 sm:text-xl">
-                    {adminSettings.heroSubtitle}
-                  </p>
+      <section className="relative overflow-hidden border-b border-border/50 pt-12 pb-12 md:pt-28 md:pb-24">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-90"
+            style={{
+              background:
+                "linear-gradient(118deg, rgba(250,204,21,0.08) 0%, transparent 26%, rgba(34,211,238,0.1) 54%, transparent 76%), linear-gradient(180deg, rgba(2,6,23,0.18) 0%, rgba(2,6,23,0.72) 100%)",
+            }}
+          />
+          <div
+            className="absolute right-[-8%] top-[-12%] h-[24rem] w-[40rem] rotate-[-10deg] opacity-70 blur-3xl"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(34,211,238,0.18) 0%, rgba(168,85,247,0.24) 42%, rgba(250,204,21,0.18) 100%)",
+            }}
+          />
+          <div
+            className="absolute left-[-10%] top-[18%] h-[18rem] w-[32rem] rotate-[8deg] opacity-60 blur-3xl"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(59,130,246,0.16) 0%, rgba(236,72,153,0.16) 46%, rgba(34,197,94,0.14) 100%)",
+            }}
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:120px_120px]" />
+        </div>
 
-                  <div className="mt-8 max-w-xl rounded-[18px] border border-white/10 bg-[#111]/90 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur">
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                      <div className="flex min-h-14 items-center rounded-[14px] border border-white/8 bg-black/30 px-4">
-                        <span className="mr-1 text-sm text-white/35">llinktr.com/</span>
-                        <input
-                          aria-label="Kullanıcı adı"
-                          value={username}
-                          onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
-                          placeholder="kullaniciadi"
-                          className="min-w-0 flex-1 bg-transparent text-base font-semibold text-white outline-none placeholder:text-white/30"
-                        />
-                      </div>
-                      <Link href={targetHref}>
-                        <Button size="lg" className="h-14 w-full rounded-[14px] bg-primary px-7 font-bold text-primary-foreground shadow-[0_0_34px_rgba(223,255,0,0.25)] transition-transform active:scale-[0.98] sm:w-auto">
-                          Ücretsiz Başla
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm font-medium text-white/48">Kayıt olmadan önizle</p>
-
-                  <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                    {["Ücretsiz", "Mobil hazır", "Tek panel"].map((item) => (
-                      <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-semibold text-white/72 backdrop-blur">
-                        <Check className="mb-2 h-4 w-4 text-primary" />
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Reveal>
-
-              <Reveal className="relative">
-                <div className="absolute -inset-8 rounded-[2rem] bg-primary/14 blur-3xl" aria-hidden />
-                <div className="pointer-events-none absolute -left-4 top-8 z-10 hidden max-w-[160px] rounded-2xl border border-white/10 bg-white/[0.075] px-4 py-3 text-xs font-semibold text-white/82 shadow-2xl backdrop-blur md:block">
-                  {heroInfoCards[0]}
-                </div>
-                <div className="pointer-events-none absolute -right-3 top-24 z-10 hidden max-w-[160px] rounded-2xl border border-primary/20 bg-primary/[0.09] px-4 py-3 text-xs font-semibold text-white/82 shadow-2xl backdrop-blur lg:block">
-                  {heroInfoCards[1]}
-                </div>
-                <div className="pointer-events-none absolute -left-2 bottom-24 z-10 hidden max-w-[180px] rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-xs font-semibold text-white/82 shadow-2xl backdrop-blur md:block">
-                  {heroInfoCards[2]}
-                </div>
-                <div className="pointer-events-none absolute right-10 bottom-5 z-10 hidden max-w-[160px] rounded-2xl border border-white/10 bg-[#101010]/75 px-4 py-3 text-xs font-semibold text-white/82 shadow-2xl backdrop-blur sm:block">
-                  {heroInfoCards[3]}
-                </div>
-                <motion.img
-                  src={adminSettings.heroImage}
-                  alt="llinktr ana sayfa bio önizlemesi"
-                  loading="eager"
-                  decoding="async"
-                  className="relative mx-auto w-full max-w-[560px] rounded-[24px] border border-white/10 object-cover shadow-[0_30px_95px_rgba(0,0,0,0.52)]"
-                  whileHover={{ y: -8, scale: 1.01 }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
-                />
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24">
-          <div className="container">
-            <SectionTitle eyebrow="Nasıl çalışır?" title="Üç adımda yayına çık" desc="Karmaşık ayarlar yok. Kullanıcı adını al, linklerini ekle, paylaşmaya başla." />
-            <div className="grid gap-4 md:grid-cols-3">
-              {howItWorks.map((item, index) => (
-                <Reveal key={item.title}>
-                  <div className="premium-card h-full rounded-[18px] border border-white/10 bg-[#111] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35">
-                    <div className="flex items-center justify-between">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-sm font-black text-black">0{index + 1}</span>
-                      <item.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="mt-8 text-xl font-semibold text-white">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-white/55">{item.desc}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-        <section className="border-y border-white/8 bg-[#0d0d0d] py-16 md:py-24">
-          <div className="container">
-            <SectionTitle eyebrow="Neden llinktr?" title="Bio link aracı değil, sade bir satış paneli" desc="Hızlı, ücretsiz, mobil uyumlu ve modern. Kullanıcı sayfayı düşünmeden kullanır." />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {whyItems.map((item) => (
-                <Reveal key={item.title}>
-                  <div className="premium-card h-full rounded-[18px] border border-white/10 bg-[#151515] p-5 transition-all duration-300 hover:border-primary/35">
-                    <item.icon className="h-6 w-6 text-primary" />
-                    <h3 className="mt-5 text-base font-semibold text-white">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-white/55">{item.desc}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24">
-          <div className="container">
-            <SectionTitle eyebrow="Kullanım alanları" title="Her profil için dolu bir vitrin" desc="İçerik üreticilerinden mağazalara kadar herkes için net bir ilk ekran." />
-            <div className="grid gap-4 md:grid-cols-3">
-              {useCases.map((item) => (
-                <Reveal key={item.title}>
-                  <div className="template-card group min-h-64 overflow-hidden rounded-[18px] border border-white/10 bg-[#151515] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35">
-                    <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{item.tag}</span>
-                    <h3 className="mt-20 text-2xl font-bold text-white">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-white/55">{item.desc}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="border-y border-white/8 bg-[#0d0d0d] py-16 md:py-24">
-          <div className="container">
-            <SectionTitle eyebrow="Örnek bio sayfalar" title="Gerçek telefon görünümünde hazır sayfalar" desc="Her kart farklı bir kullanım senaryosunu gerçek bir mobil bio sayfası gibi gösterir." />
-            <div className="grid gap-4 md:grid-cols-3">
-              {examples.map((item) => (
-                <Reveal key={item.title}>
-                  <BioExamplePhone item={item} />
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24">
-          <div className="container">
-            <SectionTitle eyebrow="Yorumlar" title="Kullanıcıların beklediği kadar basit" desc="Sade akış, net CTA ve mobil öncelikli tasarım daha iyi dönüşüm sağlar." />
-            <div className="grid gap-4 md:grid-cols-3">
-              {testimonials.map((item) => (
-                <Reveal key={item.name}>
-                  <div className="premium-card h-full rounded-[18px] border border-white/10 bg-[#111] p-6">
-                    <div className="mb-4 flex gap-1 text-primary">
-                      {[0, 1, 2, 3, 4].map((star) => <Star key={star} className="h-4 w-4 fill-current" />)}
-                    </div>
-                    <p className="text-sm leading-relaxed text-white/68">"{item.text}"</p>
-                    <div className="mt-6 border-t border-white/10 pt-4">
-                      <p className="font-semibold text-white">{item.name}</p>
-                      <p className="text-xs text-white/45">{item.role}</p>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="pb-20 md:pb-28">
-          <div className="container">
-            <Reveal>
-              <div className="overflow-hidden rounded-[18px] border border-primary/20 bg-[#151515] px-6 py-10 text-center shadow-[0_0_70px_rgba(223,255,0,0.1)] md:px-10 md:py-14">
-                <Clock3 className="mx-auto mb-5 h-8 w-8 text-primary" />
-                <h2 className="text-3xl font-bold text-white md:text-5xl">Şimdi başla</h2>
-                <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-white/58 md:text-base">Bio sayfanı oluştur, linklerini sırala ve takipçini müşteriye çevirmeye başla.</p>
-                <Link href={targetHref}>
-                  <Button size="lg" className="mt-8 h-13 rounded-[14px] bg-primary px-8 font-bold text-primary-foreground">
-                    Ücretsiz Başla
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
+        <div className="container relative">
+          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] lg:gap-14">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/70 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Tema, bio link, kisa link ve QR ayni panelde
               </div>
-            </Reveal>
+              <div className="mb-3 inline-flex items-center rounded-full border border-primary/70 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                %100 ücretsiz
+              </div>
+              <h1 className="max-w-3xl text-[2.35rem] font-bold leading-[1.02] tracking-tight sm:text-5xl md:text-6xl">
+                <span className="text-white">Bio link sayfasi,</span>
+                <br />
+                <span className="text-primary">kisa link ve QR</span>
+                <br />
+                <span className="bg-gradient-to-r from-cyan-300 via-emerald-300 to-primary bg-clip-text text-transparent">tek yerde.</span>
+              </h1>
+              <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground md:mt-6 md:text-lg">
+                <span className="text-slate-200">llinktr ile link sayfanizi kurun, blok blok duzenleyin, temalari aninda degistirin.</span>{" "}
+                <span className="text-cyan-200">Uzun URL'leri kisaltin</span> ve{" "}
+                <span className="text-emerald-200">QR ile hizli paylasin.</span>
+                <br />
+                Bio link, sosyal hesaplar, magaza baglantilari ve kampanya linkleri ayni panelde toplansin; siz de yayinlamadan once canli onizleme ile son halini rahatca kontrol edin.
+              </p>
+              <div className="mt-5 grid max-w-2xl gap-3 sm:grid-cols-2">
+                <div className="panel-strong rounded-2xl border border-border/70 bg-card/75 p-4">
+                  <p className="text-sm font-semibold">Tek panelden duzenleyin</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Baslik, metin, link, sosyal hesap ve hazir e-ticaret butonlarini ayri ayri yonetip hizlamayi secin.
+                  </p>
+                </div>
+                <div className="panel-strong rounded-2xl border border-border/70 bg-card/75 p-4">
+                  <p className="text-sm font-semibold">Temayi aninda degistirin</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Fotografli, hareketli ve sade temalar arasinda gecis yapin; bio sayfaniz yayinlanmadan once son halini rahatca kontrol edin.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href={isAuthenticated ? "/dashboard" : getLoginUrl()}>
+                  <Button size="lg" className="bg-primary px-6 font-semibold text-primary-foreground shadow-[0_0_24px_oklch(0.93_0.23_110/0.24)] hover:bg-primary/90">
+                    Basla
+                  </Button>
+                </a>
+                {isAuthenticated ? (
+                  <Link href="/shortener">
+                    <Button size="lg" variant="outline" className="border-primary/80 px-6 font-semibold text-primary hover:bg-primary/10">
+                      Link Kisalt
+                    </Button>
+                  </Link>
+                ) : (
+                  <a href={getLoginUrl()}>
+                    <Button size="lg" variant="outline" className="border-primary/80 px-6 font-semibold text-primary hover:bg-primary/10">
+                      Link Kisalt
+                    </Button>
+                  </a>
+                )}
+                {isAuthenticated ? (
+                  <Link href="/qr">
+                    <Button size="lg" variant="outline" className="border-primary/80 px-6 font-semibold text-primary hover:bg-primary/10">
+                      QR Olustur
+                    </Button>
+                  </Link>
+                ) : (
+                  <a href={getLoginUrl()}>
+                    <Button size="lg" variant="outline" className="border-primary/80 px-6 font-semibold text-primary hover:bg-primary/10">
+                      QR Olustur
+                    </Button>
+                  </a>
+                )}
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleFeatures.map((feature) => (
+                  <FeatureTile key={feature.title} feature={feature} isAuthenticated={isAuthenticated} />
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="panel-strong rounded-full border border-primary/70 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">%100 ücretsiz</span>
+                <span className="panel-strong rounded-full border border-border/70 bg-card/75 px-3 py-1.5 text-xs text-muted-foreground">Hazir magaza logolari</span>
+                <span className="panel-strong rounded-full border border-border/70 bg-card/75 px-3 py-1.5 text-xs text-muted-foreground">Telefon onizleme</span>
+                <span className="panel-strong rounded-full border border-border/70 bg-card/75 px-3 py-1.5 text-xs text-muted-foreground">Canli tema degisimi</span>
+              </div>
+            </div>
+
+            <HeroPhoneStage />
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
+
+      <section className="py-14 md:py-18">
+        <div className="container">
+          <div className="mb-8 flex items-end justify-between gap-4 md:mb-10">
+            <div>
+              <h2 className="text-2xl font-bold md:text-4xl">Her hizmet icin hizli bir alan</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+                Bio linkten QR'a kadar her modulu kendi sahnesiyle hazirladik. Araclar birbirine bagli ama kullanimlari sade.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-6">
+            {visibleFeatures.map((feature, index) => (
+              <FeatureShowcase key={feature.title} feature={feature} isAuthenticated={isAuthenticated} reverse={index % 2 === 1} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border/50 py-20">
+        <div className="container max-w-2xl">
+          <h2 className="mb-12 text-center text-3xl font-bold">Sikca Sorulan Sorular</h2>
+          <div className="space-y-3">
+            {FAQS.map((faq, i) => (
+              <div key={i} className="panel-strong overflow-hidden rounded-xl border border-border/70 bg-card">
+                <button
+                  className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-muted/30"
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                >
+                  <span className="text-sm font-medium">{faq.q}</span>
+                  {openFaq === i ? (
+                    <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+                {openFaq === i && (
+                  <div className="border-t border-border/30 px-5 pt-3 pb-4 text-sm leading-relaxed text-muted-foreground">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );
